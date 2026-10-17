@@ -42,7 +42,7 @@
 
 ## 2. 設定 Arduino IDE
 
-1. 打開 Arduino IDE，Nano 用 USB 接上電腦。
+1. 打開 Arduino IDE，Nano 用 USB-C 傳輸線接上電腦。
 2. 選單「工具 → 開發板」選 **Arduino Nano**。
 3. 「工具 → 處理器」選 **ATmega328P (Old Bootloader)**。選錯會上傳逾時，看起來像線壞了。
 4. 「工具 → 連接埠」選 Nano 對應的那個。
@@ -121,7 +121,7 @@
     - `torch` 的版本
     - 你的 Nano 序列埠（macOS 是 `/dev/cu.usbserial-xxxx` 或 `/dev/cu.wchusbserial-xxxx`，Windows 是 `COM3`、`COM4`…）
 
-    **沒看到序列埠**：先換一條 USB 線（有些線只能充電），Windows 再確認 CH340 驅動，然後重新執行 `00_setup`。
+    **沒看到序列埠**：先換一條 USB-C 線（有些線只能充電，不能傳資料），Windows 再確認 CH340 驅動，然後重新執行 `00_setup`。
 
 ## 課程 repo 的結構
 
@@ -134,8 +134,7 @@ rip-course/
 │   └── RLControl/         獨立執行的策略
 ├── policy/          Python：模擬、訓練、sysid、蒸餾（來自作者）
 ├── model/
-│   ├── model.urdf         已更新為 10 元硬幣配重
-│   └── meshes/            作者的 STL（不修改）
+│   └── model.urdf         擺錘質量與慣量（已更新為 10 元硬幣配重）
 └── tools/           流程工具，每個工具都是同名的三個檔
     ├── 00_setup.command   00_setup.bat   00_setup.py
     └── …

@@ -48,7 +48,7 @@ flowchart LR
 | --- | --- |
 | `firmware/` | Arduino sketch，用 Arduino IDE 開啟、上傳 |
 | `policy/` | Python：模擬、訓練、sysid、蒸餾 |
-| `model/` | 機台模型（URDF 與 STL） |
+| `model/` | 機台模型參數（URDF） |
 | `tools/` | 工具（macOS `.command`、Windows `.bat`） |
 | `website/` | 教學網站原始檔 |
 

@@ -32,7 +32,7 @@ def main() -> int:
         warn("現在找不到 Nano。之後接上再重新執行 00_setup 也可以；其他工具也會自己找。")
         if all_ports:
             info("  目前看得到的序列埠：" + "、".join(p.device for p in all_ports))
-        info("  沒看到就換一條 USB 線（有些只能充電）；Windows 再確認 CH340 驅動。")
+        info("  沒看到就換一條 USB-C 線（有些只能充電，不能傳資料）；Windows 再確認 CH340 驅動。")
     else:
         p = choose("偵測到的 Nano：", nano, [f"{p.device}  {p.description}" for p in nano], default=0)
         settings["port"] = p.device

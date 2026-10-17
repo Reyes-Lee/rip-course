@@ -44,7 +44,7 @@ def banner(title: str, firmware: str | None = None, *, needs_rig: bool = False) 
         print(color(f"  先用 Arduino IDE 上傳：{firmware}", "yellow"))
         print(color("  並關掉 Arduino IDE 的「序列埠監控」視窗", "yellow"))
     if needs_rig:
-        print(color("  需要機台：12 V 接好、Nano 用 USB 接上電腦", "yellow"))
+        print(color("  需要機台：12 V 接好、Nano 用 USB-C 線接上電腦", "yellow"))
     print(color(line, "pink"))
     print()
 
@@ -172,7 +172,7 @@ def get_port(*, ask_if_many: bool = True) -> str:
                    [f"{p.device}  {p.description}" for p in nano], default=0)
         return p.device
     fail("找不到 Nano 的序列埠。")
-    info("  1. 確認 USB 線有接好，而且是能傳資料的線（有些線只能充電）")
+    info("  1. 確認 USB-C 線有接好，而且是能傳資料的線（有些線只能充電）")
     info("  2. 關掉 Arduino IDE 的序列埠監控")
     if IS_WIN:
         info("  3. Windows：打開「裝置管理員 → 連接埠」，看不到 CH340 就安裝 CH341SER 驅動")
