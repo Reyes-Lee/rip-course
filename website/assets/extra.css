@@ -789,7 +789,7 @@ body, .md-main {
   position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
-  max-width: 480px;
+  max-width: 500px;
   justify-self: center;
   border-radius: 22px;
   overflow: hidden;
@@ -801,11 +801,12 @@ body, .md-main {
   /* 放射狀光芒，像遊戲角色介紹頁 */
   content: "";
   position: absolute;
-  inset: -40%;
+  /* 比容器大一圈才能旋轉，光芒在碰到容器邊緣前就淡出，不會有方形硬邊 */
+  inset: -25%;
   z-index: -1;
-  background: repeating-conic-gradient(from 0deg, rgba(255, 46, 136, .16) 0deg 9deg, transparent 9deg 22deg);
-  -webkit-mask: radial-gradient(circle, #000 18%, transparent 62%);
-          mask: radial-gradient(circle, #000 18%, transparent 62%);
+  background: repeating-conic-gradient(from 0deg, rgba(255, 46, 136, .18) 0deg 9deg, transparent 9deg 22deg);
+  -webkit-mask: radial-gradient(closest-side, #000 25%, transparent 64%);
+          mask: radial-gradient(closest-side, #000 25%, transparent 64%);
   animation: rip-spin 60s linear infinite;
   opacity: 0;
   transition: opacity .6s;

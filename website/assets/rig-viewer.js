@@ -15,6 +15,7 @@ const VISC = 1.0e-5, COUL = 1.8e-5;
 const A_MAX = 150;                                   // rad/s²，同策略上限
 const K_LQR = [-931.085, -75.325, -50.0, -27.175];   // [θ, θ̇, α, α̇]
 const SWING = { ke: 2500, aMax: 50, kp: 20, kd: 10 };
+const SWAY = 0.5;                                    // 鏡頭左右晃動幅度（rad，約 ±29°）
 const HANG_S = 1.2, BALANCE_S = 6.5, DROP_S = 4.5;
 
 const wrap = (x) => ((x + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;
@@ -83,7 +84,7 @@ function mount(host) {
   controls.enablePan = false;
   controls.enableZoom = false;
   controls.autoRotate = !reduce;
-  controls.autoRotateSpeed = 0.7;
+  controls.autoRotateSpeed = 0;      // 每一幀依時間改正負，變成左右晃
   controls.minPolarAngle = 0.35;
   controls.maxPolarAngle = 1.45;
 
@@ -102,6 +103,8 @@ function mount(host) {
   scene.add(ground);
 
   const rig = new Rig();
+  host.rig = rig;                          // 方便在瀏覽器主控台檢查狀態
+  let fit = () => {};
   let arm = null, pend = null, running = true, visible = true, raf = 0, last = performance.now();
 
   new GLTFLoader().load(MODEL_URL, (gltf) => {
@@ -110,19 +113,51 @@ function mount(host) {
     scene.add(root);
     arm = root.getObjectByName("arm");
     pend = root.getObjectByName("pendulum");
-    // 鏡頭範圍要包含「擺錘直立」的姿勢：先把擺錘轉到頂端量外框，再轉回垂下。
-    pend.rotation.x = Math.PI;
+    // 鏡頭範圍：底座的外框，加上「擺錘直立、手臂轉到 −1／0／+1 rad」時手臂與擺錘的外框。
+    // 分零件算比整台的外框緊，不會把麵包板上方的空中也算進去。
+    const pts = [];
+    const addBox = (obj) => {
+      const b = new THREE.Box3().setFromObject(obj);
+      for (const x of [b.min.x, b.max.x]) for (const y of [b.min.y, b.max.y]) for (const z of [b.min.z, b.max.z]) pts.push(new THREE.Vector3(x, y, z));
+    };
+    const base = root.getObjectByName("base");
     root.updateMatrixWorld(true);
-    const box = new THREE.Box3().setFromObject(root);
-    pend.rotation.x = 0;
-    const sphere = box.getBoundingSphere(new THREE.Sphere());
-    const center = sphere.center.clone();
-    center.x *= 0.6;                        // 稍微往馬達與擺錘那側移
-    center.y -= sphere.radius * 0.18;       // 視線往下壓一點，模型在畫面裡置中
-    const dist = (sphere.radius * 0.8) / Math.sin(THREE.MathUtils.degToRad(camera.fov / 2));
-    const dir = new THREE.Vector3(0.62, 0.36, 0.78).normalize();
+    addBox(base);
+    pend.rotation.x = Math.PI;
+    for (const a of [-1, 0, 1]) { arm.rotation.y = a; root.updateMatrixWorld(true); addBox(pend); addBox(arm); }
+    arm.rotation.y = 0; pend.rotation.x = 0; root.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromPoints(pts);
+    const center = box.getCenter(new THREE.Vector3());
+    const baseDir = new THREE.Vector3(0.62, 0.30, 0.78).normalize();
+    fit = () => {
+      // 在晃動範圍內取三個方位，二分搜尋最近的距離，讓所有點都落在畫面 88% 以內。
+      const cam = camera.clone();
+      const ok = (d) => [-SWAY, 0, SWAY].every((az) => {
+        const dir = baseDir.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), az);
+        cam.position.copy(center).addScaledVector(dir, d);
+        cam.lookAt(center); cam.updateMatrixWorld(); cam.updateProjectionMatrix();
+        return pts.every((p) => { const q = p.clone().project(cam); return Math.abs(q.x) < 0.88 && Math.abs(q.y) < 0.88; });
+      });
+      const solve = () => {
+        let lo = 0.05, hi = 3;
+        for (let i = 0; i < 30; i++) { const mid = (lo + hi) / 2; if (ok(mid)) hi = mid; else lo = mid; }
+        return hi;
+      };
+      // 先求距離，再把畫面中心移到模型投影的中心（上下左右留白平均），重算兩次
+      for (let k = 0; k < 2; k++) {
+        const d = solve();
+        cam.position.copy(center).addScaledVector(baseDir, d);
+        cam.lookAt(center); cam.updateMatrixWorld();
+        let x0 = 1, x1 = -1, y0 = 1, y1 = -1;
+        for (const p of pts) { const q = p.clone().project(cam); x0 = Math.min(x0, q.x); x1 = Math.max(x1, q.x); y0 = Math.min(y0, q.y); y1 = Math.max(y1, q.y); }
+        const mid = new THREE.Vector3((x0 + x1) / 2, (y0 + y1) / 2, new THREE.Vector3().copy(center).project(cam).z).unproject(cam);
+        center.copy(mid);
+      }
+      camera.position.copy(center).addScaledVector(baseDir, solve());
+      controls.target.copy(center);
+    };
     controls.target.copy(center);
-    camera.position.copy(center).addScaledVector(dir, dist);
+    fit();
     controls.update();
     host.classList.add("is-ready");
   }, undefined, () => host.classList.add("is-failed"));
@@ -132,6 +167,7 @@ function mount(host) {
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
+    fit();
   }
   const ro = new ResizeObserver(resize);
   ro.observe(host);
@@ -160,7 +196,10 @@ function mount(host) {
         }
       }
     }
-    controls.update();
+    // 角速度 = 0.1047·speed rad/s；取 speed = SWAY·ω/0.1047·cos(ωt) 得到 ±SWAY 的正弦晃動
+    const w = (2 * Math.PI) / 16;
+    controls.autoRotateSpeed = (SWAY * w / 0.1047) * Math.cos(w * now / 1000);
+    controls.update(dt);
     renderer.render(scene, camera);
   }
   raf = requestAnimationFrame(frame);
