@@ -12,7 +12,7 @@
 
 !!! tool "蒸餾"
 
-    1. 雙擊 `tools/09_distill`。
+    1. 執行 `tools/09_distill`。
     2. 清單的預設是最後一段微調（例如 `ft3`），直接按 Enter。如果 [Step 2 的回歸測試](step2-finetune.md#regression)改用了前一段，就輸入那一段的編號。
     3. `SEED [0]:` 直接按 Enter。
     4. 約 3 分鐘後，工具印出結果表（見[檢查點](#checkpoint)）。學生存在 `runs/ftN/distill_h16_dagger_dev/student.pt`。
@@ -62,7 +62,7 @@
 
 ## 檢查點 { #checkpoint }
 
-`09_distill` 結束時會印出下面兩項的數字，由你判斷；之後要重跑敏感度關卡，可以雙擊 `tools/13_check_sim` 選 `student.pt`。
+`09_distill` 結束時會印出下面兩項的數字，由你判斷；之後要重跑敏感度關卡，可以執行 `tools/13_check_sim` 選 `student.pt`。
 
 !!! checkpoint "參考門檻（由你判斷）"
 
@@ -75,7 +75,7 @@ DAgger gate 要跟教師比、不跟絕對門檻比，是因為模擬會系統�
 
 !!! tool "判斷要重做時"
 
-    1. 再雙擊 `tools/09_distill`。
+    1. 再執行 `tools/09_distill`。
     2. 選同一段微調。
     3. `SEED [0]:` 輸入 `1`。
     4. 換兩個 SEED 都明顯低於教師就找助教。
@@ -85,6 +85,6 @@ DAgger gate 要跟教師比、不跟絕對門檻比，是因為模擬會系統�
 !!! tool "接線測試學生"
 
     1. Nano 燒 `LowLevelServer`，等擺錘靜止垂下。
-    2. 雙擊 `tools/08_test_policy`。
+    2. 執行 `tools/08_test_policy`。
     3. 清單輸入 `ftN/distill_h16_dagger_dev/student.pt` 那一個的編號。
     4. 跑 30 秒。學生是為獨立執行最佳化的，接線分數略低於教師是正常的。

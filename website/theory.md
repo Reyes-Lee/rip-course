@@ -20,7 +20,7 @@
 <li><b>硬體與設定</b>（最常見）：編碼器、接線、微步、燒錯韌體。照<a href="../troubleshooting/">疑難排解</a>表的症狀處理，不用重訓。</li>
 <li><b>模型沒對上機台</b>（Step 0）：傾斜超過 1°、慣量誤差超過 10%（多半是硬幣位置）、自由擺包絡線不重疊。照 <a href="../steps/step0-sysid/#checkpoint-fail">Step 0「檢查點沒過時」</a>處理，重量後 Step 1–4 重做。</li>
 <li><b>策略本身不穩健</b>（Step 1）：敏感度關卡沒過。照 <a href="../steps/step1-train/#reseed">Step 1「換一個 SEED 重訓」</a>。</li>
-<li><b>模型沒有的動態</b>（Step 2）：接線測試有進步但還不穩。再雙擊 <code>07_finetune</code> 加段，照 <a href="../steps/step2-finetune/#how-long">Step 2「什麼時候停」</a>的規則。這是最有效的一招。</li>
+<li><b>模型沒有的動態</b>（Step 2）：接線測試有進步但還不穩。再執行 <code>07_finetune</code> 加段，照 <a href="../steps/step2-finetune/#how-long">Step 2「什麼時候停」</a>的規則。這是最有效的一招。</li>
 <li><b>蒸餾或部署</b>（Step 3–4）：教師接線很穩、燒進 Nano 後不穩。照 <a href="../steps/step3-distill/#tethered">Step 3 的選做步驟</a>用 <code>08_test_policy</code> 接線測學生，再看 <code>11_score_onboard</code> 第一行的頻率是否約 50 Hz。</li>
 </ol>
 

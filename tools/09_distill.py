@@ -22,7 +22,7 @@ def main() -> int:
     banner("09 蒸餾學生（約 3 分鐘，不需要機台）")
     fts = finetune_runs()
     if not fts:
-        fail("找不到完成的微調段。請先做 Step 2：雙擊 07_finetune。")
+        fail("找不到完成的微調段。請先做 Step 2：執行 07_finetune。")
         return 1
     run = choose("選要蒸餾的微調段（預設是最後一段）：", fts, [d.name for d in fts])
     seed = ask("SEED", "0")
@@ -74,7 +74,7 @@ def main() -> int:
     info(color("  參考：學生接近教師就好（我們建議相差 0.05 以內）。模擬會低估微調過的策略，不要跟絕對數字比。", "dim"))
     print_sensitivity(s_on, s_off)
     ok(f"學生：runs/{label(student)}")
-    info("下一步：雙擊 10_export_weights 匯出權重。不滿意就再雙擊 09_distill，SEED 輸入 1。")
+    info("下一步：執行 10_export_weights 匯出權重。不滿意就再執行 09_distill，SEED 輸入 1。")
     return 0
 
 

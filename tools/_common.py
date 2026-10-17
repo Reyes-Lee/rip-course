@@ -1,4 +1,4 @@
-"""所有雙擊工具共用的小工具：路徑、畫面輸出、提問、選檔案、找序列埠、呼叫 policy/ 的腳本。
+"""所有工具共用的小工具：路徑、畫面輸出、提問、選檔案、找序列埠、呼叫 policy/ 的腳本。
 
 每個工具都由 `tools/<名稱>.command`（macOS）或 `tools/<名稱>.bat`（Windows）啟動，
 兩者只做「切到 repo 根目錄 → uv run --project policy python tools/<名稱>.py」。
@@ -119,7 +119,7 @@ def choose(title: str, items: list, labels: list[str] | None = None, default: in
 
 
 def finish(code: int = 0) -> None:
-    """雙擊開的視窗結束時會直接關掉，所以最後停一下讓人看結果。"""
+    """執行開的視窗結束時會直接關掉，所以最後停一下讓人看結果。"""
     print()
     try:
         input(color("按 Enter 關閉視窗", "dim"))
@@ -233,7 +233,7 @@ def rel(p: Path) -> str:
 
 def need_sysid() -> str:
     if not SYSID_JSON.exists():
-        fail("找不到 policy/sysid_params.json。請先做 Step 0：雙擊 05_sysid。")
+        fail("找不到 policy/sysid_params.json。請先做 Step 0：執行 05_sysid。")
         finish(1)
     return rel(SYSID_JSON)
 

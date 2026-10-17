@@ -6,7 +6,7 @@
   <span class="rip-chip">:material-robot-off-outline: 不需要機台</span>
 </div>
 
-兩個系統的流程完全一樣，只有安裝方式不同。每個工具都有 macOS 的 `.command` 與 Windows 的 `.bat` 兩個入口檔，雙擊後呼叫同一支 Python 腳本。下面每個區塊都可以切換 macOS／Windows，選一次之後整個網站都會記住。
+兩個系統的流程完全一樣，只有安裝方式不同。每個工具都有 macOS 的 `.command` 與 Windows 的 `.bat` 兩個入口檔，執行後呼叫同一支 Python 腳本。下面每個區塊都可以切換 macOS／Windows，選一次之後整個網站都會記住。
 
 ## 1. 安裝軟體
 
@@ -50,7 +50,7 @@
 
 ## 3. 取得課程檔案 { #get-files }
 
-所有檔案（程式、韌體、模型、雙擊工具）都放在助教的 GitHub：[Reyes-Lee/rip-course](https://github.com/Reyes-Lee/rip-course)。用 `git clone` 下載一份到自己的電腦，之後助教更新時用 `git pull` 拿新版。
+所有檔案（程式、韌體、模型、流程工具）都放在助教的 GitHub：[Reyes-Lee/rip-course](https://github.com/Reyes-Lee/rip-course)。用 `git clone` 下載一份到自己的電腦，之後助教更新時用 `git pull` 拿新版。
 
 === ":material-apple: macOS"
 
@@ -78,7 +78,7 @@
 
     在 [GitHub 頁面](https://github.com/Reyes-Lee/rip-course)按綠色的「Code → Download ZIP」，解壓到上面建議的位置，資料夾改名成 `rip-course`。
 
-    - macOS 解壓後要在終端機多跑一行，工具才能雙擊：`chmod +x ~/rip-course/tools/*.command`
+    - macOS 解壓後要在終端機多跑一行，工具才能執行：`chmod +x ~/rip-course/tools/*.command`
     - 缺點：之後助教更新時，要重新下載 ZIP，並把舊資料夾裡的 `policy/runs/`、`policy/sysid_params.json` 搬到新資料夾。用 git 就不用。
 
 ### 助教更新檔案時 { #update }
@@ -101,11 +101,11 @@
 
 看到 `Already up to date.` 代表已經是最新版。如果出現 `error: Your local changes ... would be overwritten`，代表你改過 repo 裡的檔案；把整段訊息截圖給助教，不要自己刪檔案。
 
-## 4. 雙擊 `00_setup` { #setup }
+## 4. 執行 `00_setup` { #setup }
 
 !!! tool "操作步驟"
 
-    1. 打開 repo 裡的 `tools` 資料夾，雙擊 `00_setup`（macOS 點 `00_setup.command`，Windows 點 `00_setup.bat`）。
+    1. 打開 repo 裡的 `tools` 資料夾，執行 `00_setup`（macOS 點 `00_setup.command`，Windows 點 `00_setup.bat`）。
     2. 第一次執行會被系統擋下來時：
         - macOS：在檔案上按右鍵 →「打開」→ 再按「打開」。
         - Windows：SmartScreen 跳出時按「其他資訊 → 仍要執行」。
@@ -121,7 +121,7 @@
     - `torch` 的版本
     - 你的 Nano 序列埠（macOS 是 `/dev/cu.usbserial-xxxx` 或 `/dev/cu.wchusbserial-xxxx`，Windows 是 `COM3`、`COM4`…）
 
-    **沒看到序列埠**：先換一條 USB 線（有些線只能充電），Windows 再確認 CH340 驅動，然後重新雙擊 `00_setup`。
+    **沒看到序列埠**：先換一條 USB 線（有些線只能充電），Windows 再確認 CH340 驅動，然後重新執行 `00_setup`。
 
 ## 課程 repo 的結構
 
@@ -136,7 +136,7 @@ rip-course/
 ├── model/
 │   ├── model.urdf         已更新為 10 元硬幣配重
 │   └── meshes/            作者的 STL（不修改）
-└── tools/           雙擊工具，每個工具都是同名的三個檔
+└── tools/           流程工具，每個工具都是同名的三個檔
     ├── 00_setup.command   00_setup.bat   00_setup.py
     └── …
 ```

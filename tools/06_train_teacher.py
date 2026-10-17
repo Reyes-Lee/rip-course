@@ -98,7 +98,7 @@ def main() -> int:
                      "--resume", f"runs/{name}_stage{stage - 1}/best_model.zip"]
         code, _ = run_policy_script(args)
         if code != 0:
-            fail(f"Stage {stage} 沒有完成（代碼 {code}）。再雙擊 06_train_teacher、輸入同一個名稱就能接續。")
+            fail(f"Stage {stage} 沒有完成（代碼 {code}）。再執行 06_train_teacher、輸入同一個名稱就能接續。")
             return code
         mark_done(run_dir)
         ok(f"Stage {stage} 完成：runs/{run_dir.name}/best_model.zip")
@@ -114,9 +114,9 @@ def run_checks(name: str, params: str) -> int:
     print_sensitivity(on, off)
     info("")
     info(color("下一步：對照網站 Step 1 的檢查點自己判斷。", "yellow"))
-    info(color("  覺得可以 → 進 Step 2，雙擊 07_finetune。", "yellow"))
-    info(color("  想換一支 → 再雙擊 06_train_teacher，run 名稱輸入 v2、SEED 輸入 1。", "yellow"))
-    info("想看策略怎麼動：雙擊 12_view_policy。")
+    info(color("  覺得可以 → 進 Step 2，執行 07_finetune。", "yellow"))
+    info(color("  想換一支 → 再執行 06_train_teacher，run 名稱輸入 v2、SEED 輸入 1。", "yellow"))
+    info("想看策略怎麼動：執行 12_view_policy。")
     return 0
 
 

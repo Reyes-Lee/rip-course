@@ -26,18 +26,6 @@ hide:
 
 </div>
 
-<div class="rip-player" aria-label="範例玩家卡：五個關卡的進度">
-  <div class="rip-player__top">
-    <div class="rip-player__avatar">?</div>
-    <div><div class="rip-player__name">你的機台</div><div class="rip-player__rank">FRESH RECRUIT</div></div>
-  </div>
-  <div class="rip-player__bar"><i></i></div>
-  <div class="rip-player__xp"><span>STAGE 0 / 5</span><span>NEXT：系統識別</span></div>
-  <div class="rip-player__next">先做事前準備 <b>READY?</b></div>
-  <div class="rip-player__loadout">CURRENT LOADOUT<br><span>17HS3401S</span><span>TMC2209</span><span>AS5600</span><span>Nano</span><span>10 元硬幣</span></div>
-  <div class="rip-sticker">50 Hz!</div>
-</div>
-
 </div>
 
 <div class="rip-marquee" aria-hidden="true"><div class="rip-marquee__track"><span>SYSTEM ID</span><span>TRAIN IN SIM</span><span>FINE-TUNE ON THE RIG</span><span>DISTILL TO 16 NEURONS</span><span>FLASH THE NANO</span><span>BALANCE 300 S</span><span>SYSTEM ID</span><span>TRAIN IN SIM</span><span>FINE-TUNE ON THE RIG</span><span>DISTILL TO 16 NEURONS</span><span>FLASH THE NANO</span><span>BALANCE 300 S</span></div></div>
@@ -103,4 +91,4 @@ hide:
 
 ## 來源
 
-整套流程與程式來自作者 ferrolho 的開源專案 [rotary-inverted-pendulum](https://github.com/ferrolho/rotary-inverted-pendulum)（[文件網站](https://ferrolho.github.io/rotary-inverted-pendulum/)，MIT License）。課程只改了硬體相關的常數，並加上一組雙擊就能執行的測試與流程工具。作者的 reward、domain randomization、超參數是本專題的**標準配方**，照作者的實際做法直接沿用。
+整套流程與程式來自作者 ferrolho 的開源專案 [rotary-inverted-pendulum](https://github.com/ferrolho/rotary-inverted-pendulum)（[文件網站](https://ferrolho.github.io/rotary-inverted-pendulum/)，MIT License）。課程只改了硬體相關的常數，並加上一組測試與流程工具。作者的 reward、domain randomization、超參數是本專題的**標準配方**，照作者的實際做法直接沿用。

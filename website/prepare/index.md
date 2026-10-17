@@ -8,7 +8,7 @@
 
     ---
 
-    Arduino IDE、Git、uv，下載課程 repo，雙擊 `00_setup`。
+    Arduino IDE、Git、uv，下載課程 repo，執行 `00_setup`。
 
     [:octicons-arrow-right-24: 安裝環境](install.md)
 
@@ -20,7 +20,7 @@
 
     [:octicons-arrow-right-24: 硬體與上電測試](hardware.md)
 
--   :material-gesture-double-tap:{ .lg .middle } **3. 認識雙擊工具**
+-   :material-console-line:{ .lg .middle } **3. 認識流程工具**
 
     ---
 

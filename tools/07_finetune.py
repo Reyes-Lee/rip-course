@@ -1,4 +1,4 @@
-"""07_finetune：實機非同步微調（作者的 finetune_async.py），每雙擊一次跑一段。
+"""07_finetune：實機非同步微調（作者的 finetune_async.py），每執行一次跑一段。
 
 第一次（ft1）：從你選的教師開始，50 回合。
 之後（ft2、ft3…）：自動從最新一段接續，帶上它的 replay buffer，30 回合。
@@ -30,7 +30,7 @@ def main() -> int:
     if not done:
         ts = teachers()
         if not ts:
-            fail("找不到完成的教師。請先做 Step 1：雙擊 06_train_teacher。")
+            fail("找不到完成的教師。請先做 Step 1：執行 06_train_teacher。")
             return 1
         teacher = choose("選要微調的教師（Step 1 檢查點你判斷最好的那一支）：", ts, [label(t) for t in ts])
         args = ["finetune_async.py", "--policy", rel(teacher), "--episodes", str(FIRST_EPISODES)]
@@ -47,11 +47,11 @@ def main() -> int:
     wait_enter("擺錘靜止垂下、手臂周圍淨空後按 Enter")
     code, _ = run_policy_script([*args, "--port", port, "--run-name", run_dir.name, "--params-path", params])
     if code != 0 or not (run_dir / "best_model.zip").exists() or not (run_dir / "replay_buffer.pkl").exists():
-        fail(f"{run_dir.name} 沒有完成（代碼 {code}）。處理好問題後再雙擊 07_finetune，會重跑這一段。")
+        fail(f"{run_dir.name} 沒有完成（代碼 {code}）。處理好問題後再執行 07_finetune，會重跑這一段。")
         return code or 1
     mark_done(run_dir)
     ok(f"已存：runs/{run_dir.name}/best_model.zip")
-    info("下一步：雙擊 08_test_policy 測 30 秒，再依網站 Step 2 的表決定要不要再加一段。")
+    info("下一步：執行 08_test_policy 測 30 秒，再依網站 Step 2 的表決定要不要再加一段。")
     return 0
 
 

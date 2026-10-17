@@ -25,7 +25,7 @@
 
 !!! tool "操作步驟"
 
-    1. 雙擊 `tools/10_export_weights`。清單預設是最新的學生，直接按 Enter。工具核對 4-1 的表，全部 OK 才匯出到 `firmware/RLControl/policy_weights_student.h`。
+    1. 執行 `tools/10_export_weights`。清單預設是最新的學生，直接按 Enter。工具核對 4-1 的表，全部 OK 才匯出到 `firmware/RLControl/policy_weights_student.h`。
     2. 用 Arduino IDE 開 `firmware/RLControl/RLControl.ino`，按「上傳」。sketch 預設就載入 `policy_weights_student.h`，不用改任何一行。
     3. 看 IDE 下方的編譯訊息：「草稿碼使用了 N 位元組」的 N 必須 ≤ 30720（Old Bootloader 的上限）。超過會上傳失敗，找助教。
     4. 上傳完 Nano 會自動重開。前 1 秒 LED 恆亮，這時擺錘要**靜止垂下**（這個姿勢會被當成編碼器零點），之後它會自己甩上、平衡。
@@ -52,7 +52,7 @@
 
     1. Nano 燒的是 `RLControl`（4-2），Arduino IDE 的序列埠監控已關掉。
     2. 用手把手臂轉回正中間，等擺錘靜止垂下。工具打開 serial 時會讓 Nano 重開並重新標定零點。
-    3. 雙擊 `tools/11_score_onboard`。
+    3. 執行 `tools/11_score_onboard`。
     4. 60 秒內不要碰機台。結束時印出結果，紀錄檔存在 `policy/recordings/onboard_<時間>.npz`。照下面的順序看。
 
 ??? cmd "背後執行的指令"

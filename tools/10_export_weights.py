@@ -31,7 +31,7 @@ def main() -> int:
     banner("10 匯出學生權重（不需要機台）")
     ss = students()
     if not ss:
-        fail("找不到學生。請先做 Step 3：雙擊 09_distill。")
+        fail("找不到學生。請先做 Step 3：執行 09_distill。")
         return 1
     st = choose("選要匯出的學生：", ss, [label(s) for s in ss])
     cfg = find_run_config(st) or {}

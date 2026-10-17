@@ -6,7 +6,7 @@
   <span class="rip-chip">:material-file-outline: 產出 v1_stage3/best_model.zip</span>
 </div>
 
-雙擊 `06_train_teacher` 就會跑完三階段課程，產出一支 256×256 的 SAC 教師策略。
+執行 `06_train_teacher` 就會跑完三階段課程，產出一支 256×256 的 SAC 教師策略。
 
 ## 操作步驟 { #run }
 
@@ -14,7 +14,7 @@
 
     1. 確認 Step 0 已經產生 `policy/sysid_params.json`。
     2. 筆電接上電源、不要闔上蓋子（睡眠會讓訓練中斷）。
-    3. 雙擊 `tools/06_train_teacher`。
+    3. 執行 `tools/06_train_teacher`。
     4. 畫面問 `run 名稱 [v1]:`，第一次直接按 Enter。
     5. 畫面問 `SEED [0]:`，直接按 Enter。
     6. 工具印出設定 header 並自動核對（見[檢查點](#checkpoint)），然後開始訓練。畫面會持續印出進度，約 25 分鐘。
@@ -22,7 +22,7 @@
 
 !!! tip "中途中斷了（關掉視窗、筆電睡眠）"
 
-    再雙擊 `tools/06_train_teacher`，`run 名稱` 輸入**同一個名稱**（例如 `v1`）。工具會顯示 `已完成第 N 階段，從第 N+1 階段接續？[Y/n]`，按 Enter，已完成的階段不會重跑。
+    再執行 `tools/06_train_teacher`，`run 名稱` 輸入**同一個名稱**（例如 `v1`）。工具會顯示 `已完成第 N 階段，從第 N+1 階段接續？[Y/n]`，按 Enter，已完成的階段不會重跑。
 
 ??? cmd "背後執行的指令"
 
@@ -145,9 +145,9 @@ $$
 
 !!! tool "操作步驟"
 
-    1. 雙擊 `tools/12_view_policy`。
+    1. 執行 `tools/12_view_policy`。
     2. 清單列出 `runs/` 裡所有的 `best_model.zip`，輸入要看的那一支的編號；直接按 Enter 是最新的那一支。
-    3. MuJoCo 視窗打開，策略從垂下開始跑 30 秒，結束後視窗自動關閉。想再看一次就重新雙擊。
+    3. MuJoCo 視窗打開，策略從垂下開始跑 30 秒，結束後視窗自動關閉。想再看一次就重新執行。
 
 <div class="grid cards" markdown>
 
@@ -161,13 +161,13 @@ $$
 
     ---
 
-    雙擊兩次：第一次選 `v1_stage1/best_model.zip`，第二次選 `v1_stage3/best_model.zip`，看加入延遲與 DR 後動作有什麼不同。
+    執行兩次：第一次選 `v1_stage1/best_model.zip`，第二次選 `v1_stage3/best_model.zip`，看加入延遲與 DR 後動作有什麼不同。
 
 -   :material-mouse:{ .lg .middle } **操作**
 
     ---
 
-    左鍵拖曳旋轉視角、滾輪縮放。雙擊擺錘選取後，按住 ++ctrl++ 用右鍵拖曳可以推它，看策略怎麼救回來。
+    左鍵拖曳旋轉視角、滾輪縮放。點兩下擺錘選取後，按住 ++ctrl++ 用右鍵拖曳可以推它，看策略怎麼救回來。
 
 -   :material-alert-circle-outline:{ .lg .middle } **別被騙了**
 
@@ -189,7 +189,7 @@ $$
 
 ## 檢查點 { #checkpoint }
 
-`06_train_teacher` 訓練結束時會自動跑下面三項並印出結果；除了設定 header 不符會中止，其餘只印數字，不替你判斷。之後想對任何一支策略重跑，雙擊 `tools/13_check_sim`，從清單選那支策略即可。
+`06_train_teacher` 訓練結束時會自動跑下面三項並印出結果；除了設定 header 不符會中止，其餘只印數字，不替你判斷。之後想對任何一支策略重跑，執行 `tools/13_check_sim`，從清單選那支策略即可。
 
 !!! checkpoint "參考門檻（作者的建議，由你判斷）"
 
@@ -213,7 +213,7 @@ SEED 是亂數種子，決定網路初始權重與探索過程；同一套配方
 
 !!! tool "操作步驟"
 
-    1. 雙擊 `tools/06_train_teacher`。
+    1. 執行 `tools/06_train_teacher`。
     2. `run 名稱 [v1]:` 輸入 `v2`。**不要沿用 v1**，否則工具會把它當成接續舊的那一支。
     3. `SEED [0]:` 輸入 `1`。
     4. 約 25 分鐘後看新的檢查點數字，和前一支比較。

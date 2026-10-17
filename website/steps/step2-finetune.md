@@ -23,14 +23,14 @@
 
     1. 確認 Nano 燒的是 `LowLevelServer`，Arduino IDE 的序列埠監控已關掉。
     2. 擺錘靜止垂下，機台旁邊不要有東西擋到手臂。
-    3. 雙擊 `tools/07_finetune`。
+    3. 執行 `tools/07_finetune`。
     4. 畫面列出 `runs/` 裡所有教師（`*_stage3/best_model.zip`），輸入 [Step 1 檢查點](step1-train.md#checkpoint)通過的那一支的編號；只有一支就直接按 Enter。
     5. 工具開始跑，畫面會顯示目前第幾回合。結束時印出 `已存：runs/ft1/best_model.zip`。
     6. 接著做 [2-3 測試](#test)。
 
 !!! tool "之後每一段（ft2、ft3…，各 30 回合）"
 
-    1. 再雙擊 `tools/07_finetune` 就好。
+    1. 再執行 `tools/07_finetune` 就好。
     2. 工具會自動從最新一段接續（帶上上一段的 replay buffer），不用選。
     3. 跑完一樣接著做 [2-3 測試](#test)。
 
@@ -38,7 +38,7 @@
 
 !!! warning "前幾個回合要聽馬達"
 
-    平順的嗡嗡聲正常；**嘶嘶或磨擦聲代表失步**。立刻在工具視窗按 ++ctrl+c++ 停止（這一段不會存檔），照[疑難排解](../troubleshooting.md)的「馬達嘶嘶聲」處理，再重新雙擊 `07_finetune`，它會重跑這一段。
+    平順的嗡嗡聲正常；**嘶嘶或磨擦聲代表失步**。立刻在工具視窗按 ++ctrl+c++ 停止（這一段不會存檔），照[疑難排解](../troubleshooting.md)的「馬達嘶嘶聲」處理，再重新執行 `07_finetune`，它會重跑這一段。
 
 - 每回合 6 秒；回合之間馬達斷電 15 秒，讓擺錘自己停下來。
 - 控制迴路與 SAC 梯度更新跑在不同執行緒，所以訓練中控制頻率仍嚴格是 50 Hz。
@@ -66,7 +66,7 @@
 !!! tool "每跑完一段微調就測一次"
 
     1. Nano 仍然是 `LowLevelServer`。等擺錘靜止垂下。
-    2. 雙擊 `tools/08_test_policy`。
+    2. 執行 `tools/08_test_policy`。
     3. 清單的預設是最新一段微調（例如 `ft2/best_model.zip`），直接按 Enter。
     4. 策略會從垂下開始甩上、平衡 30 秒。不要碰機台。
     5. 結束時印出誠實指標，紀錄檔存在 `policy/recordings/ft2.npz`。照下表決定下一步。
@@ -87,7 +87,7 @@
 | balanced fraction | 下一步 |
 | --- | --- |
 | ≥ 0.85 | :material-check-circle:{ style="color: var(--rip-green)" } 教師夠穩了。仍照[下一節](#how-long)決定要不要再加一段，然後進 Step 3 |
-| 0.4–0.85 | :material-trending-up:{ style="color: var(--rip-amber)" } 還在進步。再雙擊一次 `07_finetune`（自動加一段 30 回合），然後再跑 `08_test_policy` |
+| 0.4–0.85 | :material-trending-up:{ style="color: var(--rip-amber)" } 還在進步。再執行一次 `07_finetune`（自動加一段 30 回合），然後再跑 `08_test_policy` |
 | < 0.4 | :material-close-circle:{ style="color: var(--rip-red)" } 先停止微調，依序檢查硬體：燒 `EncoderCheck` 跑 `02_check_encoder`；燒 `LowLevelServer` 跑 `04_check_level`。都正常就燒 `LowLevelServer` 重跑 `05_sysid`，對照 [Step 0 檢查點](step0-sysid.md#checkpoint)。仍然沒問題就找助教，帶著 `policy/recordings/` 裡最新的 `.npz` |
 
 ## 要微調多久？比 eval 曲線看起來的更久 { #how-long }
@@ -112,7 +112,7 @@
 
 !!! tool "進 Step 3 前做一次（不需要機台）"
 
-    1. 雙擊 `tools/13_check_sim`。
+    1. 執行 `tools/13_check_sim`。
     2. 清單選最後一段微調（例如 `ft3/best_model.zip`）。
     3. 參考門檻與 [Step 1 檢查點](step1-train.md#checkpoint)相同：關掉韌體量測模型後的 balanced fraction ≥ 0.7 就進 Step 3。
     4. 如果掉到 0.7 以下，代表最後幾段微調讓策略變脆弱。對前一段（例如 `ft2`）再跑一次，用通過的那一段進 Step 3，並告訴助教。

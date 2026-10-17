@@ -252,7 +252,7 @@ def main() -> int:
     if n_fail == 0:
         ok(f"全部 {len(results)} 項 PASS")
     else:
-        fail(f"{n_fail} 項 FAIL。照網站「編碼器測試」的 FAIL 處理表調整後，再雙擊 02_check_encoder。")
+        fail(f"{n_fail} 項 FAIL。照網站「編碼器測試」的 FAIL 處理表調整後，再執行 02_check_encoder。")
     info(f"資料與圖：{out_dir}")
     return 0 if n_fail == 0 else 1
 

@@ -29,7 +29,7 @@ def main() -> int:
     nano, all_ports = list_nano_ports()
     settings = load_settings()
     if not nano:
-        warn("現在找不到 Nano。之後接上再重新雙擊 00_setup 也可以；其他工具也會自己找。")
+        warn("現在找不到 Nano。之後接上再重新執行 00_setup 也可以；其他工具也會自己找。")
         if all_ports:
             info("  目前看得到的序列埠：" + "、".join(p.device for p in all_ports))
         info("  沒看到就換一條 USB 線（有些只能充電）；Windows 再確認 CH340 驅動。")
