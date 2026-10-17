@@ -13,16 +13,27 @@
 !!! tool "蒸餾"
 
     1. 雙擊 `tools/09_distill`。
-    2. 清單的預設是最後一段微調（例如 `<組別>_ft3`），直接按 Enter。如果 [Step 2 的回歸測試](step2-finetune.md#regression)改用了前一段，就輸入那一段的編號。
+    2. 清單的預設是最後一段微調（例如 `ft3`），直接按 Enter。如果 [Step 2 的回歸測試](step2-finetune.md#regression)改用了前一段，就輸入那一段的編號。
     3. `SEED [0]:` 直接按 Enter。
-    4. 約 3 分鐘後，工具印出結果表（見[檢查點](#checkpoint)）。學生存在 `runs/<組別>_ftN/distill_h16_dagger_dev/student.pt`。
+    4. 約 3 分鐘後，工具印出結果表（見[檢查點](#checkpoint)）。學生存在 `runs/ftN/distill_h16_dagger_dev/student.pt`。
 
 ??? cmd "背後執行的指令"
 
+    `09_distill` 是作者 `distill_student.sh` 的 Python 版，等同於 `bash distill_student.sh ft3`：
+
     ```bash
     cd policy
-    ./distill_student.sh <組別>_ft3
+    uv run python distill.py --teacher runs/ft3/best_model.zip \
+        --buffer runs/ft3/replay_buffer.pkl --out-dir runs/ft3/distill_h16_aug \
+        --hidden 16 --epochs 800 --seed 0
+    uv run python dagger_distill.py --teacher runs/ft3/best_model.zip \
+        --bc-dir runs/ft3/distill_h16_aug --out-dir runs/ft3/distill_h16_dagger_dev \
+        --transport device --rounds 5 --steps-per-round 40000 --seed 0
+    uv run python analyze_sim.py runs/ft3/distill_h16_dagger_dev/student.pt --transport device
+    uv run python analyze_sim.py runs/ft3/best_model.zip
     ```
+
+    SEED 不是 0 時，資料夾名稱會多一個後綴，例如 `distill_h16_dagger_dev_s1`。
 
 ## 它在做什麼 { #what }
 
@@ -75,5 +86,5 @@ DAgger gate 要跟教師比、不跟絕對門檻比，是因為模擬會系統�
 
     1. Nano 燒 `LowLevelServer`，等擺錘靜止垂下。
     2. 雙擊 `tools/08_test_policy`。
-    3. 清單輸入 `<組別>_ftN/distill_h16_dagger_dev/student.pt` 那一個的編號。
+    3. 清單輸入 `ftN/distill_h16_dagger_dev/student.pt` 那一個的編號。
     4. 跑 30 秒。學生是為獨立執行最佳化的，接線分數略低於教師是正常的。

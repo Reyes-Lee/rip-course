@@ -1,0 +1,6 @@
+# Windows 的 .bat 一定要 CRLF；macOS 的 .command 一定要 LF
+*.bat     text eol=crlf
+*.command text eol=lf
+*.sh      text eol=lf
+# 模型檔當一般二進位檔提交（不用 Git LFS，學生不需要另外安裝）
+*.stl     binary

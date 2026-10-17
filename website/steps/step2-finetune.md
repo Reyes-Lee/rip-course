@@ -4,7 +4,7 @@
   <span class="rip-chip rip-chip--cyan">:material-clock-outline: 每段 30 回合約 6 分鐘，共 2–4 段</span>
   <span class="rip-chip rip-chip--amber">:material-robot-industrial: 需要機台</span>
   <span class="rip-chip">:material-chip: LowLevelServer</span>
-  <span class="rip-chip">:material-file-outline: 產出 &lt;組別&gt;_ftN/best_model.zip</span>
+  <span class="rip-chip">:material-file-outline: 產出 ftN/best_model.zip</span>
 </div>
 
 模擬訓練的策略第一次上實機不會平衡得好。這一步用 30–90 個真實回合繼續跑 SAC，把模擬沒涵蓋到的動態（傳動細節、實際延遲分布、步進馬達行為）直接學進去。
@@ -25,7 +25,7 @@
     2. 擺錘靜止垂下，機台旁邊不要有東西擋到手臂。
     3. 雙擊 `tools/07_finetune`。
     4. 畫面列出 `runs/` 裡所有教師（`*_stage3/best_model.zip`），輸入 [Step 1 檢查點](step1-train.md#checkpoint)通過的那一支的編號；只有一支就直接按 Enter。
-    5. 工具開始跑，畫面會顯示目前第幾回合。結束時印出 `已存：runs/<組別>_ft1/best_model.zip`。
+    5. 工具開始跑，畫面會顯示目前第幾回合。結束時印出 `已存：runs/ft1/best_model.zip`。
     6. 接著做 [2-3 測試](#test)。
 
 !!! tool "之後每一段（ft2、ft3…，各 30 回合）"
@@ -51,14 +51,14 @@
 
     # 第一段：50 回合
     uv run python finetune_async.py \
-        --policy runs/<組別>_v1_stage3/best_model.zip \
-        --port <PORT> --episodes 50 --run-name <組別>_ft1
+        --policy runs/v1_stage3/best_model.zip \
+        --port <PORT> --episodes 50 --run-name ft1
 
     # 接續段：帶上上一段的 replay buffer
     uv run python finetune_async.py \
-        --policy runs/<組別>_ft1/best_model.zip \
-        --resume-buffer runs/<組別>_ft1/replay_buffer.pkl \
-        --port <PORT> --episodes 30 --run-name <組別>_ft2
+        --policy runs/ft1/best_model.zip \
+        --resume-buffer runs/ft1/replay_buffer.pkl \
+        --port <PORT> --episodes 30 --run-name ft2
     ```
 
 ## 2-3 用 30 秒測試教師 { #test }
@@ -67,17 +67,17 @@
 
     1. Nano 仍然是 `LowLevelServer`。等擺錘靜止垂下。
     2. 雙擊 `tools/08_test_policy`。
-    3. 清單的預設是最新一段微調（例如 `<組別>_ft2/best_model.zip`），直接按 Enter。
+    3. 清單的預設是最新一段微調（例如 `ft2/best_model.zip`），直接按 Enter。
     4. 策略會從垂下開始甩上、平衡 30 秒。不要碰機台。
-    5. 結束時印出誠實指標，紀錄檔存在 `policy/recordings/<組別>_ft2.npz`。照下表決定下一步。
+    5. 結束時印出誠實指標，紀錄檔存在 `policy/recordings/ft2.npz`。照下表決定下一步。
 
 ??? cmd "背後執行的指令"
 
     ```bash
     cd policy
     uv run python run_policy.py \
-        --policy runs/<組別>_ft2/best_model.zip \
-        --port <PORT> --duration-s 30 --log recordings/<組別>_ft2.npz
+        --policy runs/ft2/best_model.zip \
+        --port <PORT> --duration-s 30 --log recordings/ft2.npz
     ```
 
 看結束時印出的 **balanced fraction**：「|θ| ≤ 15° 且 |θ̇| ≤ 2 rad/s」的時間比例。這個定義故意不用策略自己的觀測，因為「是否直立」的檢查可以被一直繞圈騙過。
@@ -88,7 +88,7 @@
 | --- | --- |
 | ≥ 0.85 | :material-check-circle:{ style="color: var(--rip-green)" } 教師夠穩了。仍照[下一節](#how-long)決定要不要再加一段，然後進 Step 3 |
 | 0.4–0.85 | :material-trending-up:{ style="color: var(--rip-amber)" } 還在進步。再雙擊一次 `07_finetune`（自動加一段 30 回合），然後再跑 `08_test_policy` |
-| < 0.4 | :material-close-circle:{ style="color: var(--rip-red)" } 先停止微調，依序檢查硬體：燒 `EncoderCheck` 跑 `02_check_encoder`；燒 `LevelCheck` 跑 `04_check_level`。都正常就燒 `LowLevelServer` 重跑 `05_sysid`，對照 [Step 0 檢查點](step0-sysid.md#checkpoint)。仍然沒問題就找助教，帶著 `policy/recordings/` 裡最新的 `.npz` |
+| < 0.4 | :material-close-circle:{ style="color: var(--rip-red)" } 先停止微調，依序檢查硬體：燒 `EncoderCheck` 跑 `02_check_encoder`；燒 `LowLevelServer` 跑 `04_check_level`。都正常就燒 `LowLevelServer` 重跑 `05_sysid`，對照 [Step 0 檢查點](step0-sysid.md#checkpoint)。仍然沒問題就找助教，帶著 `policy/recordings/` 裡最新的 `.npz` |
 
 ## 要微調多久？比 eval 曲線看起來的更久 { #how-long }
 
@@ -113,6 +113,6 @@
 !!! tool "進 Step 3 前做一次（不需要機台）"
 
     1. 雙擊 `tools/13_check_sim`。
-    2. 清單選最後一段微調（例如 `<組別>_ft3/best_model.zip`）。
+    2. 清單選最後一段微調（例如 `ft3/best_model.zip`）。
     3. 參考門檻與 [Step 1 檢查點](step1-train.md#checkpoint)相同：關掉韌體量測模型後的 balanced fraction ≥ 0.7 就進 Step 3。
-    4. 如果掉到 0.7 以下，代表最後幾段微調讓策略變脆弱。對前一段（例如 `<組別>_ft2`）再跑一次，用通過的那一段進 Step 3，並告訴助教。
+    4. 如果掉到 0.7 以下，代表最後幾段微調讓策略變脆弱。對前一段（例如 `ft2`）再跑一次，用通過的那一段進 Step 3，並告訴助教。

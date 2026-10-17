@@ -3,7 +3,7 @@
 <div class="rip-meta" markdown>
   <span class="rip-chip rip-chip--cyan">:material-clock-outline: 筆電 CPU 約 25 分鐘</span>
   <span class="rip-chip">:material-robot-off-outline: 不需要機台</span>
-  <span class="rip-chip">:material-file-outline: 產出 &lt;組別&gt;_v1_stage3/best_model.zip</span>
+  <span class="rip-chip">:material-file-outline: 產出 v1_stage3/best_model.zip</span>
 </div>
 
 雙擊 `06_train_teacher` 就會跑完三階段課程，產出一支 256×256 的 SAC 教師策略。
@@ -12,27 +12,39 @@
 
 !!! tool "第一次訓練"
 
-    1. 確認 Step 0 已經產生 `policy/sysid_params_<組別>.json`。
+    1. 確認 Step 0 已經產生 `policy/sysid_params.json`。
     2. 筆電接上電源、不要闔上蓋子（睡眠會讓訓練中斷）。
     3. 雙擊 `tools/06_train_teacher`。
-    4. 畫面問 `run 名稱 [<組別>_v1]:`，第一次直接按 Enter。
+    4. 畫面問 `run 名稱 [v1]:`，第一次直接按 Enter。
     5. 畫面問 `SEED [0]:`，直接按 Enter。
     6. 工具印出設定 header 並自動核對（見[檢查點](#checkpoint)），然後開始訓練。畫面會持續印出進度，約 25 分鐘。
     7. 訓練完工具自動跑檢查點並印出數字（見[檢查點](#checkpoint)）。工具不替你判斷，由你對照參考門檻決定下一步。
 
 !!! tip "中途中斷了（關掉視窗、筆電睡眠）"
 
-    再雙擊 `tools/06_train_teacher`，`run 名稱` 輸入**同一個名稱**（例如 `<組別>_v1`）。工具會顯示 `已完成第 N 階段，從第 N+1 階段接續？[Y/n]`，按 Enter，已完成的階段不會重跑。
+    再雙擊 `tools/06_train_teacher`，`run 名稱` 輸入**同一個名稱**（例如 `v1`）。工具會顯示 `已完成第 N 階段，從第 N+1 階段接續？[Y/n]`，按 Enter，已完成的階段不會重跑。
 
 ??? cmd "背後執行的指令"
 
+    `06_train_teacher` 是作者 `curriculum_train.sh` 的 Python 版（Windows 不能直接跑 bash），參數照原腳本的預設值。等同於：
+
     ```bash
     cd policy
-    DEVICE=cpu PARAMS_PATH=sysid_params_<組別>.json \
-        uv run bash curriculum_train.sh <組別>_v1
+    DEVICE=cpu PARAMS_PATH=sysid_params.json bash curriculum_train.sh v1
     ```
 
-    工具固定用 CPU 訓練（`DEVICE=cpu`）：訓練的瓶頸是梯度更新，GPU 幫不上忙。
+    實際上是依序跑三次 `train_sac.py`，例如第 1 階段：
+
+    ```bash
+    uv run python train_sac.py --total-steps 100000 --device cpu \
+        --control-freq 50 --max-accel-rad-s2 150 --action-mode velocity \
+        --max-velocity-rad-s 3.5 --use-sde --obs-history-len 4 \
+        --firmware-obs-model --mirror-augment --action-smooth-window 4 \
+        --dr-obs-staleness-max 0.020 --params-path sysid_params.json \
+        --reward-stillness-bonus-weight 5 --run-name v1_stage1 --seed 0
+    ```
+
+    第 2、3 階段再加上 `--domain-randomization`、延遲範圍，並用 `--resume` 接續前一階段的 `best_model.zip`。工具固定用 CPU 訓練：訓練的瓶頸是梯度更新，GPU 幫不上忙。
 
 ## 模擬訓練在做什麼 { #what }
 
@@ -72,11 +84,11 @@
 
 ## 參數怎麼送進 MuJoCo { #params }
 
-全部自動，不用改任何檔案。`06_train_teacher` 會自動帶上你的 `sysid_params_<組別>.json`；每次建立模擬時，`pendulum_env.py` 的 `build_mjcf()` 會用下表的來源組出 MuJoCo 模型。
+全部自動，不用改任何檔案。`06_train_teacher` 會自動帶上你的 `sysid_params.json`；每次建立模擬時，`pendulum_env.py` 的 `build_mjcf()` 會用下表的來源組出 MuJoCo 模型。
 
 | 參數 | 來源 | 誰負責 |
 | --- | --- | --- |
-| 擺錘鉸鏈的黏滯與庫倫摩擦 | `sysid_params_<組別>.json` | Step 0 量測，自動帶入 |
+| 擺錘鉸鏈的黏滯與庫倫摩擦 | `sysid_params.json` | Step 0 量測，自動帶入 |
 | 擺錘質量、質心、轉動慣量 | `model/model.urdf`（已更新為 10 元外貼） | 助教已改好 |
 | 手臂長度與質量 | `pendulum_env.py` 常數（作者值） | 不用改 |
 | 動作延遲、觀測延遲 | 三階段課程的 DR 範圍（作者實測） | 不用改 |
@@ -149,7 +161,7 @@ $$
 
     ---
 
-    雙擊兩次：第一次選 `<組別>_v1_stage1/best_model.zip`，第二次選 `<組別>_v1_stage3/best_model.zip`，看加入延遲與 DR 後動作有什麼不同。
+    雙擊兩次：第一次選 `v1_stage1/best_model.zip`，第二次選 `v1_stage3/best_model.zip`，看加入延遲與 DR 後動作有什麼不同。
 
 -   :material-mouse:{ .lg .middle } **操作**
 
@@ -171,8 +183,8 @@ $$
 
     ```bash
     cd policy
-    uv run mjpython train_sac.py --eval runs/<組別>_v1_stage3/best_model.zip \
-        --params-path sysid_params_<組別>.json
+    uv run mjpython train_sac.py --eval runs/v1_stage3/best_model.zip \
+        --params-path sysid_params.json
     ```
 
 ## 檢查點 { #checkpoint }
@@ -183,7 +195,7 @@ $$
 
     | 項目 | 工具做什麼 | 參考門檻 |
     | --- | --- | --- |
-    | 設定 header | 訓練開始時核對 4 行設定 | `mirror augmentation: ON`、`obs staleness DR: up to 0.02 s`、`rig sysid: sysid_params_<組別>.json`、`control rate: 50 Hz, max accel: 150` 全部符合；不符工具會中止，請找助教 |
+    | 設定 header | 訓練開始時核對 4 行設定 | `mirror augmentation: ON`、`obs staleness DR: up to 0.02 s`、`rig sysid: sysid_params.json`、`control rate: 50 Hz, max accel: 150` 全部符合；不符工具會中止，請找助教 |
     | 對稱性 | 從垂下的狀態開始，看策略能不能自己甩上 | 從垂下的狀態能自己甩上（工具印出 `從垂下自己甩上：是／否`） |
     | 敏感度關卡 | 在模擬裡各跑 20 回合：開著與關掉韌體量測模型 | 關掉後的 balanced fraction ≥ 0.7 |
 
@@ -202,17 +214,17 @@ SEED 是亂數種子，決定網路初始權重與探索過程；同一套配方
 !!! tool "操作步驟"
 
     1. 雙擊 `tools/06_train_teacher`。
-    2. `run 名稱 [<組別>_v1]:` 輸入 `<組別>_v2`。**不要沿用 v1**，否則工具會把它當成接續舊的那一支。
+    2. `run 名稱 [v1]:` 輸入 `v2`。**不要沿用 v1**，否則工具會把它當成接續舊的那一支。
     3. `SEED [0]:` 輸入 `1`。
     4. 約 25 分鐘後看新的檢查點數字，和前一支比較。
-    5. 還是不理想，再用 `<組別>_v3`、SEED `2`。連續三支都低於 0.3 就找助教，通常是 Step 0 的問題。
-    6. Step 2 選教師時，選你判斷最好的那一支（例如 `<組別>_v2_stage3`）。
+    5. 還是不理想，再用 `v3`、SEED `2`。連續三支都低於 0.3 就找助教，通常是 Step 0 的問題。
+    6. Step 2 選教師時，選你判斷最好的那一支（例如 `v2_stage3`）。
 
 ??? cmd "檢查點背後執行的指令"
 
     ```bash
     cd policy
-    uv run python analyze_symmetry.py runs/<組別>_v1_stage3/best_model.zip
-    uv run python analyze_sim.py runs/<組別>_v1_stage3/best_model.zip --episodes 20
-    uv run python analyze_sim.py runs/<組別>_v1_stage3/best_model.zip --episodes 20 --no-firmware-obs-model
+    uv run python analyze_symmetry.py runs/v1_stage3/best_model.zip
+    uv run python analyze_sim.py runs/v1_stage3/best_model.zip --episodes 20
+    uv run python analyze_sim.py runs/v1_stage3/best_model.zip --episodes 20 --no-firmware-obs-model
     ```

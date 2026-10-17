@@ -3,11 +3,11 @@
 <div class="rip-meta" markdown>
   <span class="rip-chip rip-chip--cyan">:material-clock-outline: 約 15 分鐘</span>
   <span class="rip-chip rip-chip--amber">:material-robot-industrial: 需要機台</span>
-  <span class="rip-chip">:material-chip: LevelCheck → LowLevelServer</span>
-  <span class="rip-chip">:material-file-outline: 產出 sysid_params_&lt;組別&gt;.json</span>
+  <span class="rip-chip">:material-chip: LowLevelServer</span>
+  <span class="rip-chip">:material-file-outline: 產出 sysid_params.json</span>
 </div>
 
-這一步把模擬釘在你那台機台上：量出擺錘鉸鏈的黏滯與庫倫摩擦，寫成 `sysid_params_<組別>.json`。質量、質心、轉動慣量是零件的幾何性質，直接從 URDF 讀，**不在這一步量**。
+這一步把模擬釘在你那台機台上：量出擺錘鉸鏈的黏滯與庫倫摩擦，寫成 `sysid_params.json`。質量、質心、轉動慣量是零件的幾何性質，直接從 URDF 讀，**不在這一步量**。
 
 ## 0-1 放在水平桌面並確認傾斜 { #level }
 
@@ -17,16 +17,28 @@
 
 傾斜會讓「真正的直立」隨手臂角度改變。作者的訓練只涵蓋 0–1° 的傾斜，超過就是超出訓練分布。助教的舊機台量到 5–11°，結果手臂會一直往同一個方向飄。
 
+工具用擺錘當鉛錘：擺錘只能在垂直於手臂的平面擺，底座傾斜時，手臂轉到不同角度，擺錘靜止的位置會跟著偏。手臂走 9 個角度量一圈，就能算出傾斜的大小和方向。
+
 !!! tool "操作步驟"
 
-    1. 用 Arduino IDE 上傳 `LevelCheck`，關掉序列埠監控。
-    2. 雙擊 `tools/04_check_level`。
-    3. 手臂會自動走 9 個角度（−120° 到 +120°），每點靜置 4 秒量擺錘靜止角。這段時間不要碰機台。
-    4. 約 50 秒後印出傾斜大小、方向、該墊哪一角。
+    1. 用 Arduino IDE 上傳 `LowLevelServer`，關掉序列埠監控。
+    2. 用手把手臂轉到正中間（正前方），讓擺錘靜止垂下。
+    3. 雙擊 `tools/04_check_level`，按 Enter。Nano 會重開約 2 秒，這段時間不要碰擺錘。
+    4. 手臂自動走 9 個角度（−120° 到 +120°，每 30° 一點），每點停 5 秒量擺錘的平均位置。約 1 分鐘，不要碰機台。
+    5. 印出傾斜大小。
 
 !!! checkpoint "通過條件：傾斜 < 1°"
 
-    正常應該直接小於 1°。超過的話，先換一張桌子或確認四角著地，再依工具指示墊高那一角，重新雙擊 `04_check_level`，重複到 **傾斜 < 1°**。
+    印出 `PASS` 就完成了。
+
+    **FAIL 時**，手臂會自己轉過去**指著比較低的那一側**（低的那一側在機台後方、轉不過去時，畫面會說改成指著高的那一側）：
+
+    1. 先換一張桌子，或確認四角都著地。
+    2. 還是 FAIL，就照畫面說的那一側，在那一側的腳下墊紙片或薄墊片。
+    3. 按 Enter 讓手臂轉回中間，再雙擊 `04_check_level` 重測，重複到 **傾斜 < 1°**。
+    4. 如果墊了之後傾斜反而變大，代表方向判斷相反，請告訴助教。
+
+    畫面也會印「擬合殘差」。殘差超過 0.8° 代表量測時機台被碰到或桌面在晃，請重測。
 
 ## 0-2 擺錘配重與幾何：要量什麼？ { #geometry }
 
@@ -83,7 +95,7 @@
 
     ```bash
     cd policy
-    uv run python sysid_wizard.py --port <PORT> --out-json sysid_params_<組別>.json
+    uv run python sysid_wizard.py --port <PORT> --out-json sysid_params.json
     ```
 
 ## 檢查點 { #checkpoint }
@@ -110,7 +122,7 @@
 
     ```bash
     cd policy
-    uv run python sysid_wizard.py fit --in-dir sysid_runs/<時間> --out-json sysid_params_<組別>.json
+    uv run python sysid_wizard.py fit --in-dir sysid_runs/<時間> --out-json sysid_params.json
     ```
 
 !!! warning "機構改過就要重量"

@@ -30,6 +30,8 @@ git clone https://github.com/Reyes-Lee/rip-course.git
 
 下載後照網站的[安裝環境](https://reyes-lee.github.io/rip-course/prepare/install/)，雙擊 `tools/00_setup` 開始。
 
+助教更新檔案後，在 `rip-course` 資料夾執行 `git pull` 就能拿到新版。你自己產生的訓練結果、sysid 檔都不在 repo 裡，更新不會蓋掉。
+
 ## 流程
 
 ```mermaid

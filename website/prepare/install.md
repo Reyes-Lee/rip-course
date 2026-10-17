@@ -46,35 +46,60 @@
 2. 選單「工具 → 開發板」選 **Arduino Nano**。
 3. 「工具 → 處理器」選 **ATmega328P (Old Bootloader)**。選錯會上傳逾時，看起來像線壞了。
 4. 「工具 → 連接埠」選 Nano 對應的那個。
-5. 「工具 → 管理程式庫」，搜尋並安裝 **AS5600**（作者 Rob Tillaart）與 **FastAccelStepper**。
+5. 「工具 → 管理程式庫」，搜尋並安裝三個程式庫：**AS5600**（作者 Rob Tillaart）、**FastAccelStepper**、**AccelStepper**（`TestMotor` 用）。
 
-## 3. 下載課程 repo
+## 3. 取得課程檔案 { #get-files }
+
+所有檔案（程式、韌體、模型、雙擊工具）都放在助教的 GitHub：[Reyes-Lee/rip-course](https://github.com/Reyes-Lee/rip-course)。用 `git clone` 下載一份到自己的電腦，之後助教更新時用 `git pull` 拿新版。
 
 === ":material-apple: macOS"
 
-    放在家目錄，**不要放在有 iCloud 同步的「桌面」或「文件」**。在終端機執行：
+    放在家目錄，**不要放在有 iCloud 同步的「桌面」或「文件」**。打開「終端機」，執行：
 
     ```bash
     cd ~
-    git clone https://github.com/Reyes-Lee/rip-course.git rip-course
+    git clone https://github.com/Reyes-Lee/rip-course.git
     ```
 
-    也可以在 GitHub 頁面按「Code → Download ZIP」解壓到 `~/rip-course`，但之後要在終端機多跑一行，讓工具可以雙擊：
+    完成後會多出 `~/rip-course` 資料夾。在 Finder 按 ++cmd+shift+g++，輸入 `~/rip-course` 就能打開。
+
+=== ":material-microsoft-windows: Windows"
+
+    路徑**不要有中文或空格**，建議放在 `C:\rip-course`。打開 PowerShell，執行：
+
+    ```powershell
+    cd C:\
+    git clone https://github.com/Reyes-Lee/rip-course.git
+    ```
+
+    完成後會多出 `C:\rip-course` 資料夾。
+
+??? info "不想用 git：下載 ZIP"
+
+    在 [GitHub 頁面](https://github.com/Reyes-Lee/rip-course)按綠色的「Code → Download ZIP」，解壓到上面建議的位置，資料夾改名成 `rip-course`。
+
+    - macOS 解壓後要在終端機多跑一行，工具才能雙擊：`chmod +x ~/rip-course/tools/*.command`
+    - 缺點：之後助教更新時，要重新下載 ZIP，並把舊資料夾裡的 `policy/runs/`、`policy/sysid_params.json` 搬到新資料夾。用 git 就不用。
+
+### 助教更新檔案時 { #update }
+
+助教在課堂或公告說「有更新」時，照下面做。你自己產生的檔案（訓練結果、sysid、紀錄檔）不在 repo 裡，**更新不會蓋掉它們**。
+
+=== ":material-apple: macOS"
 
     ```bash
-    chmod +x ~/rip-course/tools/*.command
+    cd ~/rip-course
+    git pull
     ```
 
 === ":material-microsoft-windows: Windows"
 
-    路徑**不要有中文或空格**，建議 `C:\rip-course`。在 PowerShell 執行：
-
     ```powershell
-    cd C:\
-    git clone https://github.com/Reyes-Lee/rip-course.git rip-course
+    cd C:\rip-course
+    git pull
     ```
 
-    也可以在 GitHub 頁面按「Code → Download ZIP」，解壓到 `C:\rip-course`。
+看到 `Already up to date.` 代表已經是最新版。如果出現 `error: Your local changes ... would be overwritten`，代表你改過 repo 裡的檔案；把整段訊息截圖給助教，不要自己刪檔案。
 
 ## 4. 雙擊 `00_setup` { #setup }
 
@@ -85,8 +110,7 @@
         - macOS：在檔案上按右鍵 →「打開」→ 再按「打開」。
         - Windows：SmartScreen 跳出時按「其他資訊 → 仍要執行」。
     3. uv 會自動下載 Python 3.13、PyTorch、MuJoCo 等套件。第一次要幾分鐘到十幾分鐘，畫面會持續跑進度。
-    4. 畫面問 `組別名稱:` 時，輸入助教給的組別代號（例如 `g3`），按 Enter。之後所有工具都會用這個名稱命名檔案。
-    5. 畫面列出偵測到的 Nano 序列埠；只有一個就直接按 Enter，有多個就輸入編號。
+    4. 畫面列出偵測到的 Nano 序列埠；只有一個就直接按 Enter，有多個就輸入編號。
 
 !!! checkpoint "通過條件"
 
@@ -104,11 +128,9 @@
 ```text
 rip-course/
 ├── firmware/        用 Arduino IDE 開啟、上傳
-│   ├── TestHeartbeat/  TestMotor/  TestSerial/
-│   ├── EncoderCheck/      磁場強度與對心測試
-│   ├── MotorStepCheck/    高加速度失步測試
-│   ├── LevelCheck/        底座傾斜測量
-│   ├── LowLevelServer/    接線模式（sysid、微調、測試）
+│   ├── TestHeartbeat/  TestMotor/  TestSerial/   作者的上電測試
+│   ├── EncoderCheck/      磁場強度與對心測試（課程新增）
+│   ├── LowLevelServer/    接線模式：失步、傾斜、sysid、微調、測試都用它
 │   └── RLControl/         獨立執行的策略
 ├── policy/          Python：模擬、訓練、sysid、蒸餾（來自作者）
 ├── model/
@@ -118,3 +140,13 @@ rip-course/
     ├── 00_setup.command   00_setup.bat   00_setup.py
     └── …
 ```
+
+你執行工具後產生的檔案都在 `policy/` 底下，不會進 repo：
+
+| 檔案 | 哪一步產生 |
+| --- | --- |
+| `policy/sysid_params.json` | Step 0 |
+| `policy/runs/v1_stage1…3/` | Step 1 |
+| `policy/runs/ft1/`、`ft2/`… | Step 2 |
+| `policy/runs/ftN/distill_h16_dagger_dev/student.pt` | Step 3 |
+| `policy/recordings/*.npz` | Step 2–4 的測試紀錄 |

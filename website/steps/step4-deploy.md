@@ -35,9 +35,9 @@
     ```bash
     cd policy
     uv run python export_weights.py \
-        --student runs/<組別>_ft3/distill_h16_dagger_dev/student.pt \
+        --student runs/ft3/distill_h16_dagger_dev/student.pt \
         --header  ../firmware/RLControl/policy_weights_student.h \
-        --source-name <組別>_ft3/distill_h16_dagger_dev
+        --source-name ft3/distill_h16_dagger_dev
     ```
 
 !!! warning "手臂轉太遠會自動斷電"
@@ -53,14 +53,14 @@
     1. Nano 燒的是 `RLControl`（4-2），Arduino IDE 的序列埠監控已關掉。
     2. 用手把手臂轉回正中間，等擺錘靜止垂下。工具打開 serial 時會讓 Nano 重開並重新標定零點。
     3. 雙擊 `tools/11_score_onboard`。
-    4. 60 秒內不要碰機台。結束時印出結果，紀錄檔存在 `policy/recordings/onboard_<組別>.npz`。照下面的順序看。
+    4. 60 秒內不要碰機台。結束時印出結果，紀錄檔存在 `policy/recordings/onboard_<時間>.npz`。照下面的順序看。
 
 ??? cmd "背後執行的指令"
 
     ```bash
     cd policy
     uv run python analyze_onboard.py --port <PORT> --duration-s 60 \
-        --log recordings/onboard_<組別>.npz
+        --log recordings/onboard_<時間>.npz
     ```
 
 !!! checkpoint "照這個順序看結果"
