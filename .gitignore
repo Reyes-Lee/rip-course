@@ -1,0 +1,12 @@
+# 網站建置輸出
+site/
+# macOS
+.DS_Store
+# Python
+__pycache__/
+.venv/
+
+# 助教內部文件（放在 ~/rip-course-ta，不要進 repo）
+CLAUDE.md
+CLAUDE.local.md
+docs/

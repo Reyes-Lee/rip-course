@@ -1,0 +1,123 @@
+site_name: RL 旋轉倒單擺 Sim2Real
+site_description: AI 概論課程專題：從系統識別、模擬訓練、實機微調、蒸餾到燒進 Arduino Nano 的完整流程。
+site_author: AI 概論課程助教
+# 部署到 GitHub Pages 後改成實際網址，例如 https://<帳號>.github.io/rip-course/
+site_url: https://reyes-lee.github.io/rip-course/
+repo_name: rip-course
+repo_url: https://github.com/Reyes-Lee/rip-course
+docs_dir: website
+copyright: >-
+  課程整理自 <a href="https://github.com/ferrolho/rotary-inverted-pendulum">ferrolho/rotary-inverted-pendulum</a>（MIT License）
+
+theme:
+  name: material
+  language: zh-TW
+  custom_dir: website/overrides
+  font:
+    text: Noto Sans TC
+    code: JetBrains Mono
+  icon:
+    logo: material/water
+    repo: fontawesome/brands/github
+  favicon: assets/favicon.svg
+  palette:
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: 切換到淺色模式
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: 切換到深色模式
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.footer
+    - navigation.top
+    - navigation.indexes
+    - toc.follow
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - content.tooltips
+
+plugins:
+  - search:
+      separator: '[\s​\-_,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: "#"
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+extra_css:
+  - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css
+  - assets/extra.css
+extra_javascript:
+  - assets/katex-init.js
+  - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js
+  - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js
+extra:
+  generator: false
+
+nav:
+  - 首頁: index.md
+  - 事前準備:
+      - prepare/index.md
+      - 安裝環境: prepare/install.md
+      - 硬體與上電測試: prepare/hardware.md
+      - 工具一覽: prepare/tools.md
+  - 五個步驟:
+      - steps/index.md
+      - "Step 0 系統識別": steps/step0-sysid.md
+      - "Step 1 模擬訓練": steps/step1-train.md
+      - "Step 2 實機微調": steps/step2-finetune.md
+      - "Step 3 蒸餾": steps/step3-distill.md
+      - "Step 4 燒錄與評分": steps/step4-deploy.md
+  - 原理:
+      - sim2real 理論: theory.md
+  - 疑難排解: troubleshooting.md
+  - 參考資料: references.md
