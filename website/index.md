@@ -26,6 +26,11 @@ hide:
 
 </div>
 
+<div class="rip-hero__art rip-rig" role="img" aria-label="旋轉倒單擺的 3D 模型：擺錘從垂下甩上、平衡，再放手。可以用滑鼠拖曳旋轉。">
+  <div class="rip-rig__hud" data-mode="hang"><b>READY</b><span>θ  180.0°</span></div>
+  <div class="rip-rig__tag">SIM TWIN · 拖曳旋轉</div>
+</div>
+
 </div>
 
 <div class="rip-marquee" aria-hidden="true"><div class="rip-marquee__track"><span>SYSTEM ID</span><span>TRAIN IN SIM</span><span>FINE-TUNE ON THE RIG</span><span>DISTILL TO 16 NEURONS</span><span>FLASH THE NANO</span><span>BALANCE 300 S</span><span>SYSTEM ID</span><span>TRAIN IN SIM</span><span>FINE-TUNE ON THE RIG</span><span>DISTILL TO 16 NEURONS</span><span>FLASH THE NANO</span><span>BALANCE 300 S</span></div></div>

@@ -783,3 +783,73 @@ body, .md-main {
 /* 首頁 hero：右側沒有模型時改成單欄 */
 .rip-hero:not(:has(.rip-hero__art)) { grid-template-columns: 1fr; }
 .rip-hero:not(:has(.rip-hero__art)) .rip-hero__lead { max-width: 40em; }
+
+/* ---------- 首頁 3D 機台 ---------- */
+.rip-rig {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-width: 480px;
+  justify-self: center;
+  border-radius: 22px;
+  overflow: hidden;
+  isolation: isolate;
+  /* 載入前先顯示 Blender 算圖 */
+  background: url("models/pendulum_rig_poster.jpg") center / cover no-repeat;
+}
+.rip-rig::before {
+  /* 放射狀光芒，像遊戲角色介紹頁 */
+  content: "";
+  position: absolute;
+  inset: -40%;
+  z-index: -1;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 46, 136, .16) 0deg 9deg, transparent 9deg 22deg);
+  -webkit-mask: radial-gradient(circle, #000 18%, transparent 62%);
+          mask: radial-gradient(circle, #000 18%, transparent 62%);
+  animation: rip-spin 60s linear infinite;
+  opacity: 0;
+  transition: opacity .6s;
+}
+.rip-rig.is-ready { background: radial-gradient(circle at 50% 55%, rgba(255, 210, 63, .10), transparent 60%); }
+.rip-rig.is-ready::before { opacity: 1; }
+@keyframes rip-spin { to { transform: rotate(360deg); } }
+.rip-rig__canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: pan-y; }
+.rip-rig__canvas:active { cursor: grabbing; }
+.rip-rig__hud {
+  position: absolute;
+  left: .9rem; top: .9rem;
+  z-index: 2;
+  display: flex; flex-direction: column; gap: .15rem;
+  padding: .45rem .7rem;
+  border-radius: 10px;
+  border: 2px solid var(--rip-ink-shadow);
+  background: var(--rip-yellow);
+  color: var(--rip-on-yellow);
+  box-shadow: 3px 3px 0 var(--rip-pink);
+  font-family: "Anton", sans-serif;
+  letter-spacing: .08em;
+  font-size: .78rem;
+  line-height: 1.1;
+  opacity: 0;
+  transition: opacity .4s;
+  pointer-events: none;
+}
+.rip-rig__hud span { font-family: var(--md-code-font-family); font-size: .64rem; letter-spacing: 0; white-space: pre; }
+.rip-rig__hud[data-mode="swing"] { background: var(--rip-cyan); }
+.rip-rig__hud[data-mode="balance"] { background: var(--rip-lime); }
+.rip-rig__hud[data-mode="drop"] { background: #fff; }
+.rip-rig.is-ready .rip-rig__hud { opacity: 1; }
+.rip-rig__tag {
+  position: absolute;
+  right: .9rem; bottom: .8rem;
+  z-index: 2;
+  font-family: "Anton", sans-serif;
+  font-size: .62rem;
+  letter-spacing: .14em;
+  color: var(--rip-muted);
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) { .rip-rig::before { animation: none; } }
+@media screen and (max-width: 44.9375em) {
+  .rip-rig { max-width: 340px; }
+}
