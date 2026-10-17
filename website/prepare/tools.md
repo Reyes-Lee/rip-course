@@ -8,7 +8,6 @@ Nano 用 USB 接上、燒好對應的韌體，再執行工具，就會由 Python
 | `01_check_serial` | TestSerial | 量 serial 來回延遲 | [上電測試](hardware.md#power-on) |
 | `02_check_encoder` | EncoderCheck | 磁場強度、對心、轉圈連續性，逐項 PASS/FAIL | [上電測試、每次開工](hardware.md#encoder) |
 | `03_check_motor` | LowLevelServer | 加速度逐級升到 150 rad/s²，檢查失步 | [上電測試](hardware.md#power-on) |
-| `04_check_level` | LowLevelServer | 量底座傾斜與該墊哪一角 | [Step 0](../steps/step0-sysid.md) |
 | `05_sysid` | LowLevelServer | 系統識別精靈 | [Step 0](../steps/step0-sysid.md) |
 | `06_train_teacher` | — | 三階段模擬訓練＋印出檢查點數字 | [Step 1](../steps/step1-train.md) |
 | `07_finetune` | LowLevelServer | 實機微調，自動接續上一段 | [Step 2](../steps/step2-finetune.md) |

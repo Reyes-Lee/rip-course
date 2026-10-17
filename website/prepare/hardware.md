@@ -7,17 +7,27 @@
 
 ## 貼上配重硬幣 { #coin }
 
-擺錘尖端要貼一枚新台幣 10 元硬幣當配重，位置對齊作者原本嵌硬幣的地方。作者把英國 2p 硬幣（7.12 g）在列印時封進擺錘裡；我們的擺錘印好時硬幣槽是空的，所以改貼在外側。**10 元硬幣（7.5 g、Ø26.0 × 1.87 mm）只比 2p 重 5%，可以直接用。**
+擺錘大頭（圓盤）那一端要貼一枚新台幣 10 元硬幣當配重，位置對齊作者原本嵌硬幣的地方。作者把英國 2p 硬幣（7.12 g）在列印時封進擺錘裡；我們的擺錘印好時硬幣槽是空的，所以改貼在外側。**10 元硬幣（7.5 g、Ø26.0 × 1.87 mm）只比 2p 重 5%，可以直接用。**
 
 <figure class="rip-figure">
-<svg viewBox="0 0 520 330" role="img" aria-label="擺錘正面圖：硬幣中心距鉸鏈軸心 64 mm，下緣距底端 3 mm，左右各留 3 mm">
-  <!-- 擺錘本體：寬 32 mm、鉸鏈上方 9 mm、下方 80 mm；1 mm = 3.3 px -->
-  <rect x="150" y="20" width="106" height="294" rx="10" class="rip-svg-part" stroke-width="1.5"/>
-  <!-- 鉸鏈 -->
+<svg viewBox="0 0 540 340" role="img" aria-label="擺錘正面圖：硬幣貼在擺錘末端的大圓盤上，與圓盤同心，中心距鉸鏈軸心 64 mm，四周各留 3 mm">
+  <!-- 擺錘外形取自 3D 模型：鉸鏈圓頭 R9、桿寬 10、末端圓盤 Ø32（圓心距鉸鏈 64 mm）；1 mm = 3.3 px -->
+  <!-- 先畫加粗的外框，再蓋上同形狀的填色，只留下外輪廓 -->
+  <g style="stroke: var(--md-default-fg-color--light); stroke-width: 3; fill: var(--md-default-fg-color--light)">
+    <circle cx="203" cy="50" r="30"/>
+    <rect x="186.5" y="50" width="33" height="190"/>
+    <circle cx="203" cy="261" r="53"/>
+  </g>
+  <g style="fill: var(--rip-surface-2)">
+    <circle cx="203" cy="50" r="30"/>
+    <rect x="186.5" y="50" width="33" height="190"/>
+    <circle cx="203" cy="261" r="53"/>
+  </g>
+  <!-- 鉸鏈軸心 -->
   <circle cx="203" cy="50" r="9" fill="none" class="rip-svg-line" stroke-width="2"/>
   <circle cx="203" cy="50" r="2.5" class="rip-svg-text"/>
-  <!-- 硬幣：Ø26 mm，中心在鉸鏈下方 64 mm -->
-  <circle cx="203" cy="261" r="43" class="rip-svg-amber" opacity=".92"/>
+  <!-- 硬幣：Ø26 mm，與圓盤同心 -->
+  <circle cx="203" cy="261" r="43" class="rip-svg-amber" opacity=".95"/>
   <circle cx="203" cy="261" r="35" fill="none" stroke="#7a4b03" stroke-width="1" opacity=".6"/>
   <text x="203" y="268" text-anchor="middle" font-size="20" font-weight="800" fill="#5a3a02">10</text>
   <!-- 64 mm 標註 -->
@@ -28,31 +38,30 @@
   <polygon points="120,261 115,251 125,251" fill="var(--rip-cyan)"/>
   <text x="104" y="160" text-anchor="end" font-size="15" font-weight="700" class="rip-svg-text">64 mm</text>
   <text x="104" y="178" text-anchor="end" font-size="11" class="rip-svg-muted">鉸鏈軸心 → 硬幣中心</text>
-  <!-- 3 mm 底部 -->
-  <line x1="290" y1="304" x2="290" y2="314" class="rip-svg-cyan" stroke-width="1.5"/>
-  <line x1="246" y1="304" x2="296" y2="304" class="rip-svg-cyan" stroke-width="1" stroke-dasharray="3 3"/>
-  <line x1="256" y1="314" x2="296" y2="314" class="rip-svg-cyan" stroke-width="1" stroke-dasharray="3 3"/>
-  <text x="304" y="314" font-size="13" font-weight="700" class="rip-svg-text">下緣距底端 3 mm</text>
-  <!-- 3 mm 左右 -->
-  <text x="304" y="244" font-size="13" font-weight="700" class="rip-svg-text">左右各留 3 mm</text>
-  <line x1="246" y1="261" x2="300" y2="248" class="rip-svg-line" stroke-width="1"/>
+  <!-- 四周 3 mm：硬幣邊到圓盤邊 -->
+  <line x1="246" y1="261" x2="256" y2="261" class="rip-svg-cyan" stroke-width="2"/>
+  <line x1="256" y1="261" x2="300" y2="282" class="rip-svg-line" stroke-width="1"/>
+  <text x="306" y="282" font-size="13" font-weight="700" class="rip-svg-text">四周各留 3 mm</text>
+  <text x="306" y="300" font-size="11" class="rip-svg-muted">硬幣邊緣到圓盤邊緣</text>
   <!-- 說明 -->
-  <text x="304" y="60" font-size="13" font-weight="700" class="rip-svg-text">貼在外側面</text>
-  <text x="304" y="80" font-size="11" class="rip-svg-muted">遠離馬達、沒有凸出軸套的那一面</text>
-  <text x="304" y="120" font-size="13" font-weight="700" class="rip-svg-text">新台幣 10 元</text>
-  <text x="304" y="140" font-size="11" class="rip-svg-muted">7.5 g · Ø26.0 × 1.87 mm</text>
-  <text x="304" y="180" font-size="13" font-weight="700" class="rip-svg-text">擺錘寬 32 mm</text>
-  <text x="304" y="200" font-size="11" class="rip-svg-muted">鉸鏈下方長 80 mm</text>
+  <text x="306" y="56" font-size="13" font-weight="700" class="rip-svg-text">鉸鏈端（小圓頭）</text>
+  <text x="306" y="74" font-size="11" class="rip-svg-muted">裝在手臂上，不貼硬幣</text>
+  <text x="306" y="130" font-size="13" font-weight="700" class="rip-svg-text">貼在外側面</text>
+  <text x="306" y="148" font-size="11" class="rip-svg-muted">遠離馬達、沒有凸出軸套的那一面</text>
+  <text x="306" y="208" font-size="13" font-weight="700" class="rip-svg-text">大頭圓盤 Ø32 mm</text>
+  <text x="306" y="226" font-size="11" class="rip-svg-muted">新台幣 10 元貼在這裡，與圓盤同心</text>
+  <text x="306" y="242" font-size="11" class="rip-svg-muted">7.5 g · Ø26.0 × 1.87 mm</text>
 </svg>
-<figcaption>配重硬幣位置（尺寸依作者 pendulum.stl）</figcaption>
+<figcaption>配重硬幣位置：貼在擺錘大頭（圓盤）那一端</figcaption>
 </figure>
 
 !!! tool "操作步驟"
 
-    1. 確認要貼的是**外側面**：遠離馬達、沒有凸出軸套的那一面。
-    2. 用尺量位置：硬幣下緣距擺錘底端 3 mm，左右各留 3 mm。這樣硬幣中心就在距鉸鏈軸心 **64 mm** 的地方。
-    3. 用薄的強力雙面膠或少量瞬間膠，貼平、貼正。
-    4. 用手搖搖看，硬幣不能動。
+    1. 找到擺錘**大頭（圓盤）那一端**，硬幣就貼在這裡；另一端的小圓頭是裝在手臂上的鉸鏈。
+    2. 確認要貼的是**外側面**：遠離馬達、沒有凸出軸套的那一面。
+    3. 硬幣放在圓盤正中間，跟圓盤同心：四周到圓盤邊緣都留約 3 mm。這樣硬幣中心就在距鉸鏈軸心 **64 mm** 的地方。
+    4. 用薄的強力雙面膠或少量瞬間膠，貼平、貼正。
+    5. 用手搖搖看，硬幣不能動。
 
 !!! warning "一定要貼牢"
 
@@ -143,6 +152,6 @@ AS5600 讀的是磁場方向，整套系統對擺錘角度的所有認知都來�
 | Bootloader | 新版 | Old Bootloader | IDE 處理器選 Old Bootloader；flash 上限 30720 bytes |
 | 擺錘配重 | 英國 2p 硬幣，列印時嵌入 | 新台幣 10 元，貼在外側 | `model/model.urdf` 已更新 |
 | 擺臂 | 列印擺臂 | 同作者 STL 列印 | `pendulum_env.py` 的 `ARM_*` 沿用作者值 |
-| 底座 | 作者列印外殼 | v5 壓克力三層底座 | 要放在水平桌面，傾斜 < 1°（Step 0 第一步） |
+| 底座 | 作者列印外殼 | v5 壓克力三層底座 | 已經調平，放在水平的桌面上即可 |
 
 接線與作者相同：STEP→D9、DIR→D2、ENABLE→D5、AS5600 SDA/SCL→A4/A5。12 V 供電並聯 100 µF。

@@ -794,8 +794,6 @@ body, .md-main {
   border-radius: 22px;
   overflow: hidden;
   isolation: isolate;
-  /* 載入前先顯示 Blender 算圖 */
-  background: url("models/pendulum_rig_poster.jpg") center / cover no-repeat;
 }
 .rip-rig::before {
   /* 放射狀光芒，像遊戲角色介紹頁 */

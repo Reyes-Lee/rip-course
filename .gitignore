@@ -19,7 +19,6 @@ policy/encoder_runs/
 policy/accel_step_runs/
 policy/accel_lag_moving_runs/
 policy/sysid_params.json
-policy/level_check_last.npz
 policy/MUJOCO_LOG.TXT
 MUJOCO_LOG.TXT
 tools/.settings.json

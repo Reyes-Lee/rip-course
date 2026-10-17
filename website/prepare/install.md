@@ -130,7 +130,7 @@ rip-course/
 ├── firmware/        用 Arduino IDE 開啟、上傳
 │   ├── TestHeartbeat/  TestMotor/  TestSerial/   作者的上電測試
 │   ├── EncoderCheck/      磁場強度與對心測試（課程新增）
-│   ├── LowLevelServer/    接線模式：失步、傾斜、sysid、微調、測試都用它
+│   ├── LowLevelServer/    接線模式：失步測試、sysid、微調、測試都用它
 │   └── RLControl/         獨立執行的策略
 ├── policy/          Python：模擬、訓練、sysid、蒸餾（來自作者）
 ├── model/

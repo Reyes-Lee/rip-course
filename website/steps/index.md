@@ -37,7 +37,7 @@ hide:
 
 | 步驟 | 要不要機台 | Nano 要燒的韌體 | 用到的工具 |
 | --- | --- | --- | --- |
-| [Step 0](step0-sysid.md) | 要 | `LowLevelServer` | `04_check_level`、`05_sysid` |
+| [Step 0](step0-sysid.md) | 要 | `LowLevelServer` | `05_sysid` |
 | [Step 1](step1-train.md) | 不用 | — | `06_train_teacher`、`12_view_policy`、`13_check_sim` |
 | [Step 2](step2-finetune.md) | 要 | `LowLevelServer` | `07_finetune`、`08_test_policy`、`13_check_sim` |
 | [Step 3](step3-distill.md) | 不用（選做的接線測試要） | 選做：`LowLevelServer` | `09_distill`、`08_test_policy` |

@@ -4,7 +4,7 @@
 
 | 症狀 | 怎麼處理（照順序） |
 | --- | --- |
-| 手臂一直往同一個方向飄，最後撞限位 | 燒 `LowLevelServer`，執行 `04_check_level`，傾斜要 < 1°（[Step 0-1](steps/step0-sysid.md#level)）。傾斜沒問題仍然飄就找助教 |
+| 手臂一直往同一個方向飄，最後撞限位 | 先確認桌面是水平、不會晃的，機台四角都著地（[Step 0 開始前](steps/step0-sysid.md#level)）。換了桌子仍然飄就找助教 |
 | 接線時會平衡，燒進 Nano 後一直繞圈 | 1. 執行 `11_score_onboard`，第一行頻率不是約 50 Hz 就找助教。2. 確認 4-2 匯出的是 `09_distill` 產生的 `student.pt`（路徑含 `distill_h16_dagger_dev`）。3. 按 RESET 前擺錘要靜止垂下、手臂在正中間 |
 | 擺錘會擺但怎麼都甩不上去 | 燒 `LowLevelServer`，執行 `03_check_motor`。FAIL 就找助教檢查 Vref |
 | 馬達嘶嘶聲、磨擦聲 | 失步。在工具視窗按 ++ctrl+c++ 停止，燒 `LowLevelServer` 跑 `03_check_motor`，把結果拿給助教。Vref 與韌體加速度由助教調，不要自己轉可變電阻或改 sketch |

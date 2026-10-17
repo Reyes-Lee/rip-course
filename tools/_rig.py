@@ -1,4 +1,4 @@
-"""03_check_motor、04_check_level 共用：透過 LowLevelServer 控制手臂。"""
+"""03_check_motor 用：透過 LowLevelServer 控制手臂。"""
 from __future__ import annotations
 
 import math
