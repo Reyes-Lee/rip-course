@@ -109,6 +109,7 @@ nav:
   - 首頁: index.md
   - 事前準備:
       - prepare/index.md
+      - Lab02 環境預習: prepare/lab02.md
       - 安裝環境: prepare/install.md
       - 硬體與上電測試: prepare/hardware.md
       - 工具一覽: prepare/tools.md

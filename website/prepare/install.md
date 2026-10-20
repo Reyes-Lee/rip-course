@@ -6,6 +6,8 @@
   <span class="rip-chip">:material-robot-off-outline: 不需要機台</span>
 </div>
 
+已經在 [Lab02](lab02.md) 練習過安裝的話，這一頁大部分會很熟悉；差別是這裡要下載的是課程 repo，工具會自己建環境。
+
 兩個系統的流程完全一樣，只有安裝方式不同。每個工具都有 macOS 的 `.command` 與 Windows 的 `.bat` 兩個入口檔，執行後呼叫同一支 Python 腳本。下面每個區塊都可以切換 macOS／Windows，選一次之後整個網站都會記住。
 
 ## 1. 安裝軟體
