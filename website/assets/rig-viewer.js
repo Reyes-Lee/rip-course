@@ -19,6 +19,8 @@ const SWAY = 0.5;                                    // 鏡頭左右晃動幅度
 const HANG_S = 1.2, BALANCE_S = 6.5, DROP_S = 4.5;
 // 布的重心被拉離原位超過這個距離（公尺）才接自動抽走：大約是機台大半都露出來了
 const REVEAL_SHIFT = 0.14;
+// 布和機台零件之間的空隙（公尺）。越大布越鬆、越不容易穿模
+const CLEARANCE = 0.012;
 
 const wrap = (x) => ((x + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;
 const clamp = (x, a) => Math.max(-a, Math.min(a, x));
@@ -382,7 +384,7 @@ function mount(host) {
       all.union(b);
       const s = b.getSize(new THREE.Vector3());
       if (s.x * s.y * s.z < 2e-8 && Math.max(s.x, s.y, s.z) < 0.02) return;
-      const m = 0.006;                         // 布和零件之間留 6 mm，細的零件才不會從質點之間穿出來
+      const m = CLEARANCE;                     // 布和零件之間留空隙，布鬆鬆地罩在外面，細的零件才不會從質點之間穿出來
       boxes.push([b.min.x - m, b.min.y - m, b.min.z - m, b.max.x + m, b.max.y + m, b.max.z + m]);
     });
     const size = all.getSize(new THREE.Vector3()), mid = all.getCenter(new THREE.Vector3());
@@ -390,12 +392,14 @@ function mount(host) {
     // 布的中心往最高的零件（手臂與馬達）那側偏，手臂那一端才蓋得住
     const tall = new THREE.Box3().setFromObject(root.getObjectByName("arm"));
     const cx = mid.x * 0.55 + tall.getCenter(new THREE.Vector3()).x * 0.45;
-    cloth = new Cloth({ nx: 54, nz: 40, sx: size.x + 2 * drop * 0.95, sz: size.z + 2 * drop * 0.95, cx, cz: mid.z, y: all.max.y + 0.012 });
+    // 布要多留空隙的份量，下襬才碰得到桌面
+    const pad = 2 * CLEARANCE;
+    cloth = new Cloth({ nx: 56, nz: 42, sx: size.x + pad + 2 * (drop + CLEARANCE) * 0.95, sz: size.z + pad + 2 * (drop + CLEARANCE) * 0.95, cx, cz: mid.z, y: all.max.y + CLEARANCE + 0.012 });
     cloth.boxes = boxes;
     for (let i = 0; i < 520; i++) cloth.step(1 / 120, { damping: 0.97, iters: 5 });   // 先在畫面外讓布落下、蓋好
     cloth.wind = 0.35;
     restCentroid = cloth.centroid();
-    dropY = all.max.y + 0.07;
+    dropY = all.max.y + CLEARANCE + 0.07;
 
     const { nx, nz } = cloth;
     clothGeo = new THREE.BufferGeometry();

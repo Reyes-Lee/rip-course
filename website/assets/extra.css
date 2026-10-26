@@ -878,7 +878,8 @@ body, .md-main {
 .rip-rig.is-ready .rip-rig__hint { opacity: 1; }
 .rip-rig__hint:hover { border-color: #e0b45a; }
 .rip-rig__hint:focus-visible { outline: 2px solid var(--rip-yellow); outline-offset: 3px; }
-.rip-rig.is-pulling .rip-rig__hint, .rip-rig__hint.is-gone { opacity: 0; transform: translateX(-50%) translateY(8px); pointer-events: none; transition-delay: 0s; }
+/* 權重要高過上面的 .rip-rig.is-ready .rip-rig__hint，揭開後才藏得起來 */
+.rip-rig.is-pulling .rip-rig__hint, .rip-rig .rip-rig__hint.is-gone, .rip-rig.is-revealed .rip-rig__hint { opacity: 0; transform: translateX(-50%) translateY(8px); pointer-events: none; transition-delay: 0s; }
 .rip-rig__hand {
   width: 1.05rem; height: 1.05rem;
   background: currentColor;
