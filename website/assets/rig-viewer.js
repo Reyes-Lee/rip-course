@@ -17,6 +17,8 @@ const K_LQR = [-931.085, -75.325, -50.0, -27.175];   // [θ, θ̇, α, α̇]
 const SWING = { ke: 2500, aMax: 50, kp: 20, kd: 10 };
 const SWAY = 0.5;                                    // 鏡頭左右晃動幅度（rad，約 ±29°）
 const HANG_S = 1.2, BALANCE_S = 6.5, DROP_S = 4.5;
+// 布的重心被拉離原位超過這個距離（公尺）才接自動抽走：大約是機台大半都露出來了
+const REVEAL_SHIFT = 0.14;
 
 const wrap = (x) => ((x + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;
 const clamp = (x, a) => Math.max(-a, Math.min(a, x));
@@ -68,13 +70,8 @@ class Cloth {
     this.prev = new Float32Array(n * 3);
     this.inv = new Float32Array(n).fill(1);
     this.dx = sx / (nx - 1); this.dz = sz / (nz - 1);
-    for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
-      const k = (j * nx + i) * 3;
-      this.pos[k] = cx - sx / 2 + i * this.dx;
-      this.pos[k + 1] = y + 0.006 * Math.sin(i * 0.55 + j * 0.2) * Math.cos(j * 0.45);   // 一點點不平整，落下時才會有自然的皺褶
-      this.pos[k + 2] = cz - sz / 2 + j * this.dz;
-    }
-    this.prev.set(this.pos);
+    this.layout = { sx, sz, cx, cz };
+    this.layFlat(y);
     const c = [];
     const add = (a, b, s) => {
       const ax = a * 3, bx = b * 3;
@@ -92,6 +89,24 @@ class Cloth {
     this.boxes = [];
     this.wind = 0;
     this.grip = true;             // 揭開時關掉，布才滑得走
+  }
+  // 把布攤平在高度 y（一點點不平整，落下時才會有自然的皺褶）
+  layFlat(y) {
+    const { nx, nz } = this, { sx, sz, cx, cz } = this.layout;
+    for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
+      const k = (j * nx + i) * 3;
+      this.pos[k] = cx - sx / 2 + i * this.dx;
+      this.pos[k + 1] = y + 0.006 * Math.sin(i * 0.55 + j * 0.2) * Math.cos(j * 0.45);
+      this.pos[k + 2] = cz - sz / 2 + j * this.dz;
+    }
+    this.prev.set(this.pos);
+    this.inv.fill(1);
+  }
+  centroid() {
+    let x = 0, y = 0, z = 0;
+    const n = this.inv.length;
+    for (let p = 0; p < n; p++) { x += this.pos[p * 3]; y += this.pos[p * 3 + 1]; z += this.pos[p * 3 + 2]; }
+    return new THREE.Vector3(x / n, y / n, z / n);
   }
   step(dt, { damping = 0.985, iters = 4, gravity = -9.81, time = 0 } = {}) {
     const { pos, prev, inv } = this;
@@ -121,21 +136,23 @@ class Cloth {
         pos[a] += ex * f * wa; pos[a + 1] += ey * f * wa; pos[a + 2] += ez * f * wa;
         pos[b] -= ex * f * wb; pos[b + 1] -= ey * f * wb; pos[b + 2] -= ez * f * wb;
       }
+      // 每一輪約束後都做碰撞，約束才不會一次把布拉進零件裡（穿模）；摩擦只在最後一輪算
+      this.collide(it === iters - 1);
     }
-    this.collide();
   }
-  collide() {
+  collide(friction = true) {
     const { pos, prev, inv, boxes } = this;
     const FR = 0.35;                                   // 接觸時的摩擦
     for (let p = 0; p < inv.length; p++) {
-      if (inv[p] === 0) continue;
-      const k = p * 3;
+      const k = p * 3;                                  // 被抓住的質點也要碰撞，手不能把布按進機台裡
       let x = pos[k], y = pos[k + 1], z = pos[k + 2];
       if (y < 0.0015) {                                 // 桌面
         y = 0.0015;
+        if (friction) {
         prev[k] = x - (x - prev[k]) * (1 - FR * 1.6);
         prev[k + 2] = z - (z - prev[k + 2]) * (1 - FR * 1.6);
         prev[k + 1] = y;
+        }
       }
       for (let b = 0; b < boxes.length; b++) {
         const B = boxes[b];
@@ -151,6 +168,7 @@ class Cloth {
         else m = Math.min(d0, d1, d2, d3, d4, d5);
         if (m === d3) y = B[4]; else if (m === d0) x = B[0]; else if (m === d1) x = B[3];
         else if (m === d4) z = B[2]; else if (m === d5) z = B[5]; else y = B[1];
+        if (!friction) continue;
         // 壓在零件頂面上的布摩擦大很多（絲絨會「卡」住），才不會從手臂上滑下去
         const fr = m === d3 ? (this.grip ? 0.85 : 0.2) : FR;
         if (m === d3) {
@@ -277,7 +295,8 @@ function mount(host) {
 
   // ---- 布幕狀態 ----
   let cloth = null, clothMesh = null, clothGeo = null;
-  let phase = reduce ? "live" : "loading";   // loading → covered → pulling → flying → live
+  let phase = reduce ? "live" : "loading";   // loading → covered → pulling → flying → live → settling → dropping → covered
+  let coverBtn = null, restCentroid = null, dropY = 0.2, settle = null;
   let grab = null;                             // { patch, target, plane, start, vel }
   let tPhase = 0, simTime = 0;
 
@@ -363,7 +382,7 @@ function mount(host) {
       all.union(b);
       const s = b.getSize(new THREE.Vector3());
       if (s.x * s.y * s.z < 2e-8 && Math.max(s.x, s.y, s.z) < 0.02) return;
-      const m = 0.003;
+      const m = 0.006;                         // 布和零件之間留 6 mm，細的零件才不會從質點之間穿出來
       boxes.push([b.min.x - m, b.min.y - m, b.min.z - m, b.max.x + m, b.max.y + m, b.max.z + m]);
     });
     const size = all.getSize(new THREE.Vector3()), mid = all.getCenter(new THREE.Vector3());
@@ -375,6 +394,8 @@ function mount(host) {
     cloth.boxes = boxes;
     for (let i = 0; i < 520; i++) cloth.step(1 / 120, { damping: 0.97, iters: 5 });   // 先在畫面外讓布落下、蓋好
     cloth.wind = 0.35;
+    restCentroid = cloth.centroid();
+    dropY = all.max.y + 0.07;
 
     const { nx, nz } = cloth;
     clothGeo = new THREE.BufferGeometry();
@@ -389,6 +410,7 @@ function mount(host) {
     }
     clothGeo.setIndex(idx);
     clothGeo.computeVertexNormals();
+    clothGeo.computeBoundingSphere(); clothGeo.computeBoundingBox();
     const maps = velvetMaps();
     const mat = new THREE.MeshPhysicalMaterial({
       map: maps.map, metalnessMap: maps.metal, metalness: 1, roughness: 0.86,
@@ -404,10 +426,22 @@ function mount(host) {
     controls.enableRotate = false;            // 揭開前，拖曳是拉布，不是轉鏡頭
     canvas.style.touchAction = "none";
     makeHint();
+    makeCoverButton();
     // 字型載入後重畫一次貼圖（Anton 是網頁字型）
     document.fonts?.load("88px Anton").then(() => {
       const m2 = velvetMaps(); mat.map = m2.map; mat.metalnessMap = m2.metal; mat.needsUpdate = true;
     }).catch(() => {});
+  }
+
+  function makeCoverButton() {
+    coverBtn = document.createElement("button");
+    coverBtn.type = "button";
+    coverBtn.className = "rip-rig__cover";
+    coverBtn.setAttribute("aria-label", "蓋回布幕");
+    coverBtn.title = "蓋回布幕";
+    coverBtn.innerHTML = '<span aria-hidden="true"></span>';
+    coverBtn.addEventListener("click", () => recover());
+    host.appendChild(coverBtn);
   }
 
   function makeHint() {
@@ -428,6 +462,7 @@ function mount(host) {
   };
   const hitCloth = () => {
     if (!clothMesh) return null;
+    camera.updateMatrixWorld();             // 保險：確保用的是現在的鏡頭方向
     ray.setFromCamera(ndc, camera);
     return ray.intersectObject(clothMesh, false)[0] || null;
   };
@@ -447,7 +482,7 @@ function mount(host) {
     setNdc(e);
     const h = hitCloth();
     if (!h) return;
-    canvas.setPointerCapture(e.pointerId);
+    try { canvas.setPointerCapture(e.pointerId); } catch { /* 沒有對應的實體指標時（例如程式觸發）略過 */ }
     startGrab(h.point);
     e.preventDefault();
   }
@@ -456,6 +491,7 @@ function mount(host) {
     if (phase === "covered") { canvas.style.cursor = hitCloth() ? "grab" : "default"; return; }
     if (phase !== "pulling" || !grab) return;
     canvas.style.cursor = "grabbing";
+    camera.updateMatrixWorld();
     ray.setFromCamera(ndc, camera);
     const p = new THREE.Vector3();
     if (!ray.ray.intersectPlane(grab.plane, p)) return;
@@ -463,8 +499,6 @@ function mount(host) {
     grab.vel.lerp(p.clone().sub(grab.target).divideScalar(dt), 0.35);
     grab.lastT = now;
     grab.target.copy(p);
-    // 拉超過布幕大小的三分之一就算揭開
-    if (p.distanceTo(grab.start) > clothView.dist * 0.16) beginFly(grab.vel);
   }
   function onUp() {
     if (phase !== "pulling") return;
@@ -480,8 +514,10 @@ function mount(host) {
   canvas.addEventListener("pointercancel", onUp);
 
   function beginFly(vel) {
-    // 順著拉的方向再往上一點，把布整塊帶走
-    const dir = vel.clone(); dir.y = Math.max(dir.y, 0) + dir.length() * 0.5 + 0.4;
+    // 順著拉的方向（手的速度＋布已經被拉走的方向）再往上一點，把布整塊帶走
+    const dir = vel.clone();
+    if (restCentroid && cloth) dir.addScaledVector(cloth.centroid().sub(restCentroid), 4);
+    dir.y = Math.max(dir.y, 0) + dir.length() * 0.5 + 0.4;
     if (dir.lengthSq() < 1e-6) dir.set(0.3, 1, 0.4);
     grab.flyDir = dir.normalize();
     phase = "flying"; tPhase = 0;
@@ -517,6 +553,22 @@ function mount(host) {
         cloth.pos[kk + 2] += (tz - cloth.pos[kk + 2]) * (0.35 + 0.6 * w);
         cloth.prev[kk] = cloth.pos[kk]; cloth.prev[kk + 1] = cloth.pos[kk + 1]; cloth.prev[kk + 2] = cloth.pos[kk + 2];
       }
+      // 一定要把布拉離機台很多（重心移開約 14 cm）才接自動抽走的動畫
+      if (cloth.centroid().distanceTo(restCentroid) > REVEAL_SHIFT) beginFly(grab.vel);
+    } else if (phase === "dropping") {
+      // 蓋回去：布從上方淡入、自己落下蓋好，鏡頭同時拉遠
+      tPhase += dt;
+      const mat = clothMesh.material;
+      mat.opacity = smooth(Math.min(1, tPhase / 0.45));
+      if (tPhase > 0.5 && mat.transparent) { mat.transparent = false; mat.needsUpdate = true; }
+      viewK = 1 - Math.min(1, tPhase / 1.4);
+      if (tPhase > 2.6) {
+        phase = "covered"; viewK = 0;
+        cloth.wind = 0.35;
+        restCentroid = cloth.centroid();
+        hint?.classList.remove("is-gone");
+        host.classList.remove("is-covering");
+      }
     } else if (phase === "flying" && grab) {
       tPhase += dt;
       const speed = 0.25 + 1.9 * smooth(Math.min(1, tPhase / 0.55));    // 先慢後快，像一把拉起布
@@ -534,17 +586,36 @@ function mount(host) {
     if (cloth) cloth.step(dt, { time: simTime });
   }
   function finishReveal() {
-    scene.remove(clothMesh);
-    clothGeo.dispose(); clothMesh.material.map?.dispose(); clothMesh.material.metalnessMap?.dispose(); clothMesh.material.dispose();
-    cloth = null; clothMesh = null; grab = null;
+    // 布留著（之後還可以蓋回去），只是藏起來、不再模擬
+    for (const [k] of grab.patch) cloth.inv[k] = 1;
+    clothMesh.visible = false;
+    grab = null;
     phase = "live";
     controls.enableRotate = true;
     canvas.style.touchAction = "pan-y";
     canvas.style.cursor = "";
-    hint?.remove(); hint = null;
+    hint?.classList.add("is-gone");
     host.classList.remove("is-pulling", "is-revealing");
     host.classList.add("is-revealed");
     rig.reset();
+  }
+  function recover() {
+    if (phase !== "live" || !cloth) return;
+    // 先讓手臂回正、擺錘平順地回到垂下，布才蓋在跟碰撞體一致的姿勢上
+    settle = { a0: rig.al, th0: rig.th, th1: rig.th + wrap(Math.PI - rig.th) };
+    phase = "settling"; tPhase = 0;
+    host.classList.remove("is-revealed");
+    host.classList.add("is-covering");
+  }
+  function startDrop() {
+    cloth.layFlat(dropY);
+    cloth.grip = true; cloth.wind = 0;
+    const mat = clothMesh.material;
+    mat.transparent = true; mat.opacity = 0; mat.needsUpdate = true;
+    clothMesh.visible = true;
+    phase = "dropping"; tPhase = 0;
+    controls.enableRotate = false;
+    canvas.style.touchAction = "none";
   }
 
   function resize() {
@@ -567,13 +638,14 @@ function mount(host) {
     if (!visible || document.hidden) { last = now; return; }
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
-    if (cloth) {
+    if (cloth && clothMesh.visible) {
       const n = Math.max(1, Math.round(dt / (1 / 120)));
       for (let i = 0; i < n; i++) stepCloth(dt / n);
       if (clothGeo) {
         clothGeo.attributes.position.needsUpdate = true;
         clothGeo.computeVertexNormals();
         clothGeo.computeBoundingSphere();
+        clothGeo.computeBoundingBox();          // 點擊判定會先用外框盒篩選，布一變形就要跟著更新
       }
     }
     if (arm && pend) {
@@ -590,6 +662,12 @@ function mount(host) {
           hud.querySelector("b").textContent = LABEL[rig.mode];
           hud.querySelector("span").textContent = `θ ${(wrap(rig.th) * 180 / Math.PI).toFixed(1).padStart(6)}°`;
         }
+      } else if (phase === "settling") {
+        tPhase += dt;
+        const k = smooth(Math.min(1, tPhase / 0.8));
+        arm.rotation.y = settle.a0 * (1 - k);
+        pend.rotation.x = Math.PI - (settle.th0 + (settle.th1 - settle.th0) * k);
+        if (k >= 1) { arm.rotation.y = 0; pend.rotation.x = 0; startDrop(); }
       }
     }
     // 角速度 = 0.1047·speed rad/s；取 speed = SWAY·ω/0.1047·cos(ωt) 得到 ±SWAY 的正弦晃動
@@ -611,8 +689,8 @@ function mount(host) {
     canvas.removeEventListener("pointerup", onUp);
     canvas.removeEventListener("pointercancel", onUp);
     controls.dispose(); pmrem.dispose(); renderer.dispose();
-    canvas.remove(); hint?.remove();
-    host.classList.remove("is-ready", "is-revealed", "is-pulling", "is-revealing");
+    canvas.remove(); hint?.remove(); coverBtn?.remove();
+    host.classList.remove("is-ready", "is-revealed", "is-pulling", "is-revealing", "is-covering");
   };
 }
 
