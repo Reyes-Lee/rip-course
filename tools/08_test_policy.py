@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from _common import (RECORDINGS, banner, choose, fail, finetune_runs, finish, get_port, info, label, rel,
                      run_policy_script, students, teachers, wait_enter)
+from _direction import require_or_exit
 
 
 def main() -> int:
@@ -19,6 +20,7 @@ def main() -> int:
     RECORDINGS.mkdir(parents=True, exist_ok=True)
     log = RECORDINGS / f"{name}.npz"
     port = get_port()
+    require_or_exit(port)
     wait_enter("擺錘靜止垂下後按 Enter；接下來 30 秒不要碰機台")
     code, _ = run_policy_script(["run_policy.py", "--policy", rel(pol), "--port", port,
                                  "--duration-s", "30", "--log", rel(log)])

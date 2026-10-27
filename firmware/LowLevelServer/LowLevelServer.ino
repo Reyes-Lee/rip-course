@@ -1,6 +1,7 @@
 #include <FastAccelStepper.h>
 #include <AS5600.h>
 #include <Wire.h>
+#include <EEPROM.h>
 
 // Communication speed
 const long BAUD_RATE = 2000000;
@@ -14,6 +15,16 @@ const long BAUD_RATE = 2000000;
 #define CMD_TARE_PENDULUM 0x06   // re-zero pen_position_rad to current AS5600 reading
 #define CMD_SET_TARGET 0x07      // position-mode: commanded motor position (rad) → moveTo
 #define CMD_ZERO_MOTOR 0x08      // re-zero the motor step counter to the arm's current position
+#define CMD_SET_PEN_SIGN 0x09    // + int8 (+1/-1): pendulum direction, saved to EEPROM (tools/04_check_direction)
+#define CMD_GET_CONFIG 0x0A      // -> 2 bytes: calibrated (0/1), pendulum sign (int8)
+
+// 課程版：擺錘方向標定。AS5600 模組的 DIR 腳出廠可能接 GND、接 VCC 或沒接，
+// 方向因此不一定跟模擬一致。tools/04_check_direction 量出方向後用
+// CMD_SET_PEN_SIGN 存進 EEPROM；Arduino IDE 重新上傳 sketch 不會清掉 EEPROM。
+// 位址與 magic 必須和 RLControl.ino 相同。
+#define EEPROM_DIR_MAGIC_ADDR 0
+#define EEPROM_DIR_SIGN_ADDR 1
+#define EEPROM_DIR_MAGIC 0xA5
 
 // Pin assignments. STEP must be on pin 9 (Timer1 OC1A on ATmega328) for
 // FastAccelStepper. DIR and ENABLE can be any digital pin.
@@ -90,6 +101,10 @@ static uint32_t last_sample_us = 0;
 // rapid wraparounds aren't missed).
 static long    pen_raw_prev   = -1;           // -1 = first read sentinel
 static float   pen_position_rad = 0.0f;
+// Pendulum direction (+1 / -1) applied to every AS5600 delta; loaded from
+// EEPROM at boot. Uncalibrated boards run with +1 (raw AS5600 direction).
+static int8_t  pen_sign = 1;
+static bool    dir_calibrated = false;
 
 // State variables
 FastAccelStepperEngine engine = FastAccelStepperEngine();
@@ -112,6 +127,12 @@ void setup()
     Wire.begin();
     Wire.setClock(400000);   // I²C fast mode for short transaction times.
     as5600.begin();
+
+    if (EEPROM.read(EEPROM_DIR_MAGIC_ADDR) == EEPROM_DIR_MAGIC)
+    {
+        dir_calibrated = true;
+        pen_sign = ((int8_t)EEPROM.read(EEPROM_DIR_SIGN_ADDR) < 0) ? -1 : 1;
+    }
 
     engine.init();
     stepper = engine.stepperConnectToPin(STEP_PIN);
@@ -193,7 +214,7 @@ void sampleState()
         }
         else
         {
-            pen_position_rad += (float)delta * ((2.0f * PI) / 4096.0f);
+            pen_position_rad += (float)(pen_sign * delta) * ((2.0f * PI) / 4096.0f);
             pen_raw_prev = raw;
         }
     }
@@ -395,6 +416,38 @@ void handleCommand()
         Serial.write(CMD_ZERO_MOTOR);  // ack
         break;
 
+    case CMD_SET_PEN_SIGN:
+        {
+            Serial.setTimeout(5);
+            int8_t sign;
+            size_t n = Serial.readBytes((char *)&sign, 1);
+            Serial.setTimeout(1000);  // restore Stream default
+            if (n != 1 || (sign != 1 && sign != -1)) break;
+            // Flipping the direction mirrors the accumulated angle: negate the
+            // position and the ring buffer so velocity stays continuous.
+            if (sign != pen_sign)
+            {
+                noInterrupts();
+                for (uint8_t i = 0; i < BUFFER_SIZE; i++)
+                {
+                    pen_rad_buf[i] = -pen_rad_buf[i];
+                }
+                pen_position_rad = -pen_position_rad;
+                interrupts();
+            }
+            pen_sign = sign;
+            dir_calibrated = true;
+            EEPROM.update(EEPROM_DIR_SIGN_ADDR, (uint8_t)sign);
+            EEPROM.update(EEPROM_DIR_MAGIC_ADDR, EEPROM_DIR_MAGIC);
+            Serial.write(CMD_SET_PEN_SIGN);  // ack
+        }
+        break;
+
+    case CMD_GET_CONFIG:
+        Serial.write((uint8_t)(dir_calibrated ? 1 : 0));
+        Serial.write((uint8_t)pen_sign);
+        break;
+
     default:
         break;
     }
@@ -425,7 +478,8 @@ void sendState()
     computeVelocities(&motor_velocity_rad_s, &pendulum_velocity_rad_s);
 
     // Values go out exactly as the firmware measures them (step counter,
-    // AS5600 accumulator) — one frame everywhere, no flips on either side.
+    // AS5600 accumulator with the calibrated pen_sign already applied in
+    // sampleState) — one frame everywhere, no flips on the host side.
 
     // Pack and send the data
     Serial.write((byte *)&current_time, sizeof(current_time));

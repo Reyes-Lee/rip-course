@@ -5,6 +5,7 @@ import json
 
 from _common import (POLICY, SYSID_JSON, banner, choose, fail, finish, get_port, heading, info, ok,
                      rel, run_policy_script, warn)
+from _direction import require_or_exit
 
 OMEGA_RANGE = (12.3, 12.6)     # 小振幅自然頻率參考範圍（rad/s）
 INERTIA_ERR_MAX = 0.10         # 慣量：量測 vs URDF 預測
@@ -49,6 +50,7 @@ def main() -> int:
         code, _ = run_policy_script(["sysid_wizard.py", "--out-json", out, "fit", "--in-dir", rel(d), "--out-json", out])
     else:
         port = get_port()
+        require_or_exit(port)
         info("準備一塊硬紙板或泡棉塊，等一下用來把擺錘墊高。精靈會一步一步提示你。")
         code, _ = run_policy_script(["sysid_wizard.py", "--port", port, "--out-json", rel(SYSID_JSON)])
     if code == 0 and SYSID_JSON.exists():

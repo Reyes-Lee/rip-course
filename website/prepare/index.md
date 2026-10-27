@@ -16,7 +16,7 @@
 
     ---
 
-    貼配重硬幣，依序燒 5 個測試韌體，確認編碼器、馬達、serial 都正常。
+    貼配重硬幣，依序燒 5 個測試韌體，確認編碼器、馬達、serial 都正常，並做一次擺錘方向標定。
 
     [:octicons-arrow-right-24: 硬體與上電測試](hardware.md)
 
@@ -37,3 +37,4 @@
 - [ ] Arduino IDE 的序列埠監控視窗已關掉
 - [ ] 硬幣沒有鬆動
 - [ ] 燒 `EncoderCheck`，跑 `02_check_encoder`，全部 PASS
+- [ ] 這台 Nano 做過[方向標定](hardware.md#direction)（`04_check_direction`）。換過 Nano、AS5600 或磁鐵就要重做；沒做過的話 `05`、`07`、`08` 會提醒你

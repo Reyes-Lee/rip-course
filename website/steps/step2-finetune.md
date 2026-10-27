@@ -40,6 +40,7 @@
 
     平順的嗡嗡聲正常；**嘶嘶或磨擦聲代表失步**。立刻在工具視窗按 ++ctrl+c++ 停止（這一段不會存檔），照[疑難排解](../troubleshooting.md)的「馬達嘶嘶聲」處理，再重新執行 `07_finetune`，它會重跑這一段。
 
+- 每一段開始前，工具會先讓手臂在正中間小幅抖動約 4 秒，確認擺錘方向跟[方向標定](../prepare/hardware.md#direction)一致；不一致就停止，不會白跑一段。
 - 每回合 6 秒；回合之間馬達斷電 15 秒，讓擺錘自己停下來。
 - 控制迴路與 SAC 梯度更新跑在不同執行緒，所以訓練中控制頻率仍嚴格是 50 Hz。
 - Mirror augmentation 預設開啟，每筆真實資料同時存一份鏡像。
@@ -88,7 +89,7 @@
 | --- | --- |
 | ≥ 0.85 | :material-check-circle:{ style="color: var(--rip-green)" } 教師夠穩了。仍照[下一節](#how-long)決定要不要再加一段，然後進 Step 3 |
 | 0.4–0.85 | :material-trending-up:{ style="color: var(--rip-amber)" } 還在進步。再執行一次 `07_finetune`（自動加一段 30 回合），然後再跑 `08_test_policy` |
-| < 0.4 | :material-close-circle:{ style="color: var(--rip-red)" } 先停止微調，依序檢查硬體：燒 `EncoderCheck` 跑 `02_check_encoder`；確認桌面水平、機台沒有被移動。都正常就燒 `LowLevelServer` 重跑 `05_sysid`，對照 [Step 0 檢查點](step0-sysid.md#checkpoint)。仍然沒問題就找助教，帶著 `policy/recordings/` 裡最新的 `.npz` |
+| < 0.4 | :material-close-circle:{ style="color: var(--rip-red)" } 先停止微調，依序檢查硬體：燒 `LowLevelServer` 跑 `04_check_direction`（方向被修正的話，丟掉 `runs/ftN` 從教師重跑）；燒 `EncoderCheck` 跑 `02_check_encoder`；確認桌面水平、機台沒有被移動。都正常就燒 `LowLevelServer` 重跑 `05_sysid`，對照 [Step 0 檢查點](step0-sysid.md#checkpoint)。仍然沒問題就找助教，帶著 `policy/recordings/` 裡最新的 `.npz` |
 
 ## 要微調多久？比 eval 曲線看起來的更久 { #how-long }
 

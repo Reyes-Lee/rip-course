@@ -9,6 +9,7 @@ import time
 
 from _common import (RUNS, banner, choose, fail, finish, finetune_runs, get_port, heading, info, label,
                      mark_done, need_sysid, ok, rel, run_policy_script, teachers, wait_enter, warn)
+from _direction import require_or_exit
 
 FIRST_EPISODES = 50
 NEXT_EPISODES = 30
@@ -45,6 +46,8 @@ def main() -> int:
     info("每回合 6 秒；回合之間馬達斷電 15 秒，讓擺錘自己停下來。")
     info("前幾個回合要聽馬達：嘶嘶或磨擦聲代表失步，立刻按 Ctrl + C 停止。")
     wait_enter("擺錘靜止垂下、手臂周圍淨空後按 Enter")
+    # 每一段開始前都確認方向沒變（AS5600 的 DIR 腳沒接時方向可能改變），最多浪費一段。
+    require_or_exit(port, quick_check=True)
     code, _ = run_policy_script([*args, "--port", port, "--run-name", run_dir.name, "--params-path", params])
     if code != 0 or not (run_dir / "best_model.zip").exists() or not (run_dir / "replay_buffer.pkl").exists():
         fail(f"{run_dir.name} 沒有完成（代碼 {code}）。處理好問題後再執行 07_finetune，會重跑這一段。")

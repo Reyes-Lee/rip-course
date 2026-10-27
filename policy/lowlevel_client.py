@@ -13,12 +13,15 @@ firmware/LowLevelServer/LowLevelServer.ino:
     0x04 ENGAGE_MOTOR
     0x05 DISENGAGE_MOTOR
     0x07 SET_TARGET + float  commanded motor position in radians (position mode)
+    0x08 ZERO_MOTOR          -> ack 0x08
+    0x09 SET_PEN_SIGN + int8 pendulum direction (+1/-1), saved to EEPROM -> ack 0x09
+    0x0A GET_CONFIG          -> 2 bytes: calibrated (0/1), pendulum sign (int8)
 
-Sign convention: LowLevelServer flips the sign of motor and pendulum
-positions AND velocities on output. We pass the raw bytes through;
-callers decide whether to apply additional transforms. The deploy code
-(`run_policy.py`) and the real-env (`real_env.py`) consume them as-is —
-the observation matches the sim convention.
+Sign convention: LowLevelServer multiplies every AS5600 delta by the
+pendulum sign stored in EEPROM (calibrated by tools/04_check_direction),
+so GET_STATE already arrives in the sim convention. We pass the bytes
+through; the deploy code (`run_policy.py`) and the real-env
+(`real_env.py`) consume them as-is.
 
 This client is request-driven (one 20-byte read per get_state call).
 Sustained bandwidth is tiny (~2 kB/s at 100 Hz), so 2 Mbaud is
@@ -43,6 +46,8 @@ CMD_DISENGAGE_MOTOR = 0x05
 CMD_TARE_PENDULUM = 0x06
 CMD_SET_TARGET = 0x07  # position-mode: commanded motor position in radians (moveTo)
 CMD_ZERO_MOTOR = 0x08  # re-zero the motor step counter to the arm's current position
+CMD_SET_PEN_SIGN = 0x09  # + int8 (+1/-1): pendulum direction, saved to EEPROM
+CMD_GET_CONFIG = 0x0A  # -> calibrated (uint8), pendulum sign (int8)
 
 # time_us (uint32 LE), motor_pos, pen_pos, motor_vel, pen_vel (4× float32 LE).
 _STATE_STRUCT = struct.Struct("<Iffff")
@@ -217,3 +222,28 @@ class LowLevelClient:
             self.ser.flush()
             resp = self.ser.read(1)
         return resp == bytes([CMD_ZERO_MOTOR])
+
+    def get_config(self) -> tuple[bool, int] | None:
+        """Return (calibrated, pendulum_sign), or None if the sketch predates
+        the direction calibration (no reply)."""
+        with self._lock:
+            self.ser.reset_input_buffer()
+            self.ser.write(bytes([CMD_GET_CONFIG]))
+            self.ser.flush()
+            resp = self.ser.read(2)
+        if len(resp) != 2:
+            return None
+        sign = struct.unpack("<b", resp[1:2])[0]
+        return bool(resp[0]), (-1 if sign < 0 else 1)
+
+    def set_pendulum_sign(self, sign: int) -> bool:
+        """Set the pendulum direction (+1/-1) and save it to EEPROM. Returns
+        True on ack. The firmware mirrors the accumulated angle on a flip, so
+        the stream stays continuous."""
+        if sign not in (1, -1):
+            raise ValueError("sign must be +1 or -1")
+        with self._lock:
+            self.ser.write(bytes([CMD_SET_PEN_SIGN]) + struct.pack("<b", sign))
+            self.ser.flush()
+            resp = self.ser.read(1)
+        return resp == bytes([CMD_SET_PEN_SIGN])

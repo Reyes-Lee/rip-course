@@ -36,9 +36,11 @@
  * ENABLE on pin 5 are unconstrained.
  *
  * Frame conventions (match `LowLevelServer` + `run_policy.py`):
- *   - The policy is trained in the Arduino's raw stepper/encoder frame —
+ *   - The policy is trained in the Arduino's stepper/encoder frame —
  *     the ONE frame used everywhere: LowLevelServer sends GET_STATE
  *     unflipped and no host negates. Do not introduce flips anywhere.
+ *   - 課程版：擺錘方向乘上 EEPROM 裡的標定值（tools/04_check_direction 寫入，
+ *     與 LowLevelServer 共用同一個位址）。沒有標定過就不 engage。
  *   - phi = 0 means pendulum hanging down (encoder zeros at engage).
  *   - theta = wrap_pi(phi - pi); theta = 0 means upright.
  *   - motor_pos = 0 at engage (stepper position re-zeroed).
@@ -72,6 +74,7 @@
 #include <FastAccelStepper.h>
 #include <AS5600.h>
 #include <Wire.h>
+#include <EEPROM.h>
 
 // Which champion header to compile. Named policy_weights_<rig>_<driver>_<microsteps>.h:
 // the rig because each one is fine-tuned against its own measured friction, the
@@ -207,6 +210,13 @@ AS5600 as5600;
 enum State { WAITING, RUNNING };
 State state = WAITING;
 
+// 擺錘方向標定：位址與 magic 必須和 LowLevelServer.ino 相同。
+#define EEPROM_DIR_MAGIC_ADDR 0
+#define EEPROM_DIR_SIGN_ADDR 1
+#define EEPROM_DIR_MAGIC 0xA5
+static int8_t pen_sign = 1;
+static bool dir_calibrated = false;
+
 // Observation frame ring: frames[0] = oldest ... frames[OBS_FRAMES-1] = newest.
 static float frames[OBS_FRAMES][FRAME_DIM];
 
@@ -295,7 +305,7 @@ static float read_pendulum_rad()
         return pos;
     }
 
-    pos += (float)delta * RAD_PER_SEG;
+    pos += (float)(pen_sign * delta) * RAD_PER_SEG;
     raw_prev = raw;
     return pos;
 }
@@ -476,6 +486,11 @@ static void prime_initial_state()
 
 static void transition_to_running()
 {
+    if (!dir_calibrated)
+    {
+        Serial.println(F("[DIR] not calibrated: flash LowLevelServer, run tools/04_check_direction, then flash RLControl again"));
+        return;
+    }
     // Recapture both the encoder zero (phi=0 ↔ current pendulum position)
     // and the stepper origin (motor_pos=0 ↔ current motor position) so the
     // policy sees the same frame conventions it was trained in regardless
@@ -595,6 +610,9 @@ static void handle_serial()
     case 'E': case 'e': if (state == WAITING) transition_to_running(); break;
     case 'D': case 'd': if (state == RUNNING) transition_to_waiting(); break;
     case 'M': case 'm':
+        Serial.print(F("[DIR] "));
+        if (dir_calibrated) Serial.println(pen_sign);
+        else Serial.println(F("not calibrated"));
         Serial.print(F("[AS5600] magnet="));
         if (as5600.magnetTooWeak()) Serial.println(F("WEAK"));
         else if (as5600.magnetTooStrong()) Serial.println(F("STRONG"));
@@ -687,6 +705,12 @@ void setup()
     Wire.begin();
     Wire.setClock(I2C_CLOCK_HZ);
     as5600.begin();
+
+    if (EEPROM.read(EEPROM_DIR_MAGIC_ADDR) == EEPROM_DIR_MAGIC)
+    {
+        dir_calibrated = true;
+        pen_sign = ((int8_t)EEPROM.read(EEPROM_DIR_SIGN_ADDR) < 0) ? -1 : 1;
+    }
 
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, HIGH);
