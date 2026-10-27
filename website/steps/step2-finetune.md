@@ -1,7 +1,7 @@
 # Step 2：在實機上微調
 
 <div class="rip-meta" markdown>
-  <span class="rip-chip rip-chip--cyan">:material-clock-outline: 每段 30 回合約 6 分鐘，共 2–4 段</span>
+  <span class="rip-chip rip-chip--cyan">:material-clock-outline: 每段 30 回合約 6–11 分鐘，共 2–4 段</span>
   <span class="rip-chip rip-chip--amber">:material-robot-industrial: 需要機台</span>
   <span class="rip-chip">:material-chip: LowLevelServer</span>
   <span class="rip-chip">:material-file-outline: 產出 ftN/best_model.zip</span>
@@ -41,7 +41,9 @@
     平順的嗡嗡聲正常；**嘶嘶或磨擦聲代表失步**。立刻在工具視窗按 ++ctrl+c++ 停止（這一段不會存檔），照[疑難排解](../troubleshooting.md)的「馬達嘶嘶聲」處理，再重新執行 `07_finetune`，它會重跑這一段。
 
 - 每一段開始前，工具會先讓手臂在正中間小幅抖動約 4 秒，確認擺錘方向跟[方向標定](../prepare/hardware.md#direction)一致；不一致就停止，不會白跑一段。
-- 每回合 6 秒；回合之間馬達斷電 15 秒，讓擺錘自己停下來。
+- 每回合 6 秒；回合之間馬達斷電，最多等 15 秒讓擺錘自己停下來（停得快就提早開始）。所以每回合約 11–21 秒：30 回合約 6–11 分鐘，ft1 的 50 回合約 9–18 分鐘。
+- 每回合會印一行 `steps=… mean_dt=…ms max_overrun=…ms violations=…`。`mean_dt` 應約 20 ms；`violations` 持續大於 0 代表控制週期被拖慢，先關掉其他程式（同步、備份、訓練）。
+- 每段結束時工具會說這一段的 `best_model` 有沒有更新，並刪掉中途的 replay buffer 快照（每份約 80 MB），只留下一段要用的 `replay_buffer.pkl`。
 - 控制迴路與 SAC 梯度更新跑在不同執行緒，所以訓練中控制頻率仍嚴格是 50 Hz。
 - Mirror augmentation 預設開啟，每筆真實資料同時存一份鏡像。
 
@@ -81,7 +83,7 @@
         --port <PORT> --duration-s 30 --log recordings/ft2.npz
     ```
 
-看結束時印出的 **balanced fraction**：「|θ| ≤ 15° 且 |θ̇| ≤ 2 rad/s」的時間比例。這個定義故意不用策略自己的觀測，因為「是否直立」的檢查可以被一直繞圈騙過。
+看結束時印出的 **balanced fraction**：「|θ| ≤ 15° 且 |θ̇| ≤ 4 rad/s」的時間比例（作者在 2026-07 從 2 rad/s 放寬到 4 rad/s：平衡得好的策略也會有約 5 Hz 的小抖動，2 rad/s 會低估）。`verdict` 是 `NO SWING-UP` 代表擺錘從沒擺過水平、根本沒甩上去，先跑 `04_check_direction`；`SPINNING` 才是甩上去但一直繞圈接不住。這個定義故意不用策略自己的觀測，因為「是否直立」的檢查可以被一直繞圈騙過。
 
 作者的建議如下，由你判斷：
 
@@ -107,7 +109,7 @@
 
     每加一段就跑一次 `08_test_policy`，把 balanced fraction 與擺錘標準差記下來。只要其中一個還在變好，就再加一段；**連續兩段都沒有變好才停**。
 
-    就算工具印出 `best_model 未更新` 也要照這個規則加，因為 Step 3 的蒸餾會用到 replay buffer 裡所有的真實狀態。
+    就算工具說這一段的 `best_model 沒有更新` 也要照這個規則加，因為 Step 3 的蒸餾會用到 replay buffer 裡所有的真實狀態。
 
 ### 停止後：回歸測試 { #regression }
 

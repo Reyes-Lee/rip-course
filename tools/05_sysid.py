@@ -32,7 +32,8 @@ def show_checkpoint() -> None:
             f"轉動慣量：量測 {im:.3e}、URDF 預測 {ip:.3e}，誤差 {err * 100:.1f}%（參考 < 10%）")
         if err >= INERTIA_ERR_MAX:
             warn("誤差偏大：多半是硬幣位置不對或鬆動，檢查後重新量測。")
-    info("另外打開 sysid_runs/ 裡最新資料夾的 freeswing_compare.png 與 motor_sweep.png 對照網站。")
+    info("另外打開 sysid_runs/ 裡最新資料夾的 freeswing_compare.png 與 motor_sweep.png，")
+    info("對照網站 Step 0「兩張圖怎麼看」的範例圖。馬達掃描要以「目視手臂真的轉到 ±90°」為準。")
 
 
 def main() -> int:
@@ -51,7 +52,9 @@ def main() -> int:
     else:
         port = get_port()
         require_or_exit(port)
-        info("準備一塊硬紙板或泡棉塊，等一下用來把擺錘墊高。精靈會一步一步提示你。")
+        info("準備一塊硬紙板或泡棉塊，等一下用來把擺錘墊高。精靈會一步一步提示你（英文）。")
+        info("第一步「標定垂下」時先不要放墊塊：讓擺錘自然垂到最低點、完全靜止再按 Enter。")
+        info("馬達 ±90° 掃描時 12 V 要接著，目視確認手臂真的轉到左右約 90°。")
         code, _ = run_policy_script(["sysid_wizard.py", "--port", port, "--out-json", rel(SYSID_JSON)])
     if code == 0 and SYSID_JSON.exists():
         ok(f"已寫出 {rel(SYSID_JSON)}")

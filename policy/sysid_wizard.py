@@ -508,6 +508,16 @@ def fit_data(in_dir: Path, out_json: Path) -> dict:
         print(_red("  All fits failed."))
         sys.exit(5)
 
+    # 課程版防呆：標定垂下時擺錘如果不在最低點（例如還放在墊塊上），
+    # 「垂下零點」會跟擺錘自由擺停下的位置差很多。擬合本身會自己找靜止
+    # 位置，不受影響；但要讓操作的人知道，比對圖也改用靜止位置。
+    rests = [float(f["rest_angle_rad"]) for f in fits if "rest_angle_rad" in f]
+    if rests and abs(np.median(rests)) > np.radians(10.0):
+        print(_red(
+            f"\n  ！ 標定的垂下零點跟擺錘自由擺停下的位置差 {np.degrees(np.median(rests)):+.0f}°。"
+            "\n    標定時擺錘可能不是自然垂下（例如還放在墊塊上）。擬合結果不受影響，"
+            "\n    下次標定前先拿開墊塊、讓擺錘自然垂到最低點再按 Enter。"))
+
     fit = aggregate_free_swing_fits(fits)
     derived = derive_pendulum_friction(fit)
 
@@ -570,7 +580,7 @@ def fit_data(in_dir: Path, out_json: Path) -> dict:
     print(_green(f"\n  Wrote {out_json}"))
 
     # Generate validation plots
-    plot_free_swing_compare(in_dir, derived, out_dir=in_dir)
+    plot_free_swing_compare(in_dir, derived, out_dir=in_dir, params_path=out_json)
     if (in_dir / "motor_sweep.npz").exists():
         plot_motor_sweep(in_dir / "motor_sweep.npz", out_dir=in_dir)
 
@@ -581,7 +591,8 @@ def fit_data(in_dir: Path, out_json: Path) -> dict:
 # Plotting
 # ---------------------------------------------------------------------------
 
-def plot_free_swing_compare(in_dir: Path, derived: dict, *, out_dir: Path) -> None:
+def plot_free_swing_compare(in_dir: Path, derived: dict, *, out_dir: Path,
+                            params_path: Path | None = None) -> None:
     """Replay the longest free-swing in sim and compare envelopes.
 
     Time-aligned to the actual release moment, not the recording start —
@@ -603,7 +614,12 @@ def plot_free_swing_compare(in_dir: Path, derived: dict, *, out_dir: Path) -> No
     hanging_zero = float(meta.get("hanging_zero_rad", 0.0))
 
     real_t = rec["t"]
-    real_pen = rec["pen"] - hanging_zero
+    # 課程版：零點用這次自由擺最後 1 秒的靜止位置，不用標定值。標定時擺錘
+    # 沒有自然垂下（例如放在墊塊上）的話，標定值會偏幾十度，模擬就從錯的
+    # 角度開始擺。
+    tail = real_t > real_t[-1] - 1.0
+    rest = float(np.median(rec["pen"][tail])) if tail.sum() > 10 else hanging_zero
+    real_pen = rec["pen"] - rest
     real_pvel = rec["pvel"]
     sample_dt = float(np.median(np.diff(real_t)))
 
@@ -623,7 +639,10 @@ def plot_free_swing_compare(in_dir: Path, derived: dict, *, out_dir: Path) -> No
     # Sim with the derived params loaded by the env. Note: the env reads
     # the sysid params at construction time, so we rely on `fit_data` having
     # just written that file.
+    # 課程版：明確傳入剛寫出的 sysid 檔，不然 env 會用預設的作者機台
+    # （sysid_params_rig1.json）。
     env = RotaryInvertedPendulumEnv(
+        params_path=params_path,
         control_freq_hz=200.0, domain_randomization=False,
         episode_length_s=real_t_trim[-1] + 0.5,
     )
@@ -633,6 +652,9 @@ def plot_free_swing_compare(in_dir: Path, derived: dict, *, out_dir: Path) -> No
     env.data.qvel[env._motor_qvel_addr] = 0.0
     env.data.qvel[env._pen_qvel_addr]   = release_vel
     env._motor_target = 0.0; env._motor_vel = 0.0
+    # reset() 把手臂放在隨機角度；substep 插值的起點也要一起歸零，不然
+    # 第一步等於命令手臂在 5 ms 內甩回 0，把擺錘打到上千 rad。
+    env._prev_cmd_pos = 0.0; env._lagged_target = 0.0; env._meas_motor_vel = 0.0
     mujoco.mj_forward(env.model, env.data)
 
     n = len(real_t_trim)
@@ -659,6 +681,10 @@ def plot_free_swing_compare(in_dir: Path, derived: dict, *, out_dir: Path) -> No
             j = a + int(np.argmax(np.abs(y[a:b])))
             pt.append(t[j]); pa.append(abs(y[j]))
         pt, pa = np.array(pt), np.array(pa)
+        # 課程版：擺錘停下後 0° 附近的小抖動不算峰值（< 1°），只取停下前的那一段。
+        small = np.where(pa < np.radians(1.0))[0]
+        if len(small):
+            pt, pa = pt[:small[0]], pa[:small[0]]
         if len(pt) < 3:
             return None
         period = 2 * np.median(np.diff(pt))

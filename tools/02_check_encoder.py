@@ -2,7 +2,7 @@
 
 搭配韌體 firmware/EncoderCheck。三段：
   1. 靜態 10 秒：狀態位元（MD/ML/MH）、AGC、magnitude
-  2. 用手慢轉：順時針 3 圈、逆時針 3 圈（跳點、圈數、覆蓋、對心）
+  2. 用手慢轉：任一方向 3 圈、再反方向 3 圈（跳點、圈數、覆蓋、對心）
   3. 自由擺（選做）：週期與左右對稱
 每一項印 PASS/FAIL，並把原始資料與圖存在 policy/encoder_runs/<時間>/。
 """
@@ -24,7 +24,8 @@ TURN_DEG_MIN, TURN_DEG_MAX = 900.0, 1260.0   # 每個方向累積角度（約 3 
 COVER_BINS = 64             # 一圈分成 64 格（5.6°），每格都要讀到
 MAG_RIPPLE_MAX = 0.15       # 一圈內 magnitude 的 (最大−最小)/平均（偏心指標）
 PERIOD_RANGE_S = (0.49, 0.53)   # 小振幅（< 20°）自由擺週期
-SYMMETRY_MAX = 0.10         # 左右擺幅差異比例
+SMALL_AMP_DEG = (2.0, 20.0)     # 算週期用的振幅範圍；< 2° 是停下後的抖動，不算
+SYMMETRY_MAX = 0.10         # 左右擺幅差異比例（扣掉阻尼後）
 # ----------------------------------------------------------------------------
 
 BAUD = 500_000
@@ -85,6 +86,58 @@ def jumps(raw: np.ndarray) -> int:
     d = np.diff(raw.astype(np.int64))
     d = (d + 2048) % 4096 - 2048
     return int(np.sum(np.abs(d) > JUMP_LSB))
+
+
+def swing_period(t: np.ndarray, x: np.ndarray) -> float | None:
+    """小振幅自由擺週期：只用振幅在 SMALL_AMP_DEG 之間的上升零交越。
+
+    擺錘停下後還會錄到 0° 附近的小抖動，那些零交越要排除，不然中位數會被拉低。
+    """
+    peaks = _peaks(x)
+    zc = np.where((x[:-1] < 0) & (x[1:] >= 0))[0]
+    if len(zc) < 2 or len(peaks) == 0:
+        return None
+    tz = t[zc] + (t[zc + 1] - t[zc]) * (-x[zc] / (x[zc + 1] - x[zc]))
+    # 每個零交越之後第一個峰值的振幅，代表那一圈的振幅
+    amp = np.array([abs(x[peaks[peaks > i][0]]) if np.any(peaks > i) else 0.0 for i in zc])
+    keep = (amp >= SMALL_AMP_DEG[0]) & (amp < SMALL_AMP_DEG[1])
+    dt = np.diff(tz)
+    good = keep[:-1] & keep[1:] & (dt > 0.3)
+    return float(np.median(dt[good])) if good.sum() >= 3 else None
+
+
+def _peaks(x: np.ndarray) -> np.ndarray:
+    """|x| 的局部最大值（每半個週期一個），忽略 1° 以下的抖動。"""
+    s = np.sign(x)
+    idx = []
+    start = 0
+    for i in range(1, len(x)):
+        if s[i] != s[i - 1] and s[i] != 0:
+            seg = np.abs(x[start:i])
+            if len(seg) and seg.max() >= 1.0:
+                idx.append(start + int(np.argmax(seg)))
+            start = i
+    return np.array(idx, dtype=int)
+
+
+def swing_asymmetry(x: np.ndarray) -> tuple[float, float, float] | None:
+    """左右擺幅對稱：每個負峰跟前後兩個正峰的平均比，扣掉阻尼造成的自然衰減。
+
+    回傳 (差異比例中位數, 第一個正峰, 第一個負峰)。只用振幅 ≥ 5° 的峰。
+    """
+    pk = _peaks(x)
+    vals = x[pk]
+    ratios = []
+    for i in range(1, len(vals) - 1):
+        a, b, c = abs(vals[i - 1]), abs(vals[i]), abs(vals[i + 1])
+        if np.sign(vals[i - 1]) == np.sign(vals[i + 1]) != np.sign(vals[i]) and min(a, b, c) >= 5.0:
+            ref = 0.5 * (a + c)
+            ratios.append(abs(b - ref) / ref)
+    if len(ratios) < 2:
+        return None
+    pos = next((v for v in vals if v > 0), 0.0)
+    neg = next((-v for v in vals if v < 0), 0.0)
+    return float(np.median(ratios)), float(pos), float(neg)
 
 
 def report(name: str, passed: bool, detail: str, results: list) -> None:
@@ -163,13 +216,27 @@ def main() -> int:
     # ---------------- 2. 手轉
     heading("2/3 用手慢轉")
     turns = {}
-    for key, label in (("cw", "順時針"), ("ccw", "逆時針")):
-        info(f"用手捏著擺錘，{label}慢慢轉 3 圈（每圈約 2–3 秒）。")
-        wait_enter("按 Enter 開始，轉完再按一次 Enter")
-        a = collect_until_enter(reader, max_s=60)
+    # 哪個方向是正不重要（方向由 04_check_direction 處理），只要兩次方向相反。
+    # 轉不夠或方向一樣就當場要求重轉，不要等到最後才印 FAIL。
+    first_total = None
+    for key, label, hint in (("cw", "第一次", "往任一方向"), ("ccw", "第二次", "往跟第一次「相反」的方向")):
+        while True:
+            info(f"{label}：用手捏著擺錘，{hint}慢慢轉 3 整圈（每圈約 2–3 秒）。畫面會即時顯示累積角度。")
+            wait_enter("按 Enter 開始，轉完再按一次 Enter")
+            a = collect_until_enter(reader, max_s=60)
+            total = unwrap_deg(a[:, 1])[-1] if len(a) > 1 else 0.0
+            problem = None
+            if not TURN_DEG_MIN <= abs(total) <= TURN_DEG_MAX:
+                problem = f"累積 {total:+.0f}°，3 整圈應約 ±1080°"
+            elif first_total is not None and total * first_total > 0:
+                problem = f"兩次方向一樣（{first_total:+.0f}° 與 {total:+.0f}°），第二次要往反方向轉"
+            if problem is None or not ask_yes(f"{problem}。要重轉一次嗎？", default=True):
+                break
+        if first_total is None:
+            first_total = total
         data[key] = a
         turns[key] = a
-    for key, label in (("cw", "順時針"), ("ccw", "逆時針")):
+    for key, label in (("cw", "第一次"), ("ccw", "第二次")):
         a = turns[key]
         if len(a) < 10:
             report(f"{label}有資料", False, "幾乎沒有收到資料", results)
@@ -195,7 +262,8 @@ def main() -> int:
     # ---------------- 3. 自由擺（選做）
     heading("3/3 自由擺（選做）")
     if ask_yes("要做自由擺測試嗎？", default=False):
-        info("把擺錘拉到約 60°，按 Enter 的同時放手。會錄 20 秒。")
+        info("手扶住手臂不要讓它動，把擺錘從「自然垂下的位置」沿擺動方向往外拉約 60°")
+        info("（大約是垂下和水平之間的三分之二；40–70° 都可以），按 Enter 的同時放手。會錄 20 秒。")
         wait_enter("拉好就按 Enter 並放手")
         reader.take()
         time.sleep(20)
@@ -206,22 +274,19 @@ def main() -> int:
             ang = unwrap_deg(fs[:, 1])
             rest = np.median(ang[-500:])
             x = ang - rest
-            amp = np.abs(x)
-            # 小振幅段：最大振幅 < 20° 之後的零交越
-            small = np.where(np.maximum.accumulate(amp[::-1])[::-1] < 20)[0]
-            zc = np.where((x[:-1] < 0) & (x[1:] >= 0))[0]
-            zc = zc[np.isin(zc, small)] if len(small) else np.array([], int)
-            if len(zc) >= 4:
-                tz = t[zc] + (t[zc + 1] - t[zc]) * (-x[zc] / (x[zc + 1] - x[zc]))
-                period = float(np.median(np.diff(tz)))
+            period = swing_period(t, x)
+            if period is not None:
                 report("小振幅週期", PERIOD_RANGE_S[0] <= period <= PERIOD_RANGE_S[1],
                        f"{period:.4f} s（參考 0.50–0.51 s）", results)
             else:
                 warn("擺動太快停下來，抓不到足夠的小振幅週期")
-            pk = x[: len(x) // 3]
-            pos, neg = pk.max(), -pk.min()
-            asym = abs(pos - neg) / max(pos, neg, 1e-6)
-            report("左右擺幅對稱", asym <= SYMMETRY_MAX, f"+{pos:.1f}° / −{neg:.1f}°（差 {asym * 100:.0f}%）", results)
+            sym = swing_asymmetry(x)
+            if sym is not None:
+                asym, pos, neg = sym
+                report("左右擺幅對稱", asym <= SYMMETRY_MAX,
+                       f"扣掉阻尼後左右差 {asym * 100:.0f}%（放手 +{pos:.1f}°，第一次擺到對側 −{neg:.1f}°）", results)
+            else:
+                warn("擺動太快停下來，抓不到足夠的峰值判斷對稱")
     reader.close()
 
     # ---------------- 存檔與圖

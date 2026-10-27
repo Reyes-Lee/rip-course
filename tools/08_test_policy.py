@@ -26,7 +26,7 @@ def main() -> int:
                                  "--duration-s", "30", "--log", rel(log)])
     print()
     info(f"紀錄檔：policy/{rel(log)}")
-    info("看 balanced fraction（|θ| ≤ 15° 且 |θ̇| ≤ 2 rad/s 的時間比例），對照網站 Step 2 的表決定下一步。")
+    info("看 balanced fraction（|θ| ≤ 15° 且 |θ̇| ≤ 4 rad/s 的時間比例），對照網站 Step 2 的表決定下一步。")
     return code
 
 

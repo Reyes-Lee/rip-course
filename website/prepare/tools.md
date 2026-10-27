@@ -19,6 +19,10 @@ Nano 用 USB-C 線接上電腦、燒好對應的韌體，再執行工具，就�
 | `12_view_policy` | — | 在 MuJoCo 視窗播放策略 30 秒 | [Step 1–2](../steps/step1-train.md#mujoco) |
 | `13_check_sim` | — | 對稱性＋敏感度關卡，印出數字 | [Step 1–3](../steps/step1-train.md#checkpoint) |
 
+!!! warning "點兩下後只看到 `no such file or directory` 或 `[程序完成]`"
+
+    正常打開時，第一行是工具名稱，接著提醒要燒哪個韌體。只看到 `no such file or directory` 或 `[程序完成]`，代表**工具沒有執行**，`[程序完成]` 不代表成功。常見於裝了 oh-my-zsh、powerlevel10k 或 conda 的 macOS（終端機啟動較慢，吃掉了路徑的第一個字）。先回 Finder 再點兩下一次；還是一樣就打開終端機，等提示字元出現後輸入 `bash `（後面有空格），把 `.command` 檔拖進視窗，按 Enter。
+
 ## 所有工具共通的操作方式
 
 <div class="grid cards" markdown>

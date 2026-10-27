@@ -1,7 +1,7 @@
 # Step 1：在模擬中訓練教師策略
 
 <div class="rip-meta" markdown>
-  <span class="rip-chip rip-chip--cyan">:material-clock-outline: 筆電 CPU 約 25 分鐘</span>
+  <span class="rip-chip rip-chip--cyan">:material-clock-outline: 筆電 CPU 約 25–60 分鐘</span>
   <span class="rip-chip">:material-robot-off-outline: 不需要機台</span>
   <span class="rip-chip">:material-file-outline: 產出 v1_stage3/best_model.zip</span>
 </div>
@@ -17,12 +17,12 @@
     3. 執行 `tools/06_train_teacher`。
     4. 畫面問 `run 名稱 [v1]:`，第一次直接按 Enter。
     5. 畫面問 `SEED [0]:`，直接按 Enter。
-    6. 工具印出設定 header 並自動核對（見[檢查點](#checkpoint)），然後開始訓練。畫面會持續印出進度，約 25 分鐘。
+    6. 工具印出設定 header（用眼睛確認，見[檢查點](#checkpoint)），然後開始訓練。畫面會一直捲動英文統計表，那張表不用看；每 30 秒會印一行中文進度，例如 `[Stage 1/3] ████████░░ 45,600 / 100,000 步（46%）｜……預估還要約 43 分鐘`。總時間看電腦速度，作者的機器約 25 分鐘、Apple M1 約 50 分鐘。看到 `Stage 3 完成` 和檢查點才算跑完。
     7. 訓練完工具自動跑檢查點並印出數字（見[檢查點](#checkpoint)）。工具不替你判斷，由你對照參考門檻決定下一步。
 
 !!! tip "中途中斷了（關掉視窗、筆電睡眠）"
 
-    再執行 `tools/06_train_teacher`，`run 名稱` 輸入**同一個名稱**（例如 `v1`）。工具會顯示 `已完成第 N 階段，從第 N+1 階段接續？[Y/n]`，按 Enter，已完成的階段不會重跑。
+    再執行 `tools/06_train_teacher`，`run 名稱` 輸入**同一個名稱**（例如 `v1`）。工具會顯示 `已完成第 N 階段，從第 N+1 階段接續？[Y/n]`，按 Enter，已完成的階段不會重跑。**中斷時正在跑的那個階段會從頭再跑一次**（最多約 20 分鐘）。
 
 ??? cmd "背後執行的指令"
 
@@ -189,13 +189,13 @@ $$
 
 ## 檢查點 { #checkpoint }
 
-`06_train_teacher` 訓練結束時會自動跑下面三項並印出結果；除了設定 header 不符會中止，其餘只印數字，不替你判斷。之後想對任何一支策略重跑，執行 `tools/13_check_sim`，從清單選那支策略即可。
+`06_train_teacher` 訓練結束時會自動跑下面三項並印出結果；全部只印數字，不替你判斷。之後想對任何一支策略重跑，執行 `tools/13_check_sim`，從清單選那支策略即可。
 
 !!! checkpoint "參考門檻（作者的建議，由你判斷）"
 
     | 項目 | 工具做什麼 | 參考門檻 |
     | --- | --- | --- |
-    | 設定 header | 訓練開始時核對 4 行設定 | `mirror augmentation: ON`、`obs staleness DR: up to 0.02 s`、`rig sysid: sysid_params.json`、`control rate: 50 Hz, max accel: 150` 全部符合；不符工具會中止，請找助教 |
+    | 設定 header | 訓練開始時用眼睛確認這 4 行（工具會印出 12 行，其他行不用看） | `mirror augmentation: ON`、`obs staleness DR: up to 0.02 s`、`rig sysid: sysid_params.json`、`control rate: 50 Hz, max accel: 150` 全部符合；不符就按 ++ctrl+c++ 停止，找助教 |
     | 對稱性 | 從垂下的狀態開始，看策略能不能自己甩上 | 從垂下的狀態能自己甩上（工具印出 `從垂下自己甩上：是／否`） |
     | 敏感度關卡 | 在模擬裡各跑 20 回合：開著與關掉韌體量測模型 | 關掉後的 balanced fraction ≥ 0.7 |
 
@@ -216,7 +216,7 @@ SEED 是亂數種子，決定網路初始權重與探索過程；同一套配方
     1. 執行 `tools/06_train_teacher`。
     2. `run 名稱 [v1]:` 輸入 `v2`。**不要沿用 v1**，否則工具會把它當成接續舊的那一支。
     3. `SEED [0]:` 輸入 `1`。
-    4. 約 25 分鐘後看新的檢查點數字，和前一支比較。
+    4. 跑完（約 25–60 分鐘）後看新的檢查點數字，和前一支比較。
     5. 還是不理想，再用 `v3`、SEED `2`。連續三支都低於 0.3 就找助教，通常是 Step 0 的問題。
     6. Step 2 選教師時，選你判斷最好的那一支（例如 `v2_stage3`）。
 

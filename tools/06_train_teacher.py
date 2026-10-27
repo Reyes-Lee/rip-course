@@ -10,6 +10,7 @@ import re
 from _common import (RUNS, ask, ask_yes, banner, color, fail, finish, heading, info, is_done, mark_done,
                      need_sysid, ok, run_policy_script, warn)
 from _checks import print_sensitivity, sensitivity, symmetry
+from _progress import StageProgress
 
 STEPS_PER_STAGE = 100_000
 CONTROL_FREQ = 50
@@ -56,9 +57,10 @@ def print_header(params: str, name: str, seed: str) -> None:
 
 
 def main() -> int:
-    banner("06 模擬訓練教師（約 25 分鐘，不需要機台）")
+    banner("06 模擬訓練教師（約 25–60 分鐘，看電腦速度；不需要機台）")
     params = need_sysid()
     info("筆電接上電源、不要闔上蓋子，睡眠會讓訓練中斷。")
+    info("訓練中畫面會一直捲動英文統計表，那張表不用看；每 30 秒會印一行中文進度與預估剩餘時間。")
     name = ask("run 名稱", "v1")
     if not re.fullmatch(r"[A-Za-z0-9_-]+", name):
         fail("run 名稱只能用英文、數字、底線、連字號。")
@@ -96,7 +98,8 @@ def main() -> int:
                      "--dr-action-lag-tau-min", cfg["lag"][0], "--dr-action-lag-tau-max", cfg["lag"][1],
                      "--dr-delay-min", cfg["delay"][0], "--dr-delay-max", cfg["delay"][1],
                      "--resume", f"runs/{name}_stage{stage - 1}/best_model.zip"]
-        code, _ = run_policy_script(args)
+        with StageProgress(run_dir, stage, 3, STEPS_PER_STAGE):
+            code, _ = run_policy_script(args)
         if code != 0:
             fail(f"Stage {stage} 沒有完成（代碼 {code}）。再執行 06_train_teacher、輸入同一個名稱就能接續。")
             return code

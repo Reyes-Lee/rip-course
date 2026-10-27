@@ -89,6 +89,9 @@ class BalanceMetrics:
     arrivals_cw: int = 0
     catches_ccw: int = 0
     catches_cw: int = 0
+    # 課程版：離垂下的最大擺幅（度）。來回擺也會累加 gross revolutions，
+    # 只看那個數字分不出「甩不上去」和「繞圈」。
+    max_swing_deg: float | None = None
 
     @property
     def has_calmness(self) -> bool:
@@ -130,6 +133,10 @@ class BalanceMetrics:
             f"  longest balanced streak: {self.longest_streak_s:.2f} s",
             f"  catches (>=1s):          {self.catches}",
             f"  pendulum revolutions:    {self.pendulum_revolutions:.1f} gross",
+        ]
+        if self.max_swing_deg is not None:
+            lines.append(f"  max swing from hanging:  {self.max_swing_deg:.0f} deg")
+        lines += [
             f"  |action| mean:           {self.action_abs_mean:.3f}",
             f"  verdict:                 {self.verdict}",
         ]
@@ -244,8 +251,12 @@ def score(*, phi, motor_pos, action, t_s=None, hz=None, motor_cmd=None
     travel_rev = float(np.sum(np.abs(np.diff(np.unwrap(phi)))) / (2 * np.pi))
 
     frac = float(balanced.mean())
+    max_swing_deg = math.degrees(float(np.abs(wrap_pi(phi)).max())) if n else 0.0
     if frac >= 0.5 and best * dt >= 2.0:
         verdict = "BALANCED"
+    elif max_swing_deg < 90.0 and frac == 0.0:
+        # 從沒擺過水平：是「甩不上去」，不是繞圈。
+        verdict = "NO SWING-UP"
     elif travel_rev > 5 and frac < 0.3:
         verdict = "SPINNING"
     else:
@@ -260,6 +271,7 @@ def score(*, phi, motor_pos, action, t_s=None, hz=None, motor_cmd=None
         action_abs_mean=float(np.abs(action).mean()),
         verdict=verdict,
         balanced_mask=balanced,
+        max_swing_deg=max_swing_deg,
         **_direction_stats(theta, pen_vel, balanced, one_s),
     )
 
