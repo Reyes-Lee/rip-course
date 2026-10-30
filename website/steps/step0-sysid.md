@@ -53,25 +53,26 @@
 
     1. 用 Arduino IDE 上傳 `LowLevelServer`（與微調時同一份韌體，量測與部署不會對不上），關掉序列埠監控。
     2. 準備一塊硬紙板或泡棉塊。
-    3. 執行 `tools/05_sysid`。
-    4. 選單出現時輸入 `1`（新量測），或直接按 Enter。
-    5. 照畫面依序做下面四件事。
+    3. 在 `policy/` 裡執行（`<PORT>` 見[工具與指令](../prepare/tools.md#cli)）：
+
+        ```bash
+        uv run python sysid_wizard.py --port <PORT> --out-json sysid_params.json
+        ```
+
+        `--out-json` 是輸出檔名，作者規定一定要給，避免拿到別台機台的參數。之後每一步都會用到這個檔。
+
+    4. 精靈是英文的，照畫面依序做下面四件事。
 
 精靈會帶你做：
 
-1. **標定垂下位置**：**先不要放墊塊**，讓擺錘自然垂到最低點、完全靜止，再按 Enter。精靈錄 3 秒，取中位數當 0。墊塊是下一步自由擺才用。標定位置跟擺錘停下的位置差超過 10°，擬合時工具會提醒你（擬合結果不受影響）。
+1. **標定垂下位置**：**先不要放墊塊**，讓擺錘自然垂到最低點、完全靜止，再按 Enter。精靈錄 3 秒，取中位數當 0。墊塊是下一步自由擺才用。標定位置跟擺錘停下的位置差超過 10°，擬合時會印出提醒（擬合結果不受影響）。
 2. **自由擺動 × 3**：手壓住手臂，用塊子把擺錘墊高，再從垂直於擺動平面的方向抽出。每次錄 10 秒。
 3. **馬達 ±90° 掃描**：手臂走 0 → +90° → 0 → −90° → 0。**12 V 要接著**。目視確認手臂真的轉到左右約 90°（跟底座垂直）再回到正中間，明顯不足就是失步。
 4. **擬合與畫圖**：寫出 json，並在 `sysid_runs/<時間>/` 產生 `freeswing_compare.png` 與 `motor_sweep.png`。
 
 精靈的掃描只用到約 40 rad/s²，策略則會用到 150 rad/s²；高加速度下不失步已在上電測試用 `03_check_motor` 驗過。
 
-??? cmd "背後執行的指令"
-
-    ```bash
-    cd policy
-    uv run python sysid_wizard.py --port <PORT> --out-json sysid_params.json
-    ```
+跑完後，`policy/sysid_params.json` 就是你的機台的摩擦參數；`policy/sysid_runs/<時間>/` 裡有原始錄製（`tare.npz`、`free_run_1..3.npz`、`motor_sweep.npz`）和兩張檢查圖。打開 `sysid_params.json` 看看：`pendulum.fit` 裡的 `omega_n_small_amp_rad_s` 是小振幅自然頻率，`omega_n_small_amp_rad_s_all_runs` 是三次各自的值，`pendulum.derived` 裡是摩擦與慣量（量測 vs URDF 預測）。下面的檢查點都從這裡讀。
 
 ## 檢查點 { #checkpoint }
 
@@ -80,7 +81,7 @@
     | 項目 | 通過條件 |
     | --- | --- |
     | `freeswing_compare.png` | 模擬與實測的振幅包絡線幾乎重疊 |
-    | 小振幅自然頻率 ω~n~ | 工具採用的那次（三次的中位數，寫進 `sysid_params.json`）在 12.3–12.6 rad/s（週期約 0.50–0.51 s），而且三次的最大與最小相差 < 3%（約 0.4 rad/s）。只有一次偏掉、另外兩次彼此接近又都在範圍內也算通過：工具用中位數，偏掉的那次不影響結果，多半是放手時碰到或有震動 |
+    | 小振幅自然頻率 ω~n~ | 精靈採用的那次（三次的中位數，寫進 `sysid_params.json`）在 12.3–12.6 rad/s（週期約 0.50–0.51 s），而且三次的最大與最小相差 < 3%（約 0.4 rad/s）。只有一次偏掉、另外兩次彼此接近又都在範圍內也算通過：精靈用中位數，偏掉的那次不影響結果，多半是放手時碰到或有震動 |
     | 轉動慣量：量測 vs URDF 預測 | 誤差 < 10% |
     | 馬達掃描（**目視**） | 手臂真的轉到左右約 90° 再回到正中間。`motor_sweep.png` 的藍線是韌體的步數計數，12 V 沒接、手臂沒動也會畫得很漂亮，所以不能只看圖 |
     | 馬達聲音 | 平順，不嘶嘶不磨 |
@@ -95,7 +96,7 @@
 - **上圖**：藍色（實測）和橘色（模擬）都是衰減的正弦波，y 軸大約在 ±1 rad 內。一開始的相位可能差一點（放手時手的干擾），不影響。
 - **下圖**：兩條峰值線是往下的斜線，彼此靠近。
 - **標題的 Δ**：第一個是週期差，應在約 ±5% 內；第二個是衰減差，±20% 內都算正常。
-- **壞掉的樣子**：y 軸到幾百、幾千 rad，或下圖是空的。這是工具的問題，不是你的量測，找助教。
+- **壞掉的樣子**：y 軸到幾百、幾千 rad，或下圖是空的。這是程式的問題，不是你的量測，找助教。
 
 <figure class="rip-figure" markdown>
 ![motor_sweep.png 的範例：藍線落後橘色虛線約 0.5 秒，最後到達 ±90° 並回到 0°](../assets/img/step0-motor-sweep.png)
@@ -109,17 +110,16 @@
 ### 檢查點沒過時 { #checkpoint-fail }
 
 <ol class="rip-ol">
-<li><b>只有「自由擺擬合」不好</b>（包絡線不重疊，或三次 ω<sub>n</sub> 相差 ≥ 3% 而且不只一次偏掉）：再執行 <code>tools/05_sysid</code>，選單輸入 <code>1</code>（新量測），整套重做一次，約 15 分鐘。</li>
-<li><b>想用同一份錄製重新擬合</b>（例如助教更新了擬合程式）：執行 <code>tools/05_sysid</code>，選單輸入 <code>2</code>（用已存的錄製重新擬合），再從列出的 <code>sysid_runs/&lt;時間&gt;</code> 裡選一個，不用碰機台。</li>
+<li><b>只有「自由擺擬合」不好</b>（包絡線不重疊，或三次 ω<sub>n</sub> 相差 ≥ 3% 而且不只一次偏掉）：再跑一次 <code>sysid_wizard.py</code>，整套重做，約 15 分鐘。</li>
+<li><b>想用同一份錄製重新擬合</b>（例如助教更新了擬合程式）：用下面的 <code>fit</code> 子指令，指定 <code>sysid_runs/&lt;時間&gt;</code>，不用碰機台。</li>
 <li><b>慣量誤差超過 10%</b>：先檢查硬幣位置與是否鬆動（<a href="../../prepare/hardware/#coin">貼上配重硬幣</a>），修好後照第 1 點重量。仍然超過就找助教。</li>
 </ol>
 
-??? cmd "第 2 點背後執行的指令"
+```bash
+uv run python sysid_wizard.py --out-json sysid_params.json fit --in-dir sysid_runs/<時間> --out-json sysid_params.json
+```
 
-    ```bash
-    cd policy
-    uv run python sysid_wizard.py fit --in-dir sysid_runs/<時間> --out-json sysid_params.json
-    ```
+`--out-json` 要寫兩次（`fit` 前後各一次），是作者程式的參數解析問題，少一個會報錯。
 
 !!! warning "機構改過就要重量"
 

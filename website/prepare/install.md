@@ -121,6 +121,8 @@
     - `torch` 的版本
     - 你的 Nano 序列埠（macOS 是 `/dev/cu.usbserial-xxxx` 或 `/dev/cu.wchusbserial-xxxx`，Windows 是 `COM3`、`COM4`…）
 
+    **把序列埠記下來**：Step 0–4 的指令裡寫 `<PORT>` 的地方要換成它（見[工具與指令](tools.md#cli)）。
+
     **沒看到序列埠**：先換一條 USB-C 線（有些線只能充電，不能傳資料），Windows 再確認 CH340 驅動，然後重新執行 `00_setup`。
 
 ## 課程 repo 的結構
@@ -140,7 +142,7 @@ rip-course/
     └── …
 ```
 
-你執行工具後產生的檔案都在 `policy/` 底下，不會進 repo：
+你執行工具與指令後產生的檔案都在 `policy/` 底下，不會進 repo：
 
 | 檔案 | 哪一步產生 |
 | --- | --- |

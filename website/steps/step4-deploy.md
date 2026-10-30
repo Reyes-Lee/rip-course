@@ -11,7 +11,7 @@
 
 ## 4-1 sketch 常數與策略一致 { #constants }
 
-標頭檔只帶權重，迴路形狀寫在 sketch 裡，兩邊必須一致。**你不用自己核對**：`10_export_weights` 匯出前會自動讀 `firmware/RLControl/RLControl.ino` 與策略的 `config.json`，印出下表並逐項標 OK。課程 repo 的預設值已對齊，正常不會不一致；如果有一項不一致，工具會停止匯出，請找助教，不要自己改 sketch。
+標頭檔只帶權重，迴路形狀寫在 sketch 裡，兩邊必須一致。燒錄前自己核對一次：打開 `firmware/RLControl/RLControl.ino` 找下表的常數，再打開學生那一段的 `config.json`（例如 `runs/ft3/config.json`）對照。課程 repo 的預設值已對齊，正常不會不一致；有一項不一致就找助教，不要自己改 sketch。
 
 | `RLControl.ino` 常數 | 必須等於 | 預設值 |
 | --- | --- | --- |
@@ -25,20 +25,19 @@
 
 !!! tool "操作步驟"
 
-    1. 執行 `tools/10_export_weights`。清單預設是最新的學生，直接按 Enter。工具核對 4-1 的表，全部 OK 才匯出到 `firmware/RLControl/policy_weights_student.h`。
+    1. 把學生匯出成 C 標頭檔。在 `policy/` 裡執行：
+
+        ```bash
+        uv run python export_weights.py \
+            --student runs/ft3/distill_h16_dagger_dev/student.pt \
+            --header  ../firmware/RLControl/policy_weights_student.h \
+            --source-name ft3/distill_h16_dagger_dev
+        ```
+
+        `--header` 一定要是 `policy_weights_student.h`：sketch 預設載入這個檔。
     2. 用 Arduino IDE 開 `firmware/RLControl/RLControl.ino`，按「上傳」。sketch 預設就載入 `policy_weights_student.h`，不用改任何一行。
     3. 看 IDE 下方的編譯訊息：「草稿碼使用了 N 位元組」的 N 必須 ≤ 30720（Old Bootloader 的上限）。超過會上傳失敗，找助教。
-    4. 上傳完 Nano 會自動重開。前 1 秒 LED 恆亮，這時擺錘要**靜止垂下**（這個姿勢會被當成編碼器零點），之後它會自己甩上、平衡。如果馬達完全不動，打開序列埠監控（500000）看有沒有 `[DIR] not calibrated`：這塊 Nano 沒做過[方向標定](../prepare/hardware.md#direction)，改燒 `LowLevelServer` 跑 `04_check_direction`，再重新上傳 `RLControl`。
-
-??? cmd "第 1 步背後執行的指令"
-
-    ```bash
-    cd policy
-    uv run python export_weights.py \
-        --student runs/ft3/distill_h16_dagger_dev/student.pt \
-        --header  ../firmware/RLControl/policy_weights_student.h \
-        --source-name ft3/distill_h16_dagger_dev
-    ```
+    4. 上傳完 Nano 會自動重開。前 1 秒 LED 恆亮，這時擺錘要**靜止垂下**（這個姿勢會被當成編碼器零點），之後它會自己甩上、平衡。如果馬達完全不動，打開序列埠監控（500000）看有沒有 `[DIR] not calibrated`：這塊 Nano 沒做過[方向標定](../prepare/hardware.md#direction)，改燒 `LowLevelServer` 跑 `tools/04_check_direction`，再重新上傳 `RLControl`。
 
 !!! warning "手臂轉太遠會自動斷電"
 
@@ -51,17 +50,15 @@
 !!! tool "操作步驟"
 
     1. Nano 燒的是 `RLControl`（4-2），Arduino IDE 的序列埠監控已關掉。
-    2. 用手把手臂轉回正中間，等擺錘靜止垂下。工具打開 serial 時會讓 Nano 重開並重新標定零點。
-    3. 執行 `tools/11_score_onboard`。
-    4. 60 秒內不要碰機台。結束時印出結果，紀錄檔存在 `policy/recordings/onboard_<時間>.npz`。照下面的順序看。
+    2. 用手把手臂轉回正中間，等擺錘靜止垂下。下一步打開 serial 時會讓 Nano 重開並重新標定零點。
+    3. 在 `policy/` 裡執行（開序列埠會讓 Nano 重開，所以擺錘要先靜止垂下）：
 
-??? cmd "背後執行的指令"
+        ```bash
+        uv run python analyze_onboard.py --port <PORT> --duration-s 60 \
+            --log recordings/onboard_ft3.npz
+        ```
 
-    ```bash
-    cd policy
-    uv run python analyze_onboard.py --port <PORT> --duration-s 60 \
-        --log recordings/onboard_<時間>.npz
-    ```
+    4. 60 秒內不要碰機台。結束時印出結果。照下面的順序看。
 
 !!! checkpoint "照這個順序看結果"
 

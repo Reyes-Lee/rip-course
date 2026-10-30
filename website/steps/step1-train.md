@@ -6,7 +6,7 @@
   <span class="rip-chip">:material-file-outline: 產出 v1_stage3/best_model.zip</span>
 </div>
 
-執行 `06_train_teacher` 就會跑完三階段課程，產出一支 256×256 的 SAC 教師策略。
+用 `curriculum_train.py` 跑完三階段課程，產出一支 256×256 的 SAC 教師策略。輸入是 Step 0 的 `sysid_params.json`，輸出是 `runs/v1_stage3/best_model.zip`。
 
 ## 操作步驟 { #run }
 
@@ -14,26 +14,31 @@
 
     1. 確認 Step 0 已經產生 `policy/sysid_params.json`。
     2. 筆電接上電源、不要闔上蓋子（睡眠會讓訓練中斷）。
-    3. 執行 `tools/06_train_teacher`。
-    4. 畫面問 `run 名稱 [v1]:`，第一次直接按 Enter。
-    5. 畫面問 `SEED [0]:`，直接按 Enter。
-    6. 工具印出設定 header（用眼睛確認，見[檢查點](#checkpoint)），然後開始訓練。畫面會一直捲動英文統計表，那張表不用看；每 30 秒會印一行中文進度，例如 `[Stage 1/3] ████████░░ 45,600 / 100,000 步（46%）｜……預估還要約 43 分鐘`。總時間看電腦速度，作者的機器約 25 分鐘、Apple M1 約 50 分鐘。看到 `Stage 3 完成` 和檢查點才算跑完。
-    7. 訓練完工具自動跑檢查點並印出數字（見[檢查點](#checkpoint)）。工具不替你判斷，由你對照參考門檻決定下一步。
+    3. 在 `policy/` 裡執行：
+
+        ```bash
+        uv run python curriculum_train.py v1 --params-path sysid_params.json
+        ```
+
+        `v1` 是你取的名稱，會產生 `runs/v1_stage1/`、`v1_stage2/`、`v1_stage3/`。`--params-path` 告訴模擬要用哪一台機台的摩擦，**一定要指定你自己的檔**。
+
+    4. 一開始會印出 `Curriculum config:` 設定 header，用眼睛確認（見[檢查點](#checkpoint)），然後開始訓練。
+    5. 畫面會一直捲動 Stable-Baselines3 的英文統計表，`total_timesteps` 是目前步數，每階段 100,000 步。總時間看電腦速度，作者的機器約 25 分鐘、Apple M1 約 50 分鐘。
+    6. 看到 `=== Curriculum complete. Final policy: runs/v1_stage3/best_model.zip ===` 才算跑完。接著自己跑[檢查點](#checkpoint)。
 
 !!! tip "中途中斷了（關掉視窗、筆電睡眠）"
 
-    再執行 `tools/06_train_teacher`，`run 名稱` 輸入**同一個名稱**（例如 `v1`）。工具會顯示 `已完成第 N 階段，從第 N+1 階段接續？[Y/n]`，按 Enter，已完成的階段不會重跑。**中斷時正在跑的那個階段會從頭再跑一次**（最多約 20 分鐘）。
-
-??? cmd "背後執行的指令"
-
-    `06_train_teacher` 是作者 `curriculum_train.sh` 的 Python 版（Windows 不能直接跑 bash），參數照原腳本的預設值。等同於：
+    看 `runs/` 裡哪幾個階段有 `best_model.zip`，從下一個階段接續，例如第 1 階段完成了：
 
     ```bash
-    cd policy
-    DEVICE=cpu PARAMS_PATH=sysid_params.json bash curriculum_train.sh v1
+    uv run python curriculum_train.py v1 --params-path sysid_params.json --start-stage 2
     ```
 
-    實際上是依序跑三次 `train_sac.py`，例如第 1 階段：
+    第 2、3 階段會從前一階段的 `best_model.zip` 接續。**中斷時正在跑的那個階段要從頭再跑**（最多約 20 分鐘）。
+
+??? cmd "curriculum_train.py 在做什麼"
+
+    它是作者 `curriculum_train.sh` 的 Python 版（Windows 不能直接跑 bash），預設值跟原腳本一樣，只是 `--params-path` 必填、預設用 CPU。實際上是依序跑三次 `train_sac.py`，例如第 1 階段：
 
     ```bash
     uv run python train_sac.py --total-steps 100000 --device cpu \
@@ -44,7 +49,7 @@
         --reward-stillness-bonus-weight 5 --run-name v1_stage1 --seed 0
     ```
 
-    第 2、3 階段再加上 `--domain-randomization`、延遲範圍，並用 `--resume` 接續前一階段的 `best_model.zip`。工具固定用 CPU 訓練：訓練的瓶頸是梯度更新，GPU 幫不上忙。
+    第 2、3 階段再加上 `--domain-randomization`、延遲範圍，並用 `--resume` 接續前一階段的 `best_model.zip`。打開 `curriculum_train.py` 就看得到每個參數。用 CPU 是因為訓練的瓶頸是梯度更新，GPU 幫不上忙。
 
 ## 模擬訓練在做什麼 { #what }
 
@@ -84,11 +89,11 @@
 
 ## 參數怎麼送進 MuJoCo { #params }
 
-全部自動，不用改任何檔案。`06_train_teacher` 會自動帶上你的 `sysid_params.json`；每次建立模擬時，`pendulum_env.py` 的 `build_mjcf()` 會用下表的來源組出 MuJoCo 模型。
+你用 `--params-path` 指定的 `sysid_params.json` 會記在 `runs/v1_stage1/config.json` 裡，之後的階段、蒸餾、模擬檢查都從這裡讀，不用每一步重新指定。每次建立模擬時，`pendulum_env.py` 的 `build_mjcf()` 會用下表的來源組出 MuJoCo 模型。
 
 | 參數 | 來源 | 誰負責 |
 | --- | --- | --- |
-| 擺錘鉸鏈的黏滯與庫倫摩擦 | `sysid_params.json` | Step 0 量測，自動帶入 |
+| 擺錘鉸鏈的黏滯與庫倫摩擦 | `sysid_params.json` | Step 0 量測，訓練時用 `--params-path` 指定 |
 | 擺錘質量、質心、轉動慣量 | `model/model.urdf`（已更新為 10 元外貼） | 助教已改好 |
 | 手臂長度與質量 | `pendulum_env.py` 常數（作者值） | 不用改 |
 | 動作延遲、觀測延遲 | 三階段課程的 DR 範圍（作者實測） | 不用改 |
@@ -145,9 +150,14 @@ $$
 
 !!! tool "操作步驟"
 
-    1. 執行 `tools/12_view_policy`。
-    2. 清單列出 `runs/` 裡所有的 `best_model.zip`，輸入要看的那一支的編號；直接按 Enter 是最新的那一支。
-    3. MuJoCo 視窗打開，策略從垂下開始跑 30 秒，結束後視窗自動關閉。想再看一次就重新執行。
+    1. 在 `policy/` 裡執行（macOS 用 `mjpython`，Windows 用 `python`）：
+
+        ```bash
+        uv run mjpython train_sac.py --eval runs/v1_stage3/best_model.zip
+        ```
+
+    2. MuJoCo 視窗打開，策略從垂下開始跑。看完關掉視窗。
+    3. 設定（動作模式、控制頻率、sysid 檔）會從那支策略的 `config.json` 讀，不用重打。
 
 <div class="grid cards" markdown>
 
@@ -161,7 +171,7 @@ $$
 
     ---
 
-    執行兩次：第一次選 `v1_stage1/best_model.zip`，第二次選 `v1_stage3/best_model.zip`，看加入延遲與 DR 後動作有什麼不同。
+    把路徑換成 `runs/v1_stage1/best_model.zip` 再看一次，比較加入延遲與 DR 前後動作有什麼不同。
 
 -   :material-mouse:{ .lg .middle } **操作**
 
@@ -177,27 +187,23 @@ $$
 
 </div>
 
-??? cmd "背後執行的指令"
-
-    Windows 用 `python`，macOS 用 `mjpython`，工具會自動選。
-
-    ```bash
-    cd policy
-    uv run mjpython train_sac.py --eval runs/v1_stage3/best_model.zip \
-        --params-path sysid_params.json
-    ```
-
 ## 檢查點 { #checkpoint }
 
-`06_train_teacher` 訓練結束時會自動跑下面三項並印出結果；全部只印數字，不替你判斷。之後想對任何一支策略重跑，執行 `tools/13_check_sim`，從清單選那支策略即可。
+訓練完自己跑下面三項。對任何一支策略都可以跑（之後 Step 2、3 也會用到），把路徑換掉就好：
+
+```bash
+uv run python analyze_symmetry.py runs/v1_stage3/best_model.zip
+uv run python analyze_sim.py runs/v1_stage3/best_model.zip --episodes 20
+uv run python analyze_sim.py runs/v1_stage3/best_model.zip --episodes 20 --no-firmware-obs-model
+```
 
 !!! checkpoint "參考門檻（作者的建議，由你判斷）"
 
-    | 項目 | 工具做什麼 | 參考門檻 |
+    | 項目 | 看哪裡 | 參考門檻 |
     | --- | --- | --- |
-    | 設定 header | 訓練開始時用眼睛確認這 4 行（工具會印出 12 行，其他行不用看） | `mirror augmentation: ON`、`obs staleness DR: up to 0.02 s`、`rig sysid: sysid_params.json`、`control rate: 50 Hz, max accel: 150` 全部符合；不符就按 ++ctrl+c++ 停止，找助教 |
-    | 對稱性 | 從垂下的狀態開始，看策略能不能自己甩上 | 從垂下的狀態能自己甩上（工具印出 `從垂下自己甩上：是／否`） |
-    | 敏感度關卡 | 在模擬裡各跑 20 回合：開著與關掉韌體量測模型 | 關掉後的 balanced fraction ≥ 0.7 |
+    | 設定 header | 訓練開始時 `Curriculum config:` 底下的 4 行 | `mirror augmentation: ON`、`obs staleness DR: up to 0.02 s`、`rig sysid: sysid_params.json`、`control rate: 50 Hz, max accel: 150` 全部符合；不符就按 ++ctrl+c++ 停止，找助教 |
+    | 對稱性 | `analyze_symmetry.py` 最後 `Self-start from the exact engage state` 那段 | 印出 `time to upright: … s`（能自己甩上）；`never reached upright` 就是不能 |
+    | 敏感度關卡 | 兩次 `analyze_sim.py` 的 `balanced fraction:`（開著、關掉韌體量測模型） | 關掉後的 balanced fraction ≥ 0.7 |
 
 敏感度關卡在問：策略學到的是控制本身，還是模擬量測的統計特徵？作者的校準：關掉後 ≥ 0.7 的策略部署全部成功，≤ 0.3 的四支全部失敗；兩者之間作者沒有資料。我們的建議：
 
@@ -213,24 +219,19 @@ SEED 是亂數種子，決定網路初始權重與探索過程；同一套配方
 
 !!! tool "操作步驟"
 
-    1. 執行 `tools/06_train_teacher`。
-    2. `run 名稱 [v1]:` 輸入 `v2`。**不要沿用 v1**，否則工具會把它當成接續舊的那一支。
-    3. `SEED [0]:` 輸入 `1`。
-    4. 跑完（約 25–60 分鐘）後看新的檢查點數字，和前一支比較。
-    5. 還是不理想，再用 `v3`、SEED `2`。連續三支都低於 0.3 就找助教，通常是 Step 0 的問題。
-    6. Step 2 選教師時，選你判斷最好的那一支（例如 `v2_stage3`）。
+    1. 換一個名稱和 SEED：
+
+        ```bash
+        uv run python curriculum_train.py v2 --params-path sysid_params.json --seed 1
+        ```
+
+        **名稱不要沿用 v1**，不然會覆蓋掉舊的那一支。
+    2. 跑完（約 25–60 分鐘）後對 `runs/v2_stage3/best_model.zip` 跑檢查點，和前一支比較。
+    3. 還是不理想，再用 `v3`、SEED `2`。連續三支都低於 0.3 就找助教，通常是 Step 0 的問題。
+    4. Step 2 選教師時，用你判斷最好的那一支（例如 `runs/v2_stage3/best_model.zip`）。
 
 !!! warning "訓練和實機微調不要同時跑"
 
-    `06_train_teacher` 會吃滿 CPU，`07_finetune` 要在同一台筆電上維持 50 Hz 控制。兩個同時跑會拖慢控制迴路，微調資料就不可靠。要多訓練幾支，趁不用機台的時間（例如晚上）一支接一支跑，**選好教師再開始 Step 2**。
+    訓練會吃滿 CPU，實機微調（`finetune_async.py`）要在同一台筆電上維持 50 Hz 控制。兩個同時跑會拖慢控制迴路，微調資料就不可靠。要多訓練幾支，趁不用機台的時間（例如晚上）一支接一支跑，**選好教師再開始 Step 2**。
 
     已經用某一支開始微調後，才發現另一支 SEED 分數比較高：只要現在的微調在 [Step 2 的 30 秒測試](step2-finetune.md#test)還在進步，就繼續用原本那支，不用換；如果 30 秒測試的 balanced fraction 一直 < 0.4，再換新的教師從 ft1 重跑。
-
-??? cmd "檢查點背後執行的指令"
-
-    ```bash
-    cd policy
-    uv run python analyze_symmetry.py runs/v1_stage3/best_model.zip
-    uv run python analyze_sim.py runs/v1_stage3/best_model.zip --episodes 20
-    uv run python analyze_sim.py runs/v1_stage3/best_model.zip --episodes 20 --no-firmware-obs-model
-    ```

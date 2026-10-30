@@ -91,9 +91,9 @@ hide:
 !!! tip "做這個專題時記住"
 
     - **一次只處理一個問題。** 同時換兩樣東西，壞了就不知道是誰。
-    - **訓練、微調、部署的設定必須一致。** 控制頻率、動作尺度、堆疊幀數、平滑窗口三處要一樣；工具會自動檢查，不一致就中止，不要繞過它。
+    - **訓練、微調、部署的設定必須一致。** 控制頻率、動作尺度、堆疊幀數、平滑窗口三處要一樣；`run_config.check_config` 會自動檢查，不一致就中止，不要繞過它。
     - **用實機的誠實指標判斷好壞。** 模擬分不出策略優劣：作者的冠軍學生在模擬只有 0.655，實機是 0.996。
 
 ## 來源
 
-整套流程與程式來自作者 ferrolho 的開源專案 [rotary-inverted-pendulum](https://github.com/ferrolho/rotary-inverted-pendulum)（[文件網站](https://ferrolho.github.io/rotary-inverted-pendulum/)，MIT License）。課程只改了硬體相關的常數，並加上一組測試與流程工具。作者的 reward、domain randomization、超參數是本專題的**標準配方**，照作者的實際做法直接沿用。
+整套流程與程式來自作者 ferrolho 的開源專案 [rotary-inverted-pendulum](https://github.com/ferrolho/rotary-inverted-pendulum)（[文件網站](https://ferrolho.github.io/rotary-inverted-pendulum/)，MIT License）。課程只改了硬體相關的常數，加上一組硬體測試工具，並把作者的兩支 bash 腳本改寫成 Python（Windows 也能跑）。作者的 reward、domain randomization、超參數是本專題的**標準配方**，照作者的實際做法直接沿用。

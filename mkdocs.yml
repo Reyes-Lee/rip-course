@@ -111,7 +111,7 @@ nav:
       - prepare/index.md
       - 安裝環境: prepare/install.md
       - 硬體與上電測試: prepare/hardware.md
-      - 工具一覽: prepare/tools.md
+      - 工具與指令: prepare/tools.md
   - 五個步驟:
       - steps/index.md
       - "Step 0 系統識別": steps/step0-sysid.md

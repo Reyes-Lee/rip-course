@@ -19,26 +19,26 @@ hide:
 
 <div class="rip-flow" markdown>
   <div class="rip-flow__node rip-flow__node--rig" markdown="span">:material-robot-industrial: 你的機台</div>
-  <div class="rip-flow__edge" markdown="span"><code>05_sysid</code><span>Step 0</span></div>
+  <div class="rip-flow__edge" markdown="span"><code>sysid_wizard.py</code><span>Step 0</span></div>
   <div class="rip-flow__node" markdown="span"><code>sysid_params.json</code><small>擺錘鉸鏈的摩擦</small></div>
-  <div class="rip-flow__edge" markdown="span"><code>06_train_teacher</code><span>Step 1</span></div>
+  <div class="rip-flow__edge" markdown="span"><code>curriculum_train.py</code><span>Step 1</span></div>
   <div class="rip-flow__node" markdown="span"><code>v1_stage3/best_model.zip</code><small>256×256 教師（模擬）</small></div>
-  <div class="rip-flow__edge rip-flow__edge--loop" markdown="span"><code>07_finetune</code> × N 段，每段後 <code>08_test_policy</code><span>Step 2</span></div>
+  <div class="rip-flow__edge rip-flow__edge--loop" markdown="span"><code>finetune_async.py</code> × N 段，每段後 <code>run_policy.py</code><span>Step 2</span></div>
   <div class="rip-flow__node" markdown="span"><code>ftN/best_model.zip</code><small>微調後的教師 ＋ replay buffer</small></div>
-  <div class="rip-flow__edge" markdown="span"><code>09_distill</code><span>Step 3</span></div>
+  <div class="rip-flow__edge" markdown="span"><code>distill_student.py</code><span>Step 3</span></div>
   <div class="rip-flow__node" markdown="span"><code>distill_h16_dagger_dev/student.pt</code><small>16 個神經元的學生</small></div>
-  <div class="rip-flow__edge" markdown="span"><code>10_export_weights</code> → Arduino IDE 上傳<span>Step 4</span></div>
-  <div class="rip-flow__node rip-flow__node--rig" markdown="span">:material-chip: Nano 獨立執行<small><code>11_score_onboard</code> 評分</small></div>
+  <div class="rip-flow__edge" markdown="span"><code>export_weights.py</code> → Arduino IDE 上傳<span>Step 4</span></div>
+  <div class="rip-flow__node rip-flow__node--rig" markdown="span">:material-chip: Nano 獨立執行<small><code>analyze_onboard.py</code> 評分</small></div>
 </div>
 
-每個方框是一個檔案，方框之間是產生它的工具。Step 2 會重複好幾段，每段跑完都用 `08_test_policy` 接線測一次。
+每個方框是一個檔案，方框之間是產生它的指令（都在 `policy/` 裡執行，見[工具與指令](../prepare/tools.md#cli)）。**每一步的輸出檔，就是下一步指令裡要你填的路徑。** Step 2 會重複好幾段，每段跑完都用 `run_policy.py` 接線測一次。
 
 ## 每一步要不要機台、要燒什麼
 
-| 步驟 | 要不要機台 | Nano 要燒的韌體 | 用到的工具 |
+| 步驟 | 要不要機台 | Nano 要燒的韌體 | 用到的指令 |
 | --- | --- | --- | --- |
-| [Step 0](step0-sysid.md) | 要 | `LowLevelServer` | `05_sysid` |
-| [Step 1](step1-train.md) | 不用 | — | `06_train_teacher`、`12_view_policy`、`13_check_sim` |
-| [Step 2](step2-finetune.md) | 要 | `LowLevelServer` | `07_finetune`、`08_test_policy`、`13_check_sim` |
-| [Step 3](step3-distill.md) | 不用（選做的接線測試要） | 選做：`LowLevelServer` | `09_distill`、`08_test_policy` |
-| [Step 4](step4-deploy.md) | 要 | `RLControl` | `10_export_weights`、`11_score_onboard` |
+| [Step 0](step0-sysid.md) | 要 | `LowLevelServer` | `sysid_wizard.py` |
+| [Step 1](step1-train.md) | 不用 | — | `curriculum_train.py`、`train_sac.py --eval`、`analyze_symmetry.py`、`analyze_sim.py` |
+| [Step 2](step2-finetune.md) | 要 | `LowLevelServer` | `run_policy.py`、`sim_vs_real.py`、`finetune_async.py`、`analyze_sim.py` |
+| [Step 3](step3-distill.md) | 不用（選做的接線測試要） | 選做：`LowLevelServer` | `distill_student.py`、`analyze_sim.py`、選做 `run_policy.py` |
+| [Step 4](step4-deploy.md) | 要 | `RLControl` | `export_weights.py`、`analyze_onboard.py` |

@@ -1,4 +1,4 @@
-"""所有工具共用的小工具：路徑、畫面輸出、提問、選檔案、找序列埠、呼叫 policy/ 的腳本。
+"""事前準備工具（00–04）共用的小工具：路徑、畫面輸出、提問、選檔案、找序列埠、呼叫 policy/ 的腳本。
 
 每個工具都由 `tools/<名稱>.command`（macOS）或 `tools/<名稱>.bat`（Windows）啟動，
 兩者只做「切到 repo 根目錄 → uv run --project policy python tools/<名稱>.py」。
@@ -10,20 +10,13 @@ import os
 import platform
 import subprocess
 import sys
-import time
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 POLICY = REPO / "policy"
-RUNS = POLICY / "runs"
-RECORDINGS = POLICY / "recordings"
-SYSID_JSON = POLICY / "sysid_params.json"   # 你的機台的 sysid 結果（Step 0 產生）
 SETTINGS = REPO / "tools" / ".settings.json"
 IS_MAC = platform.system() == "Darwin"
 IS_WIN = platform.system() == "Windows"
-
-# 標記檔：工具在一個階段／一段完整跑完後才寫入，用來判斷要不要接續。
-DONE_MARK = ".done"
 
 # Windows 10 以上的終端機要先呼叫一次才會吃 ANSI 色碼。
 if IS_WIN:
@@ -184,15 +177,6 @@ def get_port(*, ask_if_many: bool = True) -> str:
 
 # ---------------------------------------------------------------- 呼叫 policy/ 腳本
 
-def mujoco_python() -> str:
-    """開 MuJoCo 視窗的 Python：macOS 一定要用 mjpython。"""
-    if IS_MAC:
-        cand = Path(sys.executable).with_name("mjpython")
-        if cand.exists():
-            return str(cand)
-    return sys.executable
-
-
 def run_policy_script(args: list[str], *, python: str | None = None, capture: bool = False) -> tuple[int, str]:
     """在 policy/ 目錄執行一支作者的腳本，即時把輸出印到畫面。
 
@@ -229,56 +213,3 @@ def rel(p: Path) -> str:
         return Path(p).resolve().relative_to(POLICY).as_posix()
     except ValueError:
         return str(p)
-
-
-def need_sysid() -> str:
-    if not SYSID_JSON.exists():
-        fail("找不到 policy/sysid_params.json。請先做 Step 0：執行 05_sysid。")
-        finish(1)
-    return rel(SYSID_JSON)
-
-
-def mark_done(run_dir: Path) -> None:
-    (run_dir / DONE_MARK).write_text(time.strftime("%Y-%m-%d %H:%M:%S") + "\n", encoding="utf-8")
-
-
-def is_done(run_dir: Path) -> bool:
-    return (run_dir / DONE_MARK).exists()
-
-
-# ---------------------------------------------------------------- 找訓練結果
-
-def _mtime(p: Path) -> float:
-    try:
-        return p.stat().st_mtime
-    except OSError:
-        return 0.0
-
-
-def teachers() -> list[Path]:
-    """Step 1 完成的教師（*_stage3/best_model.zip），舊到新。"""
-    found = [d / "best_model.zip" for d in RUNS.glob("*_stage3") if is_done(d) and (d / "best_model.zip").exists()]
-    return sorted(found, key=_mtime)
-
-
-def finetune_runs() -> list[Path]:
-    """Step 2 完成的微調段（ft1、ft2…），依編號排序。"""
-    out = []
-    for d in RUNS.glob("ft*"):
-        if d.is_dir() and d.name[2:].isdigit() and is_done(d) and (d / "best_model.zip").exists():
-            out.append(d)
-    return sorted(out, key=lambda d: int(d.name[2:]))
-
-
-def students() -> list[Path]:
-    """Step 3 蒸餾出的學生（student.pt），舊到新。"""
-    return sorted(RUNS.glob("*/distill_h*_dagger_*/student.pt"), key=_mtime)
-
-
-def all_checkpoints() -> list[Path]:
-    """所有 best_model.zip，舊到新。"""
-    return sorted(RUNS.glob("*/best_model.zip"), key=_mtime)
-
-
-def label(p: Path) -> str:
-    return rel(p).removeprefix("runs/")

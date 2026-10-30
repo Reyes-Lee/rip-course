@@ -12,17 +12,25 @@
 
 !!! tool "蒸餾"
 
-    1. 執行 `tools/09_distill`。
-    2. 清單的預設是最後一段微調（例如 `ft3`），直接按 Enter。如果 [Step 2 的回歸測試](step2-finetune.md#regression)改用了前一段，就輸入那一段的編號。
-    3. `SEED [0]:` 直接按 Enter。
-    4. 約 3 分鐘後，工具印出結果表（見[檢查點](#checkpoint)）。學生存在 `runs/ftN/distill_h16_dagger_dev/student.pt`。
+    1. 選要蒸餾的那一段微調（通常是最後一段，例如 `ft3`）。在 `policy/` 裡執行：
 
-??? cmd "背後執行的指令"
+        ```bash
+        uv run python distill_student.py ft3
+        ```
 
-    `09_distill` 是作者 `distill_student.sh` 的 Python 版，等同於 `bash distill_student.sh ft3`：
+    2. 約 3 分鐘，依序做 1/3 行為克隆、2/3 DAgger、3/3 學生在模擬裡的分數。`runs/ft3/replay_buffer.pkl` 存在就會自動拿來用。
+    3. 學生存在 `runs/ft3/distill_h16_dagger_dev/student.pt`。
+    4. 結束時它會提醒你拿教師的分數來比，照著跑一次（見[檢查點](#checkpoint)）：
+
+        ```bash
+        uv run python analyze_sim.py runs/ft3/best_model.zip
+        ```
+
+??? cmd "distill_student.py 在做什麼"
+
+    它是作者 `distill_student.sh` 的 Python 版（Windows 不能直接跑 bash），預設值一樣。等同於：
 
     ```bash
-    cd policy
     uv run python distill.py --teacher runs/ft3/best_model.zip \
         --buffer runs/ft3/replay_buffer.pkl --out-dir runs/ft3/distill_h16_aug \
         --hidden 16 --epochs 800 --seed 0
@@ -30,10 +38,9 @@
         --bc-dir runs/ft3/distill_h16_aug --out-dir runs/ft3/distill_h16_dagger_dev \
         --transport device --rounds 5 --steps-per-round 40000 --seed 0
     uv run python analyze_sim.py runs/ft3/distill_h16_dagger_dev/student.pt --transport device
-    uv run python analyze_sim.py runs/ft3/best_model.zip
     ```
 
-    SEED 不是 0 時，資料夾名稱會多一個後綴，例如 `distill_h16_dagger_dev_s1`。
+    `--seed` 不是 0 時，資料夾名稱會多一個後綴，例如 `distill_h16_dagger_dev_s1`。
 
 ## 它在做什麼 { #what }
 
@@ -62,29 +69,37 @@
 
 ## 檢查點 { #checkpoint }
 
-`09_distill` 結束時會印出下面兩項的數字，由你判斷；之後要重跑敏感度關卡，可以執行 `tools/13_check_sim` 選 `student.pt`。
+下面兩項由你判斷。敏感度關卡跟 Step 1 一樣跑兩次 `analyze_sim.py`，路徑換成學生、加上 `--transport device`：
+
+```bash
+uv run python analyze_sim.py runs/ft3/distill_h16_dagger_dev/student.pt --transport device --episodes 20
+uv run python analyze_sim.py runs/ft3/distill_h16_dagger_dev/student.pt --transport device --episodes 20 --no-firmware-obs-model
+```
 
 !!! checkpoint "參考門檻（由你判斷）"
 
     | 項目 | 參考門檻 |
     | --- | --- |
-    | DAgger gate | 學生的 gate 接近教師自己的 gate（工具並排印出兩個數字）。作者沒有給數字，我們建議相差 0.05 以內 |
+    | DAgger gate | DAgger 每一輪印的 `gate`（最後 `best gate`）接近教師自己的 `balanced fraction`（上面第 4 步）。作者沒有給數字，只說「大約到教師的 gate 或更好就是好的」 |
     | 敏感度關卡 | 同 Step 1：關掉韌體量測模型後的 balanced fraction ≥ 0.7 |
 
 DAgger gate 要跟教師比、不跟絕對門檻比，是因為模擬會系統性低估實機微調過的策略：作者的冠軍在模擬 gate 只有 0.655，實機是 0.996。
 
 !!! tool "判斷要重做時"
 
-    1. 再執行 `tools/09_distill`。
-    2. 選同一段微調。
-    3. `SEED [0]:` 輸入 `1`。
-    4. 換兩個 SEED 都明顯低於教師就找助教。
+    1. 同一段微調換一個 SEED：`uv run python distill_student.py ft3 --seed 1`。
+    2. 換兩個 SEED 都明顯低於教師就找助教。
 
 ## （選做）燒進 Nano 前先接線測學生 { #tethered }
 
 !!! tool "接線測試學生"
 
     1. Nano 燒 `LowLevelServer`，等擺錘靜止垂下。
-    2. 執行 `tools/08_test_policy`。
-    3. 清單輸入 `ftN/distill_h16_dagger_dev/student.pt` 那一個的編號。
-    4. 跑 30 秒。學生是為獨立執行最佳化的，接線分數略低於教師是正常的。
+    2. 用 Step 2 的 `run_policy.py`，策略換成學生：
+
+        ```bash
+        uv run python run_policy.py --policy runs/ft3/distill_h16_dagger_dev/student.pt \
+            --port <PORT> --duration-s 30 --log recordings/ft3_student.npz
+        ```
+
+    3. 學生是為獨立執行最佳化的，接線分數略低於教師是正常的。

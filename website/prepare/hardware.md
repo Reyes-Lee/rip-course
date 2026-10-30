@@ -171,14 +171,14 @@ AS5600 讀的是磁場方向，整套系統對擺錘角度的所有認知都來�
 
 - **存在哪裡**：Nano 的 EEPROM。Arduino IDE 重新上傳 `LowLevelServer` 或 `RLControl` **不會**清掉它，不用每次重做。`RLControl` 開機時讀同一個值。
 - **什麼時候要重做**：換了 Nano、重新安裝 AS5600 或磁鐵、換了 AS5600 模組。
-- **工具會幫你擋**：`05_sysid`、`07_finetune`、`08_test_policy` 開始前會確認 Nano 已經標定，沒有就停止並提示你先跑 `04_check_direction`。`07_finetune` 每一段開始前還會讓手臂抖動約 4 秒，確認方向沒有變；`RLControl` 沒標定就不會啟動馬達。
+- **沒標定的話**：`RLControl` 不會啟動馬達；但 `LowLevelServer`（Step 0、2 用的）**不會擋你**，會照 AS5600 原本的方向跑。方向反了的症狀是擺錘只擺到幾十度、怎麼都甩不上去，而且 `02`、`03` 都會 PASS。
 - **方向被修正過的話**：在錯的方向下做的實機微調（`runs/ftN`）要丟掉，從教師重新微調。sysid 與模擬訓練不受影響。
 
 !!! warning "AS5600 的 DIR 腳不要自己接線"
 
     方向全部由 `04_check_direction` 處理，DIR 腳**不用接**。有些模組的 DIR 在板上已經用電阻接到 GND，這時再把 DIR 接到 5V 等於把 5V 短路到 GND。
 
-    換過 AS5600 模組或重裝磁鐵後，要重做 `02_check_encoder`（間隙、對心、AGC 都可能變）和 `04_check_direction`，並重跑 `05_sysid`。
+    換過 AS5600 模組或重裝磁鐵後，要重做 `02_check_encoder`（間隙、對心、AGC 都可能變）和 `04_check_direction`，並重做 [Step 0](../steps/step0-sysid.md) 的 sysid。
 
 ## 我們的硬體與作者的差異 { #diff }
 

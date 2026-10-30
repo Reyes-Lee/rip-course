@@ -1,7 +1,7 @@
 # Step 2：在實機上微調
 
 <div class="rip-meta" markdown>
-  <span class="rip-chip rip-chip--cyan">:material-clock-outline: 每段 30 回合約 6–11 分鐘，共 2–4 段</span>
+  <span class="rip-chip rip-chip--cyan">:material-clock-outline: 每段 30 回合約 6–11 分鐘，段數自己決定</span>
   <span class="rip-chip rip-chip--amber">:material-robot-industrial: 需要機台</span>
   <span class="rip-chip">:material-chip: LowLevelServer</span>
   <span class="rip-chip">:material-file-outline: 產出 ftN/best_model.zip</span>
@@ -15,87 +15,110 @@
 
 ## 2-1 燒錄 LowLevelServer { #flash }
 
-用 Arduino IDE 上傳 `firmware/LowLevelServer`，關掉序列埠監控。這個模式下筆電透過 USB serial（2 Mbaud）讀狀態、送動作，Nano 只當低階伺服器。
+用 Arduino IDE 上傳 `firmware/LowLevelServer`，關掉序列埠監控。這個模式下筆電透過 USB serial（2 Mbaud）讀狀態、送動作，Nano 只當低階伺服器。這塊 Nano 要做過[方向標定](../prepare/hardware.md#direction)：沒標定的 `LowLevelServer` 會照 AS5600 原本的方向跑，**不會提醒你**。
 
-## 2-2 跑非同步微調 { #finetune }
+## 2-2 微調之前：先直接上機，看 sim2real gap { #zero-shot }
 
-!!! tool "第一次（ft1，50 回合）"
+先不微調，把 Step 1 的教師直接放到實機上跑 30 秒，看看模擬裡學到的東西搬到實機會變成什麼樣子。
 
-    1. 確認 Nano 燒的是 `LowLevelServer`，Arduino IDE 的序列埠監控已關掉。
-    2. 擺錘靜止垂下，機台旁邊不要有東西擋到手臂。
-    3. 執行 `tools/07_finetune`。
-    4. 畫面列出 `runs/` 裡所有教師（`*_stage3/best_model.zip`），輸入 [Step 1 檢查點](step1-train.md#checkpoint)通過的那一支的編號；只有一支就直接按 Enter。
-    5. 工具開始跑，畫面會顯示目前第幾回合。結束時印出 `已存：runs/ft1/best_model.zip`。
-    6. 接著做 [2-3 測試](#test)。
+!!! tool "零樣本測試"
 
-!!! tool "之後每一段（ft2、ft3…，各 30 回合）"
+    1. 擺錘靜止垂下，機台旁邊不要有東西擋到手臂。
+    2. 在 `policy/` 裡執行（`<PORT>` 見[工具與指令](../prepare/tools.md#cli)）：
 
-    1. 再執行 `tools/07_finetune` 就好。
-    2. 工具會自動從最新一段接續（帶上上一段的 replay buffer），不用選。
-    3. 跑完一樣接著做 [2-3 測試](#test)。
+        ```bash
+        uv run python run_policy.py --policy runs/v1_stage3/best_model.zip \
+            --port <PORT> --duration-s 30 --log recordings/v1_stage3_zeroshot.npz
+        ```
 
-    控制頻率、動作模式、reward、平滑窗口都從 checkpoint 的 `config.json` 繼承。
+    3. 結束時印出的 `Honest balance` 那一行記下來（balanced fraction 的定義見 [2-4](#test)）。
+    4. 把同一段紀錄丟回模擬重播：實機每一步送出的動作，原封不動在模擬裡再跑一次，比較兩邊的手臂與擺錘軌跡。
+
+        ```bash
+        uv run python sim_vs_real.py recordings/v1_stage3_zeroshot.npz \
+            --params-path sysid_params.json --out recordings/v1_stage3_zeroshot_cmp.png
+        ```
+
+    5. 打開 `v1_stage3_zeroshot_cmp.png`。上圖是手臂、中圖是擺錘：藍色實機、紅色模擬。
+
+??? question "怎麼看 sim_vs_real 的結果"
+
+    - 擺錘是混沌系統，開迴路重播一定會越來越分開，所以只看**前 1–3 秒**：畫面會印 `first 1s / 2s / 3s` 的 rmse。
+    - 手臂差很多、擺錘差不多：步進馬達沒有照指令走（失步、延遲）。
+    - 手臂差不多、擺錘的擺幅或週期不同：擺錘的模型（摩擦、慣量）不準，回 Step 0 檢查。
+    - 手臂往右推時，實機和模擬的擺錘往**相反**方向反應：擺錘角度的正負號反了，做[方向標定](../prepare/hardware.md#direction)。
+    - `motor cross-corr lag` 是實機比模擬慢幾步，對照 Step 1 訓練時的延遲 DR 範圍（20–35 ms）。
+
+    `--action-lag-tau`、`--firmware-model` 可以加進模擬重播，看哪一個讓兩邊比較接近。
+
+## 2-3 跑非同步微調 { #finetune }
+
+!!! tool "第一段（ft1）"
+
+    1. Nano 是 `LowLevelServer`，序列埠監控已關掉；擺錘靜止垂下。
+    2. 從你選的教師開始，跑 50 回合：
+
+        ```bash
+        uv run python finetune_async.py --policy runs/v1_stage3/best_model.zip \
+            --port <PORT> --episodes 50 --run-name ft1 --params-path sysid_params.json
+        ```
+
+    3. 跑完後 `runs/ft1/` 裡有 `best_model.zip`（微調後的教師）和 `replay_buffer.pkl`（這一段所有的真實資料）。
+    4. 接著做 [2-4 測試](#test)。
+
+!!! tool "之後每一段"
+
+    從上一段的 `best_model.zip` 接續，並用 `--resume-buffer` 把上一段的真實資料帶過來（不帶的話，之前的回合就白跑了）。例如第二段：
+
+    ```bash
+    uv run python finetune_async.py --policy runs/ft1/best_model.zip \
+        --resume-buffer runs/ft1/replay_buffer.pkl \
+        --port <PORT> --episodes 30 --run-name ft2 --params-path sysid_params.json
+    ```
+
+    第三段就把 `ft1` 換成 `ft2`、`--run-name` 換成 `ft3`，依此類推。每段跑完一樣做 [2-4 測試](#test)。
+
+    控制頻率、動作模式、reward、平滑窗口都從 checkpoint 的 `config.json` 繼承，不用重打。`--params-path` 在微調時只是記錄用（實機就是被控體），Step 3 蒸餾會讀它。
 
 !!! warning "前幾個回合要聽馬達"
 
-    平順的嗡嗡聲正常；**嘶嘶或磨擦聲代表失步**。立刻在工具視窗按 ++ctrl+c++ 停止（這一段不會存檔），照[疑難排解](../troubleshooting.md)的「馬達嘶嘶聲」處理，再重新執行 `07_finetune`，它會重跑這一段。
+    平順的嗡嗡聲正常；**嘶嘶或磨擦聲代表失步**。立刻按 ++ctrl+c++ 停止，照[疑難排解](../troubleshooting.md)的「馬達嘶嘶聲」處理，再用同一個 `--run-name` 重跑這一段。
 
-- 每一段開始前，工具會先讓手臂在正中間小幅抖動約 4 秒，確認擺錘方向跟[方向標定](../prepare/hardware.md#direction)一致；不一致就停止，不會白跑一段。
-- 每回合 6 秒；回合之間馬達斷電，最多等 15 秒讓擺錘自己停下來（停得快就提早開始）。所以每回合約 11–21 秒：30 回合約 6–11 分鐘，ft1 的 50 回合約 9–18 分鐘。
+- 每回合 6 秒；回合之間馬達斷電，最多等 15 秒讓擺錘自己停下來（停得快就提早開始）。所以每回合約 11–21 秒：30 回合約 6–11 分鐘，50 回合約 9–18 分鐘。
 - 每回合會印一行 `steps=… mean_dt=…ms max_overrun=…ms violations=…`。`mean_dt` 應約 20 ms；`violations` 持續大於 0 代表控制週期被拖慢，先關掉其他程式（同步、備份、訓練）。
-- 每段結束時工具會說這一段的 `best_model` 有沒有更新，並刪掉中途的 replay buffer 快照（每份約 80 MB），只留下一段要用的 `replay_buffer.pkl`。
+- 每 5 回合會做一次評估，分數變好才印 `new best deterministic eval (…) → best_model.zip`。
+- `runs/ftN/` 裡每 10 回合存一份 `replay_buffer_ep010.pkl`…（每份約 80 MB），下一段只需要最後的 `replay_buffer.pkl`，硬碟不夠可以刪掉快照。
 - 控制迴路與 SAC 梯度更新跑在不同執行緒，所以訓練中控制頻率仍嚴格是 50 Hz。
 - Mirror augmentation 預設開啟，每筆真實資料同時存一份鏡像。
 
-??? cmd "背後執行的指令"
-
-    ```bash
-    cd policy
-
-    # 第一段：50 回合
-    uv run python finetune_async.py \
-        --policy runs/v1_stage3/best_model.zip \
-        --port <PORT> --episodes 50 --run-name ft1
-
-    # 接續段：帶上上一段的 replay buffer
-    uv run python finetune_async.py \
-        --policy runs/ft1/best_model.zip \
-        --resume-buffer runs/ft1/replay_buffer.pkl \
-        --port <PORT> --episodes 30 --run-name ft2
-    ```
-
-## 2-3 用 30 秒測試教師 { #test }
+## 2-4 用 30 秒測試教師 { #test }
 
 !!! tool "每跑完一段微調就測一次"
 
     1. Nano 仍然是 `LowLevelServer`。等擺錘靜止垂下。
-    2. 執行 `tools/08_test_policy`。
-    3. 清單的預設是最新一段微調（例如 `ft2/best_model.zip`），直接按 Enter。
-    4. 策略會從垂下開始甩上、平衡 30 秒。不要碰機台。
-    5. 結束時印出誠實指標，紀錄檔存在 `policy/recordings/ft2.npz`。照下表決定下一步。
+    2. 測剛跑完的那一段，例如 `ft2`：
 
-??? cmd "背後執行的指令"
+        ```bash
+        uv run python run_policy.py --policy runs/ft2/best_model.zip \
+            --port <PORT> --duration-s 30 --log recordings/ft2.npz
+        ```
 
-    ```bash
-    cd policy
-    uv run python run_policy.py \
-        --policy runs/ft2/best_model.zip \
-        --port <PORT> --duration-s 30 --log recordings/ft2.npz
-    ```
+    3. 策略會從垂下開始甩上、平衡 30 秒。不要碰機台。
+    4. 結束時印出誠實指標，紀錄檔存在 `policy/recordings/ft2.npz`。
 
-看結束時印出的 **balanced fraction**：「|θ| ≤ 15° 且 |θ̇| ≤ 4 rad/s」的時間比例（作者在 2026-07 從 2 rad/s 放寬到 4 rad/s：平衡得好的策略也會有約 5 Hz 的小抖動，2 rad/s 會低估）。`verdict` 是 `NO SWING-UP` 代表擺錘從沒擺過水平、根本沒甩上去，先跑 `04_check_direction`；`SPINNING` 才是甩上去但一直繞圈接不住。這個定義故意不用策略自己的觀測，因為「是否直立」的檢查可以被一直繞圈騙過。
+看結束時印出的 **balanced fraction**：「|θ| ≤ 15° 且 |θ̇| ≤ 4 rad/s」的時間比例（作者在 2026-07 從 2 rad/s 放寬到 4 rad/s：平衡得好的策略也會有約 5 Hz 的小抖動，2 rad/s 會低估）。`verdict` 是 `NO SWING-UP` 代表擺錘從沒擺過水平、根本沒甩上去，先檢查[方向標定](../prepare/hardware.md#direction)；`SPINNING` 才是甩上去但一直繞圈接不住。這個定義故意不用策略自己的觀測，因為「是否直立」的檢查可以被一直繞圈騙過。
 
-作者的建議如下，由你判斷：
+作者的建議：
 
 | balanced fraction | 下一步 |
 | --- | --- |
-| ≥ 0.85 | :material-check-circle:{ style="color: var(--rip-green)" } 教師夠穩了。仍照[下一節](#how-long)決定要不要再加一段，然後進 Step 3 |
-| 0.4–0.85 | :material-trending-up:{ style="color: var(--rip-amber)" } 還在進步。再執行一次 `07_finetune`（自動加一段 30 回合），然後再跑 `08_test_policy` |
-| < 0.4 | :material-close-circle:{ style="color: var(--rip-red)" } 先停止微調，依序檢查硬體：燒 `LowLevelServer` 跑 `04_check_direction`（方向被修正的話，丟掉 `runs/ftN` 從教師重跑）；燒 `EncoderCheck` 跑 `02_check_encoder`；確認桌面水平、機台沒有被移動。都正常就燒 `LowLevelServer` 重跑 `05_sysid`，對照 [Step 0 檢查點](step0-sysid.md#checkpoint)。仍然沒問題就找助教，帶著 `policy/recordings/` 裡最新的 `.npz` |
+| ≥ 0.85 | :material-check-circle:{ style="color: var(--rip-green)" } 教師夠穩，可以進 Step 3。要不要再加一段，看[下一節](#how-long) |
+| 0.4–0.85 | :material-trending-up:{ style="color: var(--rip-amber)" } 通常再加一段還會進步 |
+| < 0.4 | :material-close-circle:{ style="color: var(--rip-red)" } 先停止微調，找原因再繼續：重做 sysid、用 `sim_vs_real.py` 重播這段紀錄（見 [2-2](#zero-shot)）、檢查傳輸延遲的假設。硬體方面：`02_check_encoder`、`04_check_direction`、桌面水平。都查過還是不行就找助教，帶著 `policy/recordings/` 裡最新的 `.npz` |
 
 ## 要微調多久？比 eval 曲線看起來的更久 { #how-long }
 
-作者的量測：eval reward 很早就持平，實機平衡品質卻還在明顯變好。
+**要跑幾段由你決定。** 作者的量測：eval reward 很早就持平，實機平衡品質卻還在明顯變好。
 
 | 驅動板／微調回合 | 擺錘標準差 | 手臂速度 RMS（rad/s） | \|動作\| 平均 | balanced |
 | --- | --- | --- | --- | --- |
@@ -105,20 +128,21 @@
 | TMC2209／30 | 1.62° | 0.76 | 0.236 | 0.993 |
 | TMC2209／60 | 1.23° | 0.58 | 0.177 | 1.000 |
 
-!!! checkpoint "什麼時候停（建議）"
+作者的經驗：
 
-    每加一段就跑一次 `08_test_policy`，把 balanced fraction 與擺錘標準差記下來。只要其中一個還在變好，就再加一段；**連續兩段都沒有變好才停**。
+- 判斷一段有沒有用，看實機測試，不看 eval reward。測試越來越「平靜」（擺錘標準差、手臂速度、動作大小變小）就值得再加。
+- `best_model` 不再更新之後，繼續加段還是有用：Step 3 蒸餾時，教師會對 replay buffer 裡**所有**的真實狀態重新標動作，所以多跑的回合會變成學生看過的狀態。
+- 記錄每一段的數字（balanced fraction、擺錘標準差、手臂速度），自己決定什麼時候停，並說得出理由。
 
-    就算工具說這一段的 `best_model 沒有更新` 也要照這個規則加，因為 Step 3 的蒸餾會用到 replay buffer 裡所有的真實狀態。
-
-### 停止後：回歸測試 { #regression }
+## 停止後：回歸檢查 { #regression }
 
 !!! tool "進 Step 3 前做一次（不需要機台）"
 
-    1. 執行 `tools/13_check_sim`。
-    2. 清單選最後一段微調（例如 `ft3/best_model.zip`）。
-    3. 參考門檻與 [Step 1 檢查點](step1-train.md#checkpoint)相同：關掉韌體量測模型後的 balanced fraction ≥ 0.7 就進 Step 3。
-    4. 如果掉到 0.7 以下，代表最後幾段微調讓策略變脆弱。對前一段（例如 `ft2`）再跑一次，用通過的那一段進 Step 3，並告訴助教。
-    5. **教師在 Step 1 就落在 0.3–0.7 的情況**（例如教師本身只有 0.37）：每一段都可能到不了 0.7，這時門檻改成「不比教師自己的分數低超過 0.1」。用符合的段裡 [30 秒測試](#test) balanced fraction 最高的那段進 Step 3。每一段都比教師低超過 0.1，就用 30 秒測試最好的那段進 Step 3，並把每段的分數一起給助教。
+    對最後一段微調再跑一次 Step 1 的敏感度關卡，例如 `ft3`：
 
-    實機的 30 秒測試才是主要依據；回歸測試是用來抓「微調讓策略在模擬裡明顯變差」的情況。
+    ```bash
+    uv run python analyze_sim.py runs/ft3/best_model.zip --episodes 20
+    uv run python analyze_sim.py runs/ft3/best_model.zip --episodes 20 --no-firmware-obs-model
+    ```
+
+    作者量過的每一條線，微調都沒有讓「關掉後」的分數掉下來，所以這只是便宜的保險。如果關掉後明顯比教師在 [Step 1](step1-train.md#checkpoint) 時低很多，代表這幾段微調讓策略去依賴量測的統計特徵，蒸餾它會浪費時間：改用前一段，並告訴助教。

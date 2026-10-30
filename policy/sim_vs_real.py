@@ -75,6 +75,10 @@ def main(argv: list[str] | None = None) -> int:
                         "stale, window-differenced state; velocity-mode "
                         "P-law on measured velocity) — A/B against the "
                         "legacy clean-integrator replay")
+    p.add_argument("--params-path", default=None,
+                   help="the rig's sysid json (e.g. sysid_params.json). Without "
+                        "it the replay uses sysid_params_rig1.json — another "
+                        "rig's friction")
     p.add_argument("--staleness", type=float, default=None,
                    help="fixed obs staleness (s) for the firmware model "
                         "(default: env nominal)")
@@ -105,6 +109,7 @@ def main(argv: list[str] | None = None) -> int:
     # records action_mode and the action scales in the npz.
     action_mode = str(d.get("action_mode", "accel"))
     env_kwargs = dict(
+        params_path=args.params_path,
         control_freq_hz=control_freq,
         episode_length_s=n * dt_s + 1.0,  # plenty
         action_mode=action_mode,
@@ -125,7 +130,8 @@ def main(argv: list[str] | None = None) -> int:
           f"lag tau={args.action_lag_tau*1000:.0f} ms, "
           f"firmware_model={'ON' if args.firmware_model else 'off'}"
           + (f" (staleness {args.staleness*1000:.0f} ms)"
-             if args.firmware_model and args.staleness is not None else ""))
+             if args.firmware_model and args.staleness is not None else "")
+          + f", rig sysid={args.params_path or 'sysid_params_rig1.json (default)'}")
     env = RotaryInvertedPendulumEnv(**env_kwargs)
     sim = replay_in_sim(
         env,

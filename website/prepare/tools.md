@@ -1,60 +1,90 @@
-# 工具一覽
+# 工具與指令
 
-Nano 用 USB-C 線接上電腦、燒好對應的韌體，再執行工具，就會由 Python 直接控制機台。執行方式：macOS 在 Finder 打開 `tools/<名稱>.command`，Windows 在檔案總管打開 `tools\<名稱>.bat`（兩者都是點兩下）。每個工具開頭會提醒你該燒哪個韌體，結束時印出結果與檔案位置。
+事前準備（安裝、上電測試）用**點兩下的工具**；Step 0–4 的訓練流程用**自己下指令**，跟作者的做法一樣。每一步會產生哪個檔案、下一步要把哪個檔案餵進去，都要你自己接起來。
+
+## 事前準備的工具（點兩下）
+
+macOS 在 Finder 打開 `tools/<名稱>.command`，Windows 在檔案總管打開 `tools\<名稱>.bat`。每個工具開頭會提醒你該燒哪個韌體，結束時印出結果與檔案位置。
 
 | 工具 | 先燒的韌體 | 做什麼 | 用在 |
 | --- | --- | --- | --- |
-| `00_setup` | — | 環境、序列埠 | [第一次](install.md#setup) |
+| `00_setup` | — | 環境、列出 Nano 的序列埠 | [第一次](install.md#setup) |
 | `01_check_serial` | TestSerial | 量 serial 來回延遲 | [上電測試](hardware.md#power-on) |
 | `02_check_encoder` | EncoderCheck | 磁場強度、對心、轉圈連續性，逐項 PASS/FAIL | [上電測試、每次開工](hardware.md#encoder) |
 | `03_check_motor` | LowLevelServer | 加速度逐級升到 150 rad/s²，檢查失步 | [上電測試](hardware.md#power-on) |
 | `04_check_direction` | LowLevelServer | 擺錘方向跟模擬一致，結果存進 Nano 的 EEPROM | [上電測試、換零件後](hardware.md#direction) |
-| `05_sysid` | LowLevelServer | 系統識別精靈 | [Step 0](../steps/step0-sysid.md) |
-| `06_train_teacher` | — | 三階段模擬訓練＋印出檢查點數字 | [Step 1](../steps/step1-train.md) |
-| `07_finetune` | LowLevelServer | 實機微調，自動接續上一段 | [Step 2](../steps/step2-finetune.md) |
-| `08_test_policy` | LowLevelServer | 接線測試 30 秒，印誠實指標 | [Step 2–3](../steps/step2-finetune.md) |
-| `09_distill` | — | BC＋DAgger＋敏感度關卡 | [Step 3](../steps/step3-distill.md) |
-| `10_export_weights` | — | 核對 sketch 常數，匯出 `policy_weights_student.h` | [Step 4](../steps/step4-deploy.md) |
-| `11_score_onboard` | RLControl | 獨立執行 60 秒評分 | [Step 4](../steps/step4-deploy.md) |
-| `12_view_policy` | — | 在 MuJoCo 視窗播放策略 30 秒 | [Step 1–2](../steps/step1-train.md#mujoco) |
-| `13_check_sim` | — | 對稱性＋敏感度關卡，印出數字 | [Step 1–3](../steps/step1-train.md#checkpoint) |
 
 !!! warning "點兩下後只看到 `no such file or directory` 或 `[程序完成]`"
 
     正常打開時，第一行是工具名稱，接著提醒要燒哪個韌體。只看到 `no such file or directory` 或 `[程序完成]`，代表**工具沒有執行**，`[程序完成]` 不代表成功。常見於裝了 oh-my-zsh、powerlevel10k 或 conda 的 macOS（終端機啟動較慢，吃掉了路徑的第一個字）。先回 Finder 再點兩下一次；還是一樣就打開終端機，等提示字元出現後輸入 `bash `（後面有空格），把 `.command` 檔拖進視窗，按 Enter。
 
-## 所有工具共通的操作方式
+## Step 0–4：自己下指令 { #cli }
 
-<div class="grid cards" markdown>
+### 開一個終端機，進到 `policy/`
 
--   :material-format-list-numbered:{ .lg .middle } **選檔案：輸入編號**
+所有指令都在 `policy/` 資料夾裡執行，前面加 `uv run`（uv 會自動用課程的 Python 環境）。
 
-    ---
+=== ":material-apple: macOS"
 
-    需要選檔案的工具（例如要測哪一支策略）會列出編號清單，輸入編號按 Enter。**直接按 Enter 就是預設值，預設一律是最新的那一個。**
+    打開「終端機」：
 
--   :material-keyboard-return:{ .lg .middle } **回答問題：`[ ]` 是預設值**
+    ```bash
+    cd ~/rip-course/policy
+    uv run python train_sac.py --help
+    ```
 
-    ---
+    **會打開 MuJoCo 視窗的指令**（`--eval`）要用 `mjpython`，不是 `python`：`uv run mjpython train_sac.py --eval …`。
 
-    例如畫面問 `run 名稱 [g3_v1]:`，直接按 Enter 就是用 `g3_v1`。
+=== ":material-microsoft-windows: Windows"
 
--   :material-stop-circle-outline:{ .lg .middle } **中途停止：++ctrl+c++**
+    打開 PowerShell：
 
-    ---
+    ```powershell
+    cd C:\rip-course\policy
+    uv run python train_sac.py --help
+    ```
 
-    在工具的視窗裡按 ++ctrl+c++。macOS 也是 Ctrl，不是 Command。
+    網站上的指令用 `\` 換行，那是 macOS／Linux 的寫法。在 PowerShell 裡請**整行打在同一行**（或把行尾的 `\` 換成 `` ` ``）。路徑裡的 `/` 在 Windows 也可以用。
 
--   :material-console:{ .lg .middle } **「背後執行的指令」不用自己打**
+每個腳本都可以加 `--help` 看所有參數。
 
-    ---
+### `<PORT>`：Nano 的序列埠
 
-    每一步列出的指令只是讓你知道工具在做什麼。所有動作都寫成「執行哪個工具 → 畫面問什麼 → 輸入什麼 → 看到什麼算通過」。
+指令裡寫 `<PORT>` 的地方，換成你的 Nano 的序列埠：`00_setup` 最後會印出來，Arduino IDE 的「工具 → 連接埠」也看得到。
 
-</div>
+- macOS：`/dev/cu.usbserial-xxxx` 或 `/dev/cu.wchusbserial-xxxx`
+- Windows：`COM3`、`COM4`…
 
-!!! warning "工具和 Arduino IDE 不能同時用序列埠"
+序列埠同一時間只能給一個程式用：**跑指令前先關掉 Arduino IDE 的序列埠監控**。
 
-    執行工具前先關掉 Arduino IDE 的序列埠監控視窗。工具會自動找 Nano 的序列埠，接了不只一個裝置時會請你選。
+### 檔案會放在哪裡 { #files }
 
-所有工具都一律使用 `best_model.zip`（訓練中評估分數最高的版本），不會用同一個資料夾裡的 `last.zip`（最後一步的版本，不一定最好），你不用選。
+指令產生的檔案都在 `policy/` 底下，**不會進 git**，`git pull` 不會蓋掉。名稱是你自己在指令裡取的，下表是網站範例用的名稱：
+
+```text
+policy/
+├── sysid_params.json            Step 0：你的機台的摩擦參數（之後訓練時要指定它）
+├── sysid_runs/<時間>/            Step 0：原始錄製與兩張檢查圖
+├── runs/
+│   ├── v1_stage1/ … v1_stage3/  Step 1：三階段教師，最後用 v1_stage3/best_model.zip
+│   ├── ft1/  ft2/ …             Step 2：每段微調的 best_model.zip 與 replay_buffer.pkl
+│   └── ft3/distill_h16_dagger_dev/student.pt   Step 3：蒸餾出的學生
+└── recordings/                  Step 2–4：實機測試的紀錄（.npz）
+```
+
+每個 `runs/<名稱>/` 裡有 `best_model.zip`（訓練中評估分數最高的版本）和 `last.zip`（最後一步的版本）。**一律用 `best_model.zip`**。`config.json` 記錄了這支策略的設定，下游的腳本會從它讀控制頻率、動作模式和 sysid 檔。
+
+### 中途停止
+
+在終端機按 ++ctrl+c++（macOS 也是 Ctrl，不是 Command）。
+
+### 作者的其他工具
+
+`policy/` 裡還有作者用來分析的腳本，網站的步驟沒有全部用到，進階任務可能會用上。用途見作者網站的 [Python tooling](https://ferrolho.github.io/rotary-inverted-pendulum/reference/python/)，例如：
+
+| 腳本 | 做什麼 |
+| --- | --- |
+| `sim_vs_real.py` | 把實機紀錄的動作丟回模擬重播，比較兩邊的軌跡（[Step 2](../steps/step2-finetune.md#zero-shot) 會用） |
+| `analyze_sim.py --kick-amp` | 在模擬裡推擺錘，測擾動恢復；`disturbance.py` 說明每個指標的意義 |
+| `eval_dr_sensitivity.py` | 看策略對各個隨機化參數有多敏感 |
+| `fft_deploy.py` | 實機紀錄的頻譜，查震動 |

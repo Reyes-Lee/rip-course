@@ -20,13 +20,13 @@
 
     [:octicons-arrow-right-24: 硬體與上電測試](hardware.md)
 
--   :material-console-line:{ .lg .middle } **3. 認識流程工具**
+-   :material-console-line:{ .lg .middle } **3. 工具與指令**
 
     ---
 
-    每個工具做什麼、要先燒哪個韌體、在哪一步用。
+    事前準備的工具做什麼；Step 0–4 怎麼下指令、檔案放在哪裡。
 
-    [:octicons-arrow-right-24: 工具一覽](tools.md)
+    [:octicons-arrow-right-24: 工具與指令](tools.md)
 
 </div>
 

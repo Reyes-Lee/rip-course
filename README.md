@@ -49,9 +49,9 @@ flowchart LR
 | `firmware/` | Arduino sketch，用 Arduino IDE 開啟、上傳 |
 | `policy/` | Python：模擬、訓練、sysid、蒸餾 |
 | `model/` | 機台模型參數（URDF） |
-| `tools/` | 工具（macOS `.command`、Windows `.bat`） |
+| `tools/` | 事前準備的硬體測試工具（macOS `.command`、Windows `.bat`） |
 | `website/` | 教學網站原始檔 |
 
 ## 來源與授權
 
-整套流程與程式來自 Henrique Ferrolho 的 [rotary-inverted-pendulum](https://github.com/ferrolho/rotary-inverted-pendulum)（MIT License）。課程版只改了硬體相關的常數，並加上測試與流程工具。
+整套流程與程式來自 Henrique Ferrolho 的 [rotary-inverted-pendulum](https://github.com/ferrolho/rotary-inverted-pendulum)（MIT License）。課程版只改了硬體相關的常數，加上硬體測試工具，並把 `curriculum_train.sh`、`distill_student.sh` 改寫成 Python。

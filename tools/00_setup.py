@@ -38,6 +38,7 @@ def main() -> int:
         settings["port"] = p.device
         save_settings(settings)
         ok(f"已記住序列埠 {p.device}，之後的工具會自動使用。")
+        info(f"Step 0–4 的指令裡寫 <PORT> 的地方，換成 {p.device}。")
 
     print()
     ok("環境設定完成。")
