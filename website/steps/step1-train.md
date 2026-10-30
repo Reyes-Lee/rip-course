@@ -204,7 +204,7 @@ $$
 | 關掉後的分數 | 建議 | 下一步 |
 | --- | --- | --- |
 | ≥ 0.7 | :material-check-circle:{ style="color: var(--rip-green)" } 多半可行 | 進 Step 2 |
-| 0.3–0.7 | :material-alert:{ style="color: var(--rip-amber)" } 不確定 | 可以進 Step 2，但建議同時照下面的方法再訓練一支，後續用分數高的 |
+| 0.3–0.7 | :material-alert:{ style="color: var(--rip-amber)" } 不確定 | 進 Step 2 **之前**，先照下面換一個 SEED 再訓練一支（不需要機台），兩支比較後用「關掉後」分數高的那支進 Step 2 |
 | < 0.3，或不能自己甩上 | :material-close-circle:{ style="color: var(--rip-red)" } 多半會失敗 | 照下面換 SEED 重訓 |
 
 ### 決定重訓時：換一個 SEED { #reseed }
@@ -219,6 +219,12 @@ SEED 是亂數種子，決定網路初始權重與探索過程；同一套配方
     4. 跑完（約 25–60 分鐘）後看新的檢查點數字，和前一支比較。
     5. 還是不理想，再用 `v3`、SEED `2`。連續三支都低於 0.3 就找助教，通常是 Step 0 的問題。
     6. Step 2 選教師時，選你判斷最好的那一支（例如 `v2_stage3`）。
+
+!!! warning "訓練和實機微調不要同時跑"
+
+    `06_train_teacher` 會吃滿 CPU，`07_finetune` 要在同一台筆電上維持 50 Hz 控制。兩個同時跑會拖慢控制迴路，微調資料就不可靠。要多訓練幾支，趁不用機台的時間（例如晚上）一支接一支跑，**選好教師再開始 Step 2**。
+
+    已經用某一支開始微調後，才發現另一支 SEED 分數比較高：只要現在的微調在 [Step 2 的 30 秒測試](step2-finetune.md#test)還在進步，就繼續用原本那支，不用換；如果 30 秒測試的 balanced fraction 一直 < 0.4，再換新的教師從 ft1 重跑。
 
 ??? cmd "檢查點背後執行的指令"
 

@@ -7,6 +7,7 @@
 | 手臂一直往同一個方向飄，最後撞限位 | 先確認桌面是水平、不會晃的，機台四角都著地（[Step 0 開始前](steps/step0-sysid.md#level)）。換了桌子仍然飄就找助教 |
 | 接線時會平衡，燒進 Nano 後一直繞圈 | 1. 執行 `11_score_onboard`，第一行頻率不是約 50 Hz 就找助教。2. 確認 4-2 匯出的是 `09_distill` 產生的 `student.pt`（路徑含 `distill_h16_dagger_dev`）。3. 按 RESET 前擺錘要靜止垂下、手臂在正中間 |
 | 擺錘會擺但怎麼都甩不上去 | 燒 `LowLevelServer`，執行 `03_check_motor`。FAIL 就找助教檢查 Vref |
+| 馬達只轉一小段就卡住、來回抖，驅動板很燙 | 先拔 12 V。最常見是馬達線接觸不良：重新插好馬達線與 TMC2209 的接頭，確認 Nano 只用 USB 供電、12 V 只接 TMC2209（[供電](prepare/hardware.md#power-on)），再接 12 V 跑 `03_check_motor`。還是一樣就找助教 |
 | 馬達嘶嘶聲、磨擦聲 | 失步。在工具視窗按 ++ctrl+c++ 停止，燒 `LowLevelServer` 跑 `03_check_motor`，把結果拿給助教。Vref 與韌體加速度由助教調，不要自己轉可變電阻或改 sketch |
 | 手臂速度或範圍是預期的一半或兩倍 | 微步接線不對（應為 MS1 接 5V、MS2 接 GND）。拔掉 12 V 後找助教 |
 | 編碼器角度亂跳 | 燒 `EncoderCheck`，執行 `02_check_encoder`，照[編碼器測試](prepare/hardware.md#encoder)的 FAIL 處理表調磁鐵 |

@@ -33,7 +33,8 @@
 ## 開工前檢查清單
 
 - [ ] 機台放在水平、堅固、不會晃的桌面上，四角都著地
-- [ ] 12 V 電源接好，Nano 用 USB-C 傳輸線接上電腦（要能傳資料的線，只能充電的線電腦會找不到 Nano）
+- [ ] Nano 用 USB-C 傳輸線接上電腦（要能傳資料的線，只能充電的線電腦會找不到 Nano），再接 12 V；12 V 只接 TMC2209，不接 Nano
+- [ ] 插拔或碰過馬達線的話，燒 `LowLevelServer` 跑一次 `03_check_motor`，確認手臂平順
 - [ ] Arduino IDE 的序列埠監控視窗已關掉
 - [ ] 硬幣沒有鬆動
 - [ ] 燒 `EncoderCheck`，跑 `02_check_encoder`，全部 PASS

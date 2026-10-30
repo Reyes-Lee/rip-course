@@ -82,6 +82,13 @@
 | 5 | `LowLevelServer`（不用重燒） | 執行 `04_check_direction`（見[方向標定](#direction)） | 印出 `PASS`，方向存進 Nano |
 | 6 | `TestSerial` | 執行 `01_check_serial` | 來回約 2.5 ms |
 
+!!! warning "供電：Nano 只用 USB，12 V 只接 TMC2209"
+
+    - Nano 只靠 USB-C 線供電。**12 V 只接 TMC2209 的 VM／GND**（旁邊並聯 100 µF），不要接到 Nano 的 VIN 或 5V 腳。
+    - 先接 USB、再接 12 V；拔的時候先拔 12 V。12 V 接著時不要插拔馬達線，會燒 TMC2209。
+    - TMC2209 的 Vref 助教已調好（約 1.0 V）。散熱片要貼在晶片那一面。
+    - **插拔、碰過馬達線，或搬動過機台之後，先跑一次 `03_check_motor` 確認平順**。馬達線接觸不良的症狀是：只轉一小段就卡住、來回抖、有聲音，驅動板很燙；嚴重時 TMC2209 會進入保護、完全不動（要斷 12 V 才會恢復）。
+
 !!! warning "工具和 Arduino IDE 不能同時用序列埠"
 
     執行任何工具前，先關掉 Arduino IDE 的序列埠監控視窗。同一個埠一次只能有一個程式使用。
@@ -170,6 +177,8 @@ AS5600 讀的是磁場方向，整套系統對擺錘角度的所有認知都來�
 !!! warning "AS5600 的 DIR 腳不要自己接線"
 
     方向全部由 `04_check_direction` 處理，DIR 腳**不用接**。有些模組的 DIR 在板上已經用電阻接到 GND，這時再把 DIR 接到 5V 等於把 5V 短路到 GND。
+
+    換過 AS5600 模組或重裝磁鐵後，要重做 `02_check_encoder`（間隙、對心、AGC 都可能變）和 `04_check_direction`，並重跑 `05_sysid`。
 
 ## 我們的硬體與作者的差異 { #diff }
 
