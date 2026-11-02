@@ -50,16 +50,20 @@
 
 !!! tool "操作步驟"
 
-    1. Nano 燒的是 `RLControl`（4-2），Arduino IDE 的序列埠監控已關掉。
-    2. 用手把手臂轉回正中間，等擺錘靜止垂下。工具打開 serial 時會讓 Nano 重開並重新標定零點。
-    3. 執行 `tools/11_score_onboard`。
-    4. 60 秒內不要碰機台。結束時印出結果，紀錄檔存在 `policy/recordings/onboard_<時間>.npz`。照下面的順序看。
+    1. Nano 燒的是 `RLControl`（4-2），Arduino IDE 的序列埠監控已關掉。這時策略可能已經在甩，不用先停它。
+    2. 執行 `tools/11_score_onboard`。工具打開 serial 時 Nano 會重開，接著工具讓馬達斷電，印出「馬達已斷電」。
+    3. 用手把手臂轉回正中間，等擺錘**完全靜止垂下**，按 Enter。Nano 在這一刻抓零點並開始甩。
+    4. 之後約 65 秒不要碰機台（前 5 秒是甩上去的時間，不計分）。結束時印出結果，紀錄檔存在 `policy/recordings/onboard_<時間>.npz`。照下面的順序看。
+
+!!! warning "為什麼要先斷電、等你按 Enter"
+
+    `RLControl` 開機 1 秒後，會把「當下」的擺錘角度當成垂下的零點。打開 serial 會讓 Nano 重開；如果策略原本在平衡，重開時擺錘還在甩，零點就會抓錯，之後手臂會一直轉、分數完全不準。所以工具改成重開後先讓馬達斷電，等擺錘靜止再送指令重新抓零點。
 
 ??? cmd "背後執行的指令"
 
     ```bash
     cd policy
-    uv run python analyze_onboard.py --port <PORT> --duration-s 60 \
+    uv run python analyze_onboard.py --port <PORT> --duration-s 60 --rearm \
         --log recordings/onboard_<時間>.npz
     ```
 
@@ -76,3 +80,20 @@
 | 擺錘標準差 | 1.90° | — |
 
 「獨立重跑」是作者在配方定案後，用預設設定從頭重跑整套流程一次的結果（重新訓練教師、重新實機微調、蒸餾、燒錄）。照流程做，應該落在這個附近。
+
+### 獨立執行比接線測試差時 { #gap }
+
+同一個學生在 Nano 上獨立執行，分數通常會比 Step 3 的接線測試低一些。網路是同一個，差在誰來算、指令多久之後才生效：
+
+| | 接線（`08_test_policy`） | 獨立執行（`RLControl`） |
+| --- | --- | --- |
+| 誰讀感測器、估速度 | Nano | Nano |
+| 誰算神經網路 | 電腦 | Nano（約 12 ms） |
+| 指令延遲 | 經過 USB，約晚一個控制週期 | 沒有 USB 往返，sample→command 約 16 ms |
+
+DAgger 用 `--transport device` 就是為了讓學生適應獨立執行的時序。頻率約 50 Hz、延遲在範圍內，但 balanced fraction 明顯低於參考值（例如手臂大幅來回、一直倒下又接回）時，照這個順序試：
+
+1. 再跑一次 `11_score_onboard`，確認不是單次運氣不好。
+2. 回到 [Step 3](step3-distill.md#checkpoint) 用 `SEED 1` 重新蒸餾，再匯出、燒錄、評分。`09_distill` 印出的 DAgger gate 如果和第 0 輪一樣，代表 DAgger 沒有改善，換 SEED 最值得一試。
+3. 如果 Step 2 還沒照[停止規則](step2-finetune.md#how-long)做完，就回 Step 2 再加一段微調，然後重新蒸餾。真實資料越多，教師和學生都越穩。
+4. 都試過仍然遠低於參考值，帶著 `policy/recordings/` 裡的 `onboard_*.npz` 找助教。

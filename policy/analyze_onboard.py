@@ -20,7 +20,9 @@ Usage:
 
 NB: opening the serial port RESETS the Nano (auto-reset on DTR) — the
 sketch reboots, re-zeroes the encoder (pendulum must hang still!), and
-re-engages after its 1 s settle delay. Capture starts after boot.
+re-engages after its 1 s settle delay. Capture starts after boot. If the
+sketch was already running, pass --rearm: the reboot drops the pendulum
+mid-swing, so the zero must be re-captured once the rig is still again.
 """
 
 from __future__ import annotations
@@ -37,6 +39,33 @@ import balance_metrics
 from pendulum_env import OBS_STALENESS_NOMINAL_S
 
 
+def rearm(ser: serial.Serial) -> None:
+    """Disengage right after boot, let the user reset the rig, re-engage.
+
+    The sketch engages 1 s after printing its "[boot] policy(upright)" line
+    and captures the encoder zero at that instant. If it was balancing when
+    the port opened, the reboot drops the pendulum and that zero lands
+    mid-swing, so the whole capture runs in a wrong frame. 'E' re-captures
+    both zeros (transition_to_running), from wherever the rig is then.
+    """
+    t_end = time.monotonic() + 10.0
+    while time.monotonic() < t_end:
+        if b"policy(upright)" in ser.readline():
+            break
+    else:
+        print("no boot banner seen — is RLControl flashed? continuing anyway")
+    time.sleep(1.5)  # past the sketch's 1 s engage delay
+    ser.reset_input_buffer()
+    ser.write(b"D")
+    print("\n馬達已斷電。用手把手臂轉回正中間，等擺錘完全靜止垂下。")
+    try:
+        input("準備好就按 Enter（Nano 會在這時抓零點並開始甩，之後不要碰機台）")
+    except EOFError:
+        pass
+    ser.write(b"E")
+    print("已啟動。")
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="Capture + score on-device telemetry")
     p.add_argument("--port", required=True)
@@ -49,11 +78,21 @@ def main(argv: list[str] | None = None) -> int:
                    help="the flashed policy's control rate — the capture is "
                         "flagged invalid if the measured loop rate deviates")
     p.add_argument("--log", default=None, help="optional .npz output")
+    p.add_argument("--rearm", action="store_true",
+                   help="after boot, disengage ('D'), wait for Enter while the "
+                        "user re-centres the arm and lets the pendulum hang "
+                        "still, then re-engage ('E') so the encoder zero comes "
+                        "from a still pendulum. Use when the sketch was already "
+                        "running: opening the port reboots it mid-swing.")
     args = p.parse_args(argv if argv is not None else sys.argv[1:])
 
     print(f"Opening {args.port} (this resets the Nano — pendulum should hang still)")
     ser = serial.Serial(args.port, args.baud, timeout=2.0)
-    time.sleep(3.0)  # bootloader + setup() + magnet check + settle delay
+    if args.rearm:
+        rearm(ser)
+        time.sleep(0.5)  # engage is immediate; keep the same swing-up allowance
+    else:
+        time.sleep(3.0)  # bootloader + setup() + magnet check + settle delay
     ser.reset_input_buffer()
     ser.write(b"P")  # enable telemetry
 
