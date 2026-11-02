@@ -28,7 +28,7 @@ cd C:\
 git clone https://github.com/Reyes-Lee/rip-course.git
 ```
 
-下載後照網站的[安裝環境](https://reyes-lee.github.io/rip-course/prepare/install/)，執行 `tools/00_setup` 開始。
+下載後照網站的[安裝環境](https://reyes-lee.github.io/rip-course/prepare/install/)，執行 `tools/macOS/00_setup.command` 或 `tools\Windows\00_setup.bat` 開始。
 
 助教更新檔案後，在 `rip-course` 資料夾執行 `git pull` 就能拿到新版。你自己產生的訓練結果、sysid 檔都不在 repo 裡，更新不會蓋掉。
 
@@ -49,7 +49,7 @@ flowchart LR
 | `firmware/` | Arduino sketch，用 Arduino IDE 開啟、上傳 |
 | `policy/` | Python：模擬、訓練、sysid、蒸餾 |
 | `model/` | 機台模型參數（URDF） |
-| `tools/` | 工具（macOS `.command`、Windows `.bat`） |
+| `tools/` | 工具：macOS 點 `tools/macOS/` 的 `.command`，Windows 點 `tools/Windows/` 的 `.bat`；程式在 `tools/_lib/` |
 | `website/` | 教學網站原始檔 |
 
 ## 來源與授權

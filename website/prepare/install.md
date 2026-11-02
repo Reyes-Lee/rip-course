@@ -6,7 +6,7 @@
   <span class="rip-chip">:material-robot-off-outline: 不需要機台</span>
 </div>
 
-兩個系統的流程完全一樣，只有安裝方式不同。每個工具都有 macOS 的 `.command` 與 Windows 的 `.bat` 兩個入口檔，執行後呼叫同一支 Python 腳本。下面每個區塊都可以切換 macOS／Windows，選一次之後整個網站都會記住。
+兩個系統的流程完全一樣，只有安裝方式不同。每個工具都有 macOS 的 `.command`（在 `tools/macOS/`）與 Windows 的 `.bat`（在 `tools/Windows/`）兩個入口檔，執行後呼叫同一支 Python 腳本。下面每個區塊都可以切換 macOS／Windows，選一次之後整個網站都會記住。
 
 ## 1. 安裝軟體
 
@@ -78,7 +78,7 @@
 
     在 [GitHub 頁面](https://github.com/Reyes-Lee/rip-course)按綠色的「Code → Download ZIP」，解壓到上面建議的位置，資料夾改名成 `rip-course`。
 
-    - macOS 解壓後要在終端機多跑一行，工具才能執行：`chmod +x ~/rip-course/tools/*.command`
+    - macOS 解壓後要在終端機多跑一行，工具才能執行：`chmod +x ~/rip-course/tools/macOS/*.command`
     - 缺點：之後助教更新時，要重新下載 ZIP，並把舊資料夾裡的 `policy/runs/`、`policy/sysid_params.json` 搬到新資料夾。用 git 就不用。
 
 ### 助教更新檔案時 { #update }
@@ -105,7 +105,7 @@
 
 !!! tool "操作步驟"
 
-    1. 打開 repo 裡的 `tools` 資料夾，執行 `00_setup`（macOS 點 `00_setup.command`，Windows 點 `00_setup.bat`）。
+    1. 打開 repo 裡的 `tools` 資料夾，再打開你的系統那一個（macOS 開 `tools/macOS`、Windows 開 `tools\Windows`），點兩下 `00_setup`（macOS 是 `00_setup.command`，Windows 是 `00_setup.bat`）。
     2. 第一次執行會被系統擋下來時：
         - macOS：在檔案上按右鍵 →「打開」→ 再按「打開」。
         - Windows：SmartScreen 跳出時按「其他資訊 → 仍要執行」。
@@ -135,9 +135,10 @@ rip-course/
 ├── policy/          Python：模擬、訓練、sysid、蒸餾（來自作者）
 ├── model/
 │   └── model.urdf         擺錘質量與慣量（已更新為 10 元硬幣配重）
-└── tools/           流程工具，每個工具都是同名的三個檔
-    ├── 00_setup.command   00_setup.bat   00_setup.py
-    └── …
+└── tools/           流程工具
+    ├── macOS/             macOS 點這裡的 .command（00_setup.command …）
+    ├── Windows/           Windows 點這裡的 .bat（00_setup.bat …）
+    └── _lib/              工具的 Python 程式，不用打開
 ```
 
 你執行工具後產生的檔案都在 `policy/` 底下，不會進 repo：

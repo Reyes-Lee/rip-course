@@ -1,7 +1,7 @@
 """所有工具共用的小工具：路徑、畫面輸出、提問、選檔案、找序列埠、呼叫 policy/ 的腳本。
 
-每個工具都由 `tools/<名稱>.command`（macOS）或 `tools/<名稱>.bat`（Windows）啟動，
-兩者只做「切到 repo 根目錄 → uv run --project policy python tools/<名稱>.py」。
+每個工具都由 `tools/macOS/<名稱>.command` 或 `tools/Windows/<名稱>.bat` 啟動，
+兩者只做「切到 repo 根目錄 → uv run --project policy python tools/_lib/<名稱>.py」。
 """
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ import sys
 import time
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[1]
+REPO = Path(__file__).resolve().parents[2]   # tools/_lib/ → repo 根目錄
 POLICY = REPO / "policy"
 RUNS = POLICY / "runs"
 RECORDINGS = POLICY / "recordings"

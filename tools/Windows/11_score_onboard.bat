@@ -1,7 +1,7 @@
 @echo off
-rem Double-click to run 09_distill (Windows). Logic lives in tools\09_distill.py.
+rem Double-click to run 11_score_onboard (Windows). Logic lives in tools\_lib\11_score_onboard.py.
 chcp 65001 >nul
-cd /d "%~dp0\.."
+cd /d "%~dp0\..\.."
 rem uv installs to %USERPROFILE%\.local\bin; add it in case this window has not picked up the new PATH yet.
 set "PATH=%USERPROFILE%\.local\bin;%PATH%"
 where uv >nul 2>nul
@@ -10,4 +10,4 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
-uv run --project policy python tools\09_distill.py %*
+uv run --project policy python tools\_lib\11_score_onboard.py %*

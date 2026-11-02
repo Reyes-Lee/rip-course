@@ -3,7 +3,7 @@
 AS5600 模組的 DIR 腳出廠可能接 GND、接 VCC 或沒接，擺錘角度的正方向因此不一定
 跟模擬一樣。這個工具讓手臂在正中間小幅抖動，看垂下的擺錘被往哪邊帶：
 跟模擬一致就記下來；相反就把方向寫進 EEPROM，再測一次確認。
-不需要判斷順時針或逆時針。原理見 tools/_direction.py。
+不需要判斷順時針或逆時針。原理見 tools/_lib/_direction.py。
 """
 from __future__ import annotations
 

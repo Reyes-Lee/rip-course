@@ -1,7 +1,7 @@
 @echo off
-rem Double-click to run 04_check_direction (Windows). Logic lives in tools\04_check_direction.py.
+rem Double-click to run 03_check_motor (Windows). Logic lives in tools\_lib\03_check_motor.py.
 chcp 65001 >nul
-cd /d "%~dp0\.."
+cd /d "%~dp0\..\.."
 rem uv installs to %USERPROFILE%\.local\bin; add it in case this window has not picked up the new PATH yet.
 set "PATH=%USERPROFILE%\.local\bin;%PATH%"
 where uv >nul 2>nul
@@ -10,4 +10,4 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
-uv run --project policy python tools\04_check_direction.py %*
+uv run --project policy python tools\_lib\03_check_motor.py %*

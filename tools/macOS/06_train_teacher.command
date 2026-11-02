@@ -1,10 +1,10 @@
 #!/bin/bash
-# 雙擊執行 07_finetune（macOS）。邏輯都在 tools/07_finetune.py。
-cd "$(dirname "$0")/.." || exit 1
+# 雙擊執行 06_train_teacher（macOS）。邏輯都在 tools/_lib/06_train_teacher.py。
+cd "$(dirname "$0")/../.." || exit 1
 export PATH="$HOME/.local/bin:$PATH"
 if ! command -v uv >/dev/null 2>&1; then
   echo "找不到 uv。請先照網站「安裝環境」安裝 uv，然後關掉終端機重開。"
   read -r -p "按 Enter 關閉視窗"
   exit 1
 fi
-uv run --project policy python tools/07_finetune.py "$@"
+uv run --project policy python tools/_lib/06_train_teacher.py "$@"
