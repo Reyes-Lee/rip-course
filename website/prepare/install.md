@@ -65,7 +65,7 @@
 
 === ":material-microsoft-windows: Windows"
 
-    路徑**不要有中文或空格**，建議放在 `C:\rip-course`。打開 PowerShell，執行：
+    路徑**不要有中文或空格**，也不要放在會被 OneDrive 同步的「桌面」或「文件」（很多電腦預設會同步，原因同 macOS 的 iCloud），建議放在 `C:\rip-course`。打開 PowerShell，執行：
 
     ```powershell
     cd C:\

@@ -76,13 +76,11 @@
 #include <Wire.h>
 #include <EEPROM.h>
 
-// Which champion header to compile. Named policy_weights_<rig>_<driver>_<microsteps>.h:
-// the rig because each one is fine-tuned against its own measured friction, the
-// driver and MICROSTEPS because the policy is trained against that quantisation.
-// Both rigs now run TMC2209s, which is why the rig comes first — the driver alone
-// stopped identifying a champion. Select at compile time, no file edits:
-//   arduino-cli compile --upload -p <port> --fqbn arduino:avr:nano:cpu=atmega328 \
-//     --build-property 'build.extra_flags=-DPOLICY_WEIGHTS_H="policy_weights_rig2_tmc2209_32.h"' \
+// Which weights header to compile. The default is policy_weights_student.h, which
+// tools/10_export_weights overwrites with your own student. To try another header
+// without editing this file, pass it at compile time:
+//   arduino-cli compile --upload -p <port> --fqbn arduino:avr:nano:cpu=atmega328old \
+//     --build-property 'build.extra_flags=-DPOLICY_WEIGHTS_H="<your_header>.h"' \
 //     firmware/RLControl
 #ifndef POLICY_WEIGHTS_H
 // 課程版：預設載入學生自己匯出的權重（tools/10_export_weights 會覆寫這個檔）。

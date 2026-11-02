@@ -2,6 +2,8 @@
 rem Double-click to run 09_distill (Windows). Logic lives in tools\09_distill.py.
 chcp 65001 >nul
 cd /d "%~dp0\.."
+rem uv installs to %USERPROFILE%\.local\bin; add it in case this window has not picked up the new PATH yet.
+set "PATH=%USERPROFILE%\.local\bin;%PATH%"
 where uv >nul 2>nul
 if errorlevel 1 (
   echo uv not found. Install uv first ^(see the course website^), then reopen this window.

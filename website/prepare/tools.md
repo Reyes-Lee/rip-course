@@ -45,6 +45,8 @@ Nano 用 USB-C 線接上電腦、燒好對應的韌體，再執行工具，就�
 
     在工具的視窗裡按 ++ctrl+c++。macOS 也是 Ctrl，不是 Command。
 
+    Windows 停止後會再問 `終止批次工作 (Y/N)?`：等工具印完收尾訊息（例如存檔、馬達斷電）再輸入 `Y` 按 Enter。
+
 -   :material-console:{ .lg .middle } **「背後執行的指令」不用自己打**
 
     ---

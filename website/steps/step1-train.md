@@ -13,7 +13,7 @@
 !!! tool "第一次訓練"
 
     1. 確認 Step 0 已經產生 `policy/sysid_params.json`。
-    2. 筆電接上電源、不要闔上蓋子（睡眠會讓訓練中斷）。
+    2. 筆電接上電源、不要闔上蓋子（睡眠會讓訓練中斷）。訓練約 25–50 分鐘，比系統預設的自動睡眠時間長：macOS 在「系統設定 → 電池 → 選項」打開接電源時「防止自動睡眠」；Windows 在「設定 → 系統 → 電源」把接電源時的睡眠設成「永不」。
     3. 執行 `tools/06_train_teacher`。
     4. 畫面問 `run 名稱 [v1]:`，第一次直接按 Enter。
     5. 畫面問 `SEED [0]:`，直接按 Enter。
@@ -26,12 +26,7 @@
 
 ??? cmd "背後執行的指令"
 
-    `06_train_teacher` 是作者 `curriculum_train.sh` 的 Python 版（Windows 不能直接跑 bash），參數照原腳本的預設值。等同於：
-
-    ```bash
-    cd policy
-    DEVICE=cpu PARAMS_PATH=sysid_params.json bash curriculum_train.sh v1
-    ```
+    `06_train_teacher` 是作者 repo 裡 [`curriculum_train.sh`](https://github.com/ferrolho/rotary-inverted-pendulum/blob/main/policy/curriculum_train.sh) 的 Python 版（Windows 不能直接跑 bash，課程 repo 沒有附這支 `.sh`），參數照原腳本的預設值。
 
     實際上是依序跑三次 `train_sac.py`，例如第 1 階段：
 

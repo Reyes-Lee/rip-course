@@ -19,7 +19,7 @@
 
 ??? cmd "背後執行的指令"
 
-    `09_distill` 是作者 `distill_student.sh` 的 Python 版，等同於 `bash distill_student.sh ft3`：
+    `09_distill` 是作者 repo 裡 [`distill_student.sh`](https://github.com/ferrolho/rotary-inverted-pendulum/blob/main/policy/distill_student.sh) 的 Python 版（課程 repo 沒有附這支 `.sh`），以 `ft3` 為例等同於：
 
     ```bash
     cd policy

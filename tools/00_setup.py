@@ -3,13 +3,33 @@ from __future__ import annotations
 
 import platform
 import sys
+from pathlib import Path
 
-from _common import (banner, choose, fail, finish, heading, info, list_nano_ports, load_settings,
-                     ok, save_settings, warn)
+from _common import (IS_MAC, IS_WIN, REPO, banner, choose, fail, finish, heading, info, list_nano_ports,
+                     load_settings, ok, save_settings, warn)
+
+
+def check_repo_path() -> None:
+    """repo 放在雲端同步資料夾或有中文／空格的路徑時提醒（只警告，不中止）。"""
+    heading("課程資料夾位置")
+    ok(f"{REPO}")
+    path = str(REPO)
+    synced = "OneDrive" in path or "Mobile Documents" in path
+    if IS_MAC:
+        # 開了 iCloud「桌面與文件」時，~/Desktop、~/Documents 路徑不變，但會被同步。
+        icloud_desktop = Path.home() / "Library" / "Mobile Documents" / "com~apple~CloudDocs" / "Desktop"
+        under = any(REPO.is_relative_to(Path.home() / d) for d in ("Desktop", "Documents"))
+        synced = synced or (icloud_desktop.exists() and under)
+    if synced:
+        warn("這個資料夾會被 iCloud／OneDrive 同步。訓練與微調會寫出很多大檔，背景同步會搶 CPU 和磁碟，")
+        warn("可能拖慢 50 Hz 的實機控制。建議照網站「安裝環境」改放到家目錄（macOS）或 C:\\rip-course（Windows）。")
+    if IS_WIN and (" " in path or not path.isascii()):
+        warn("路徑裡有空格或中文，部分工具可能出錯。建議照網站改放到 C:\\rip-course。")
 
 
 def main() -> int:
     banner("00 環境設定")
+    check_repo_path()
 
     heading("Python 與套件")
     ok(f"Python {platform.python_version()}（{sys.executable}）")

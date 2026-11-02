@@ -846,8 +846,7 @@ def main(argv: list[str] | None = None) -> int:
         # Full pipeline
         out_dir = collect_data(args)
         fit_data(out_dir, args.out_json)
-        print(_bold("\nDone. Use the policy training scripts next:"))
-        print(_dim(f"  ./curriculum_train.sh <run-prefix>"))
+        print(_bold("\nDone. Next: Step 1, run tools/06_train_teacher."))
     return 0
 
 
