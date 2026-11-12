@@ -176,19 +176,19 @@ AS5600 讀的是磁場方向，整套系統對擺錘角度的所有認知都來�
 
     換過 AS5600 模組或重裝磁鐵後，要重做 `02_check_encoder`（間隙、對心、AGC 都可能變）和 `04_check_direction`，並重跑 `05_sysid`。
 
-## 我們的硬體與作者的差異 { #diff }
+## 硬體規格 { #specs }
 
-下表是課程 repo 已經處理好的差異，對照作者文件時參考，**不需要你改任何東西**。
+下表是課程機台的規格，repo 裡的程式都已經對應好，**不需要你改任何東西**。
 
-| 項目 | 作者 | 我們 | 說明 |
-| --- | --- | --- | --- |
-| 馬達 | 17HS4023（22 mm 機身） | 17HS3401S（34 mm，額定 1.3 A） | 模擬把步進馬達當成剛性位置致動器，扭力不在模型裡，程式不用改 |
-| TMC2209 Vref | 約 0.9 V（0.64 A RMS） | 約 1.0 V（約 0.7 A RMS） | 助教已調好；**Vref 設的是 RMS 不是峰值**，不要照抄 DRV8825 的數字 |
-| 微步 | 1/32 | 1/32（MS1 接 5V、MS2 接 GND） | 所有 sketch 的 `MICROSTEPS = 32` |
-| Bootloader | 新版 | Old Bootloader | IDE 處理器選 Old Bootloader；flash 上限 30720 bytes |
-| 擺錘配重 | 英國 2p 硬幣，列印時嵌入 | 新台幣 10 元，貼在外側 | `model/model.urdf` 已更新 |
-| 擺臂 | 列印擺臂 | 同作者的設計列印 | `pendulum_env.py` 的 `ARM_*` 沿用作者值 |
-| 底座 | 作者列印外殼 | v5 壓克力三層底座 | 已經調平，放在水平的桌面上即可 |
-| AS5600 方向 | DIR 不接，方向由模組決定 | DIR 不接，方向由 `04_check_direction` 存進 EEPROM | 作者的機台方向剛好跟模擬一致；我們的模組不一定，所以每台都要[標定](#direction) |
+| 項目 | 規格 | 說明 |
+| --- | --- | --- |
+| 步進馬達 | 17HS3401S（34 mm 機身，額定 1.3 A） | |
+| 馬達驅動 | TMC2209，Vref 約 1.0 V（約 0.7 A RMS） | 助教已調好；**Vref 設的是 RMS 不是峰值**，不要照抄 DRV8825 的數字 |
+| 微步 | 1/32（MS1 接 5V、MS2 接 GND） | 所有 sketch 的 `MICROSTEPS = 32` |
+| 控制板 | Arduino Nano（Old Bootloader） | IDE 處理器選 Old Bootloader；flash 上限 30720 bytes |
+| 擺錘編碼器 | AS5600 | DIR 不接，方向由 `04_check_direction` 存進 EEPROM，每台都要[標定](#direction) |
+| 擺錘配重 | 新台幣 10 元，貼在擺錘大頭外側 | `model/model.urdf` 已依此設定 |
+| 擺臂 | 3D 列印 | `pendulum_env.py` 的 `ARM_*` 已對應這個設計 |
+| 底座 | v5 壓克力三層底座 | 已經調平，放在水平的桌面上即可 |
 
-接線與作者相同：STEP→D9、DIR→D2、ENABLE→D5、AS5600 SDA/SCL→A4/A5，AS5600 只接 VCC、GND、SDA、SCL 四條線（DIR、OUT、GPO 不接）。12 V 供電並聯 100 µF。
+接線：STEP→D9、DIR→D2、ENABLE→D5、AS5600 SDA/SCL→A4/A5，AS5600 只接 VCC、GND、SDA、SCL 四條線（DIR、OUT、GPO 不接）。12 V 供電並聯 100 µF。
