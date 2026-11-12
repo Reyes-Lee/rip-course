@@ -46,6 +46,7 @@
 - 每回合預設 6 秒；回合之間馬達斷電，最多等 15 秒讓擺錘自己停下來（停得快就提早開始）。用預設值時每回合約 11–21 秒：30 回合約 6–11 分鐘，50 回合約 9–18 分鐘。工具開始前會依你選的設定印出這一段的預估時間。
 - 每回合會印一行 `steps=… mean_dt=…ms max_overrun=…ms violations=…`。`mean_dt` 應約 20 ms；`violations` 持續大於 0 代表控制週期被拖慢，先關掉其他程式（同步、備份、訓練）。
 - 每段結束時工具會印出 `best_model.zip` 是第幾回合的模型，並刪掉中途的 replay buffer 快照（每份約 80 MB），只留下一段要用的 `replay_buffer.pkl`。
+- 開始前工具會檢查 `policy/reward.py`（見 [Step 1 修改 reward](step1-train.md#edit-reward)）：`compute_reward()` 出錯或回傳非有限數字就停止，不會動到機台。也會比對現在的 `reward.py` 和起點模型的 `reward_used.py`，不同就印出提醒。結束後這一段用的 `reward.py` 存成 `runs/ftN/reward_used.py`。
 - 控制迴路與 SAC 梯度更新跑在不同執行緒，所以訓練中控制頻率仍嚴格是 50 Hz。
 - Mirror augmentation 預設開啟，每筆真實資料同時存一份鏡像。
 

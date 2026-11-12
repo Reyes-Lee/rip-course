@@ -10,8 +10,8 @@ from __future__ import annotations
 import json
 import re
 
-from _common import (RUNS, ask, ask_number, ask_yes, banner, color, fail, finish, heading, info, is_done, mark_done,
-                     need_sysid, ok, run_policy_script, warn)
+from _common import (RUNS, ask, ask_number, ask_yes, banner, check_reward, color, fail, finish, heading, info,
+                     is_done, mark_done, need_sysid, ok, run_policy_script, save_reward_copy, warn)
 from _checks import print_sensitivity, sensitivity, symmetry
 from _progress import StageProgress
 
@@ -122,6 +122,8 @@ def main() -> int:
     steps = ask_number("每階段步數", STEPS_PER_STAGE, 1000)
     w = ask_reward(name, start)
     print_header(params, name, seed, steps, w)
+    if not check_reward(w):
+        return 1
     for stage in (1, 2, 3):
         if stage < start:
             continue
@@ -143,6 +145,7 @@ def main() -> int:
             fail(f"Stage {stage} 沒有完成（代碼 {code}）。再執行 06_train_teacher、輸入同一個名稱就能接續。")
             return code
         mark_done(run_dir)
+        save_reward_copy(run_dir)
         ok(f"Stage {stage} 完成：runs/{run_dir.name}/best_model.zip")
 
     return run_checks(name, params)

@@ -11,8 +11,9 @@ import csv
 import json
 import time
 
-from _common import (RUNS, ask_number, ask_yes, banner, choose, fail, finish, finetune_runs, get_port, heading,
-                     info, label, mark_done, need_sysid, ok, rel, run_policy_script, teachers, wait_enter, warn)
+from _common import (RUNS, ask_number, ask_yes, banner, check_reward, choose, fail, finish, finetune_runs, get_port,
+                     heading, info, label, mark_done, need_sysid, ok, rel, run_policy_script, same_reward_as,
+                     save_reward_copy, teachers, wait_enter, warn)
 from _direction import require_or_exit
 
 # 作者的預設值（直接按 Enter 就用這些）
@@ -115,6 +116,14 @@ def main() -> int:
     else:
         heading(f"第一段 ft1：從 {label(start)} 開始，{episodes} 回合")
 
+    same = same_reward_as(start.parent)
+    if same is None:
+        info(f"{label(start.parent)} 沒有存 reward_used.py，無法比對 policy/reward.py 有沒有改過。")
+    elif not same:
+        warn(f"policy/reward.py 跟 {label(start.parent)}/reward_used.py（起點模型訓練時的版本）不同，這一段會用現在的 reward.py。")
+    if not check_reward({**cfg, **reward}):
+        return 1
+
     port = get_port()
     lo, hi = episodes * (length + 5) / 60, episodes * (length + 15) / 60
     info(f"每回合 {length:g} 秒；回合之間馬達斷電，最多等 15 秒讓擺錘停下來。這一段約 {lo:.0f}–{hi:.0f} 分鐘。")
@@ -128,6 +137,7 @@ def main() -> int:
         fail(f"{run_dir.name} 沒有完成（代碼 {code}）。處理好問題後再執行 07_finetune，會重跑這一段。")
         return code or 1
     mark_done(run_dir)
+    save_reward_copy(run_dir)
     settings = {"start_model": rel(start), "resume_buffer": rel(buffer) if buffer else None,
                 "episodes": episodes, "episode_length_s": length, "learning_rate": lr,
                 "gradient_steps": grad_steps, "eval_every": eval_every, "reward_changed": reward_changed,

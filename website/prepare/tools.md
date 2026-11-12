@@ -61,4 +61,6 @@ Nano 用 USB-C 線接上電腦、燒好對應的韌體，再執行工具，就�
 
 會問設定的工具，`[ ]` 裡的預設值都是作者的設定，直接按 Enter 就照作者的流程走。每個設定改了會影響什麼，寫在用到它的那一步。工具沒有問的選項，可以照每一步「背後執行的指令」自己在 `policy/` 執行，加 `--help` 會列出全部選項。
 
+reward：`06_train_teacher`、`07_finetune` 開始前會檢查 `policy/reward.py` 能不能正常算出數字，結束後把用到的 `reward.py` 存成結果資料夾裡的 `reward_used.py`，見 [Step 1 修改 reward](../steps/step1-train.md#edit-reward)。
+
 模型檔：Step 1 的三個階段一律從前一階段的 `best_model.zip`（訓練中評估分數最高的版本）接續。Step 2 之後，`07_finetune`、`08_test_policy`、`09_distill` 會讓你選 `best_model.zip` 或 `last.zip`（最後一回合的版本），`08_test_policy` 另外可以選每 10 回合存的 `checkpoint_epNNN.zip`；兩者的差別見 [Step 2](../steps/step2-finetune.md#best-model)。

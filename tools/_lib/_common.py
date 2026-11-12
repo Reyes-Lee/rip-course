@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import os
 import platform
+import shutil
 import subprocess
 import sys
 import time
@@ -297,3 +298,32 @@ def all_checkpoints() -> list[Path]:
 
 def label(p: Path) -> str:
     return rel(p).removeprefix("runs/")
+
+
+# ---------------------------------------------------------------- reward
+
+REWARD_PY = POLICY / "reward.py"
+REWARD_COPY = "reward_used.py"   # 每次訓練／微調結束後，把當時的 reward.py 存一份在結果資料夾
+
+
+def check_reward(weights: dict) -> bool:
+    """開跑前用各種輸入呼叫 compute_reward()，出錯或回傳非有限數字就回傳 False。"""
+    heading("檢查 policy/reward.py")
+    code, _ = run_policy_script([str(Path(__file__).with_name("_reward_check.py")), json.dumps(weights)])
+    if code != 0:
+        fail("policy/reward.py 的 compute_reward() 沒有通過檢查（上面印出出錯的輸入）。修好再執行；"
+             "要還原成作者的版本，在 rip-course 資料夾執行 git checkout policy/reward.py。")
+        return False
+    return True
+
+
+def save_reward_copy(run_dir: Path) -> None:
+    shutil.copyfile(REWARD_PY, run_dir / REWARD_COPY)
+
+
+def same_reward_as(run_dir: Path) -> bool | None:
+    """現在的 reward.py 跟 run_dir 當時存的副本是否相同；沒有副本回傳 None。"""
+    copy = run_dir / REWARD_COPY
+    if not copy.exists():
+        return None
+    return copy.read_bytes() == REWARD_PY.read_bytes()

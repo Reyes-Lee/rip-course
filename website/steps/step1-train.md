@@ -140,7 +140,11 @@ $$
 
 ### 修改 reward { #edit-reward }
 
-**用工具改的 7 個權重。** `06_train_teacher` 問 `要改 reward 權重嗎？` 時輸入 `y`，會逐項問下表的值（`[ ]` 裡是作者的值）。
+reward 有兩種改法：只改權重（工具會問），或直接改寫 `policy/reward.py`，包括整個重寫。
+
+#### 用工具改權重
+
+ `06_train_teacher` 問 `要改 reward 權重嗎？` 時輸入 `y`，會逐項問下表的值（`[ ]` 裡是作者的值）。
 
 | 工具上的名稱 | 在 reward 裡的位置 | 作者的值 | `train_sac.py` 選項 |
 | --- | --- | --- | --- |
@@ -152,7 +156,9 @@ $$
 | 手臂角速度變化² 懲罰 | 額外一項：係數 ×（這一步 α̇ − 上一步 α̇）²，作者的值是 0（關閉），所以不在上面的公式裡 | 0 | `--reward-motor-jerk-weight` |
 | 動作變化² 懲罰 | 額外一項：係數 ×（這一步 a − 上一步 a）²，作者的值是 0（關閉） | 0 | `--reward-action-rate-weight` |
 
-**要改程式的部分。** 下面這些工具不會問，要直接改 `policy/` 裡的程式：
+#### 改寫程式
+
+下面這些工具不會問，要直接改 `policy/` 裡的程式：
 
 | 要改的東西 | 作者的值 | 位置 |
 | --- | --- | --- |
@@ -163,10 +169,28 @@ $$
 | 靜止獎勵的寬度 0.3 rad、1 rad/s | 0.3、1.0 | 同上，`reward_stillness_sigma_theta_rad`、`reward_stillness_sigma_motor_vel_rad_s` |
 | 接住的直立的條件 15°、2 rad/s | 0.2618 rad、2.0 | `policy/reward.py` 的 `RewardWeights`：`alive_theta_band`、`alive_pen_vel_limit` |
 
+**整個重寫 `compute_reward()`** 也可以，工具照樣能用，只要守住它的介面：
+
+- 輸入固定是這 8 個（都是 keyword 參數）：`theta`（擺錘角，0 是直立，範圍 −π 到 π）、`pen_vel`（擺錘角速度）、`motor_pos`（手臂角）、`motor_vel`（手臂角速度）、`action`（這一步的動作，−1 到 1）、`prev_action`（上一步的動作）、`prev_motor_vel`（上一步的手臂角速度）、`weights`（`RewardWeights`，工具問的權重在這裡面；用不到可以不管）。單位都是 rad、rad/s。
+- 回傳一個數字，代表這一步的 reward。
+- 要用其他資訊（例如回合進行到第幾步），就要連 `pendulum_env.py` 和 `real_env.py` 呼叫 `compute_reward()` 的地方一起改。
+- 手臂撞到 ±135° 硬限位時的 −5 和結束回合，是在兩個環境檔裡另外處理的，不在 `compute_reward()` 裡。
+- 改壞了要還原成作者的版本：在 `rip-course` 資料夾執行 `git checkout policy/reward.py`。
+
+**工具的配套**：
+
+- **開跑前檢查**：`06_train_teacher` 和 `07_finetune` 開始前，會用約 8 萬組輸入呼叫 `compute_reward()`，涵蓋垂下、直立、快速轉圈、手臂到極限，以及下面說的實機特有輸入。出錯或回傳的不是有限數字（例如 `nan`、`inf`），工具會印出出錯的那組輸入並停止，不會開始訓練或動到機台。這個檢查只確認工具不會因為 reward 壞掉，不判斷 reward 好不好。
+- **保存副本**：每個階段、每一段微調結束後，工具把當時的 `policy/reward.py` 複製一份存成結果資料夾裡的 `reward_used.py`。`07_finetune` 開始時會比對現在的 `reward.py` 和起點模型的 `reward_used.py`，不同就印出提醒。
+
 改了 reward 之後會連帶影響的地方：
 
 - **記錄與沿用**：工具問的 7 個權重會寫進每個階段的 `runs/<名稱>_stageN/config.json`。從中斷處接續第 2、3 階段時，工具沿用前一階段 `config.json` 的權重。Step 2 的 `07_finetune` 會讀起點模型的 `config.json`，沿用同一組權重（見 [Step 2](step2-finetune.md#options)）。
-- **改程式的部分不會被記錄**：每次執行時用的是當時檔案裡的程式。Step 1 訓練完再改程式，Step 2 微調時用的就是改過的版本。
+- **改程式的部分不會寫進 `config.json`**：每次執行時用的是當時檔案裡的程式，當時的版本存在 `reward_used.py`。Step 1 訓練完再改程式，Step 2 微調時用的就是改過的版本，而這個版本沒有在模擬裡跑過。
+- **replay buffer 裡新舊 reward 會混在一起**：buffer 存的是收集當時算好的 reward，不會重算。Step 2 每一段都會帶上前一段的 buffer，所以兩段之間改了 reward，buffer 裡就會同時有新舊兩種 reward。
+- **鏡像資料增強假設 reward 左右對稱**：訓練和微調預設會把每筆資料存一份左右鏡像（擺錘角、手臂角、速度和動作全部變號），而且直接沿用同一個 reward。reward 不對稱時，鏡像那一筆的 reward 就不是它真正會拿到的值。
+- **實機和模擬算 reward 的輸入不完全一樣**：
+    - 模擬用 MuJoCo 的真實狀態；實機用感測器量到的值，速度會有雜訊和尖峰。
+    - 實機算 reward 時，`prev_action` 已經被更新成這一步的動作，所以 `action − prev_action` 一律是 0；`prev_motor_vel` 一律是 0。作者的「動作變化²」「手臂角速度變化²」兩項在實機上因此都是 0。
 - **實機微調少一項**：`real_env.py` 沒有「手臂角速度變化²」這一項，在 Step 2 一律是 0。
 - **best_model 的挑法跟著變**：Step 1 每個階段的 `best_model.zip` 和 Step 2 的 `best_model.zip`，都是用 reward 總和挑的。改了 reward，「分數最高」指的就是新 reward 下的最高分，不同 reward 的分數不能直接比。
 - **誠實指標不受影響**：balanced fraction、最長連續平衡、擺錘標準差等指標，不用 reward 計算，改 reward 前後可以直接比。
