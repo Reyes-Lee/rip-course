@@ -140,7 +140,11 @@ $$
 
 ### 修改 reward { #edit-reward }
 
-reward 有兩種改法：只改權重（工具會問），或直接改寫 `policy/reward.py`，包括整個重寫。
+reward 有三種改法：
+
+1. **用工具改權重**：最常調的 7 個權重，`06_train_teacher` 會問，不用碰程式。
+2. **改工具沒問到的係數**：公式裡其他現有的係數，要直接改檔案裡的數字。
+3. **改寫公式**：改每一項怎麼算、加新的項，或整個重寫 `compute_reward()`。
 
 #### 用工具改權重
 
@@ -156,20 +160,21 @@ reward 有兩種改法：只改權重（工具會問），或直接改寫 `polic
 | 手臂角速度變化² 懲罰 | 額外一項：係數 ×（這一步 α̇ − 上一步 α̇）²，作者的值是 0（關閉），所以不在上面的公式裡 | 0 | `--reward-motor-jerk-weight` |
 | 動作變化² 懲罰 | 額外一項：係數 ×（這一步 a − 上一步 a）²，作者的值是 0（關閉） | 0 | `--reward-action-rate-weight` |
 
-#### 改寫程式
+#### 改工具沒問到的係數
 
-下面這些工具不會問，要直接改 `policy/` 裡的程式：
+`06_train_teacher` 只問上表 7 個權重。公式裡還有下面這些係數，工具不會問，要改的話得直接改檔案裡的數字：
 
 | 要改的東西 | 作者的值 | 位置 |
 | --- | --- | --- |
-| 公式本身（每一項怎麼算、加新的項） | — | `policy/reward.py` 的 `compute_reward()`。模擬訓練和實機微調都呼叫這一個函式 |
 | θ² 的係數 | 1（寫死在公式裡） | `policy/reward.py` 的 `compute_reward()` |
 | θ̇² 的係數 | 0.001 | `policy/pendulum_env.py`（模擬）和 `policy/real_env.py`（實機微調）的 `reward_pen_vel_weight` 預設值，兩個檔案都要改 |
 | a² 的係數 | 0.2 | 同上，`reward_action_weight` |
 | 靜止獎勵的寬度 0.3 rad、1 rad/s | 0.3、1.0 | 同上，`reward_stillness_sigma_theta_rad`、`reward_stillness_sigma_motor_vel_rad_s` |
 | 接住的直立的條件 15°、2 rad/s | 0.2618 rad、2.0 | `policy/reward.py` 的 `RewardWeights`：`alive_theta_band`、`alive_pen_vel_limit` |
 
-**整個重寫 `compute_reward()`** 也可以，工具照樣能用，只要守住它的介面：
+#### 改寫公式
+
+要改每一項怎麼算、加新的項，就要改 `policy/reward.py` 的 `compute_reward()`，模擬訓練和實機微調都呼叫這一個函式。也可以整個重寫，工具照樣能用，只要守住它的介面：
 
 - 輸入固定是這 8 個（都是 keyword 參數）：`theta`（擺錘角，0 是直立，範圍 −π 到 π）、`pen_vel`（擺錘角速度）、`motor_pos`（手臂角）、`motor_vel`（手臂角速度）、`action`（這一步的動作，−1 到 1）、`prev_action`（上一步的動作）、`prev_motor_vel`（上一步的手臂角速度）、`weights`（`RewardWeights`，工具問的權重在這裡面；用不到可以不管）。單位都是 rad、rad/s。
 - 回傳一個數字，代表這一步的 reward。
