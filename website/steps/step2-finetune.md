@@ -25,7 +25,7 @@
     2. 擺錘靜止垂下，機台旁邊不要有東西擋到手臂。
     3. 執行 `tools/07_finetune`。
     4. 畫面列出 `runs/` 裡所有教師（`*_stage3/best_model.zip`），輸入 [Step 1 檢查點](step1-train.md#checkpoint)通過的那一支的編號；只有一支就直接按 Enter。
-    5. 畫面問這一段的設定（回合數、每回合秒數、要不要改進階設定）。每個設定的意思見 [07 會問的設定](#options)；直接按 Enter 是作者的預設值（50 回合、每回合 6 秒）。
+    5. 畫面問這一段的設定（回合數、每回合秒數、要不要改進階設定），接著印出沿用的 reward 權重並問要不要改。每個設定的意思見 [07 會問的設定](#options)；直接按 Enter 是作者的預設值（50 回合、每回合 6 秒）。
     6. 工具開始跑，畫面會顯示目前第幾回合。結束時印出 `已存：runs/ft1/best_model.zip`，以及 best_model 來自第幾回合。
     7. 接著做 [2-3 測試](#test)。
 
@@ -33,10 +33,10 @@
 
     1. 再執行 `tools/07_finetune`。
     2. 工具從最新一段接續，帶上那一段的 replay buffer。畫面先問從那一段的 `best_model.zip` 還是 `last.zip` 接續（差別見 [best_model 和 last 是怎麼來的](#best-model)），直接按 Enter 是作者的 `best_model.zip`。
-    3. 接著問這一段的設定，直接按 Enter 是作者的預設值（30 回合、每回合 6 秒）。
+    3. 接著問這一段的設定和 reward 權重，直接按 Enter 是作者的預設值（30 回合、每回合 6 秒、reward 沿用上一段）。
     4. 跑完一樣接著做 [2-3 測試](#test)。
 
-    控制頻率、動作模式、reward、平滑窗口都從 checkpoint 的 `config.json` 繼承，工具不會問。每一段實際用的設定存在 `runs/ftN/07_settings.json`。
+    控制頻率、動作模式、平滑窗口都從 checkpoint 的 `config.json` 繼承，工具不會問。每一段實際用的設定存在 `runs/ftN/07_settings.json`。
 
 !!! warning "前幾個回合要聽馬達"
 
@@ -68,7 +68,7 @@
         --learning-rate 0.0001 --gradient-steps 4 --eval-every 5 --run-name ft2
     ```
 
-    `finetune_async.py` 還有其他選項（例如 `--reset-settle-s`、`--deterministic`），工具沒有問，要用就自己在 `policy/` 執行指令，`uv run python finetune_async.py --help` 會列出全部。
+    改 reward 權重時，工具會再加上 `--reward-alive-offset`、`--reward-motor-pos-weight` 等 6 個選項和 `--ignore-config-mismatch`。`finetune_async.py` 還有其他選項（例如 `--reset-settle-s`、`--deterministic`），工具沒有問，要用就自己在 `policy/` 執行指令，`uv run python finetune_async.py --help` 會列出全部。
 
 ### 07 會問的設定 { #options }
 
@@ -80,6 +80,7 @@
 | 學習率（進階） | 0.0001 | 每次梯度更新的步幅。模擬訓練用 0.0003。作者在 `finetune_async.py --help` 裡說明微調刻意調低的原因：真實資料很少時，用全速的梯度更新，是把模擬訓練好的策略弄壞的典型原因 |
 | 每次更新的梯度步數（進階） | 4 | 學習執行緒每輪做幾次梯度更新。越多代表每筆真實資料被用得越多次，電腦的負擔也越重。控制迴路在另一個執行緒，不受影響；但電腦太忙時，每回合那一行的 `violations=` 會大於 0 |
 | 每幾回合做一次評估回合（進階） | 5 | 評估回合用不隨機（deterministic）的動作跑，用來挑 `best_model.zip`。評估回合的資料一樣會進 buffer 和訓練，但它沒有探索用的隨機性 |
+| reward 權重 | 沿用起點模型的 `config.json` | 工具先印出起點模型訓練時用的 6 個權重（[Step 1 修改 reward](step1-train.md#edit-reward) 那 7 個去掉實機不支援的「手臂角速度變化²」）。選擇要改時，工具會加上 `--ignore-config-mismatch`，因為 `finetune_async.py` 預設在權重和起點模型不同時停下來。這一段用的權重會寫進 `runs/ftN/config.json`，下一段再沿用。replay buffer 裡已經存的資料，reward 是收集當時的權重算的，不會重算；改了權重之後，buffer 裡新舊兩種 reward 會混在一起 |
 
 ### best_model 和 last 是怎麼來的 { #best-model }
 

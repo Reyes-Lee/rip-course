@@ -2,10 +2,12 @@
 
 設定照作者的標準配方：velocity 模式、50 Hz、±3.5 rad/s、150 rad/s²、K=4、gSDE、
 靜止獎勵 5、韌體量測模型、4-tap 動作平滑、鏡像增強、觀測延遲 DR 到 20 ms。
-每階段步數會在畫面上問，直接按 Enter 是作者的 100,000 步。
+每階段步數與 reward 權重會在畫面上問，直接按 Enter 是作者的設定。
+reward 權重存進每個階段的 config.json，07_finetune 會自動沿用。
 """
 from __future__ import annotations
 
+import json
 import re
 
 from _common import (RUNS, ask, ask_number, ask_yes, banner, color, fail, finish, heading, info, is_done, mark_done,
@@ -16,6 +18,16 @@ from _progress import StageProgress
 STEPS_PER_STAGE = 100_000
 CONTROL_FREQ = 50
 MAX_ACCEL = 150
+# reward 權重：(train_sac.py 的選項, config.json 的欄位, 畫面上的名稱, 作者的值)
+REWARD_WEIGHTS = [
+    ("--reward-alive-offset", "reward_alive_offset", "存活偏移", 15.0),
+    ("--reward-upright-alive-weight", "reward_upright_alive_weight", "接住的直立獎勵", 5.0),
+    ("--reward-stillness-bonus-weight", "reward_stillness_bonus_weight", "靜止獎勵", 5.0),
+    ("--reward-motor-pos-weight", "reward_motor_pos_weight", "手臂角度² 懲罰", 0.5),
+    ("--reward-motor-vel-weight", "reward_motor_vel_weight", "手臂角速度² 懲罰", 0.005),
+    ("--reward-motor-jerk-weight", "reward_motor_jerk_weight", "手臂角速度變化² 懲罰（實機微調不支援）", 0.0),
+    ("--reward-action-rate-weight", "reward_action_rate_weight", "動作變化² 懲罰", 0.0),
+]
 STAGES = {
     2: dict(lag=("0.000", "0.020"), delay=("0", "1")),
     3: dict(lag=("0.000", "0.015"), delay=("1", "1")),
@@ -33,19 +45,42 @@ def common_args(params: str) -> list[str]:
         "--action-smooth-window", "4",
         "--dr-obs-staleness-max", "0.020",
         "--params-path", params,
-        "--reward-stillness-bonus-weight", "5",
     ]
 
 
-def print_header(params: str, name: str, seed: str, steps: int) -> None:
-    heading("設定 header（作者的標準配方）")
+def ask_reward(name: str, start: int) -> dict:
+    """reward 權重。從第 2、3 階段接續時沿用前一階段 config.json 的值，三個階段才一致。"""
+    if start > 1:
+        try:
+            cfg = json.loads((RUNS / f"{name}_stage{start - 1}" / "config.json").read_text(encoding="utf-8"))
+            w = {key: float(cfg[key]) for _, key, _, _ in REWARD_WEIGHTS if cfg.get(key) is not None}
+        except (OSError, ValueError):
+            w = {}
+        if len(w) == len(REWARD_WEIGHTS):
+            info(f"reward 權重沿用 {name}_stage{start - 1} 的設定。")
+            return w
+        warn(f"讀不到 {name}_stage{start - 1} 的 reward 權重，改用作者的值。")
+        return {key: d for _, key, _, d in REWARD_WEIGHTS}
+    w = {key: d for _, key, _, d in REWARD_WEIGHTS}
+    if ask_yes("要改 reward 權重嗎？（每一項的意思見網站 Step 1 的 Reward 一節）", default=False):
+        for _, key, lab, d in REWARD_WEIGHTS:
+            w[key] = ask_number(lab, d, 0.0)
+    return w
+
+
+def reward_args(w: dict) -> list[str]:
+    return [a for flag, key, _, _ in REWARD_WEIGHTS for a in (flag, str(w[key]))]
+
+
+def print_header(params: str, name: str, seed: str, steps: int, w: dict) -> None:
+    heading("設定 header")
     lines = [
         "action mode: velocity",
         "exploration: gSDE",
         "firmware measurement model: ON",
         "mirror augmentation: ON (every transition stored with its mirror)",
         "obs staleness DR: up to 0.02 s (measured rig value 0.0156)",
-        "reward_stillness_bonus_weight: 5",
+        *[f"{key}: {w[key]:g}" for _, key, _, _ in REWARD_WEIGHTS],
         f"rig sysid: {params}",
         f"control rate: {CONTROL_FREQ} Hz, max accel: {MAX_ACCEL} rad/s²",
         "stage 2 delay: [0, 1] ticks + lag tau [0, 20] ms",
@@ -85,7 +120,8 @@ def main() -> int:
             start = last + 1
 
     steps = ask_number("每階段步數", STEPS_PER_STAGE, 1000)
-    print_header(params, name, seed, steps)
+    w = ask_reward(name, start)
+    print_header(params, name, seed, steps, w)
     for stage in (1, 2, 3):
         if stage < start:
             continue
@@ -94,7 +130,7 @@ def main() -> int:
                 f" (delay {STAGES[stage]['delay']} ticks, lag tau {STAGES[stage]['lag']} s)"))
         args = ["train_sac.py", "--total-steps", str(steps), "--device", "cpu",
                 "--control-freq", str(CONTROL_FREQ), "--max-accel-rad-s2", str(MAX_ACCEL),
-                *common_args(params), "--run-name", run_dir.name, "--seed", seed]
+                *common_args(params), *reward_args(w), "--run-name", run_dir.name, "--seed", seed]
         if stage > 1:
             cfg = STAGES[stage]
             args += ["--domain-randomization",

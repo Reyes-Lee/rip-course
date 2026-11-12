@@ -17,8 +17,9 @@
     3. 執行 `tools/06_train_teacher`。
     4. 畫面問 `run 名稱 [v1]:`，第一次直接按 Enter。
     5. 畫面問 `SEED [0]:`，直接按 Enter。
-    6. 工具印出設定 header（用眼睛確認，見[檢查點](#checkpoint)），然後開始訓練。畫面會一直捲動英文統計表，那張表不用看；每 30 秒會印一行中文進度，例如 `[Stage 1/3] ████████░░ 45,600 / 100,000 步（46%）｜……預估還要約 43 分鐘`。總時間看電腦速度，作者的機器約 25 分鐘、Apple M1 約 50 分鐘。看到 `Stage 3 完成` 和檢查點才算跑完。
-    7. 訓練完工具自動跑檢查點並印出數字（見[檢查點](#checkpoint)）。工具不替你判斷，由你對照參考門檻決定下一步。
+    6. 畫面問 `每階段步數 [100000]:` 和 `要改 reward 權重嗎？ [y/N]:`，直接按 Enter 是作者的設定（見[三個階段](#stages)與[修改 reward](#edit-reward)）。
+    7. 工具印出設定 header（用眼睛確認，見[檢查點](#checkpoint)），然後開始訓練。畫面會一直捲動英文統計表，那張表不用看；每 30 秒會印一行中文進度，例如 `[Stage 1/3] ████████░░ 45,600 / 100,000 步（46%）｜……預估還要約 43 分鐘`。總時間看電腦速度，作者的機器約 25 分鐘、Apple M1 約 50 分鐘。看到 `Stage 3 完成` 和檢查點才算跑完。
+    8. 訓練完工具自動跑檢查點並印出數字（見[檢查點](#checkpoint)）。工具不替你判斷，由你對照參考門檻決定下一步。
 
 !!! tip "中途中斷了（關掉視窗、筆電睡眠）"
 
@@ -36,7 +37,10 @@
         --max-velocity-rad-s 3.5 --use-sde --obs-history-len 4 \
         --firmware-obs-model --mirror-augment --action-smooth-window 4 \
         --dr-obs-staleness-max 0.020 --params-path sysid_params.json \
-        --reward-stillness-bonus-weight 5 --run-name v1_stage1 --seed 0
+        --reward-alive-offset 15.0 --reward-upright-alive-weight 5.0 \
+        --reward-stillness-bonus-weight 5.0 --reward-motor-pos-weight 0.5 \
+        --reward-motor-vel-weight 0.005 --reward-motor-jerk-weight 0.0 \
+        --reward-action-rate-weight 0.0 --run-name v1_stage1 --seed 0
     ```
 
     第 2、3 階段再加上 `--domain-randomization`、延遲範圍，並用 `--resume` 接續前一階段的 `best_model.zip`。工具固定用 CPU 訓練：訓練的瓶頸是梯度更新，GPU 幫不上忙。
@@ -73,9 +77,9 @@
 
 </div>
 
-!!! question "為什麼不用改 reward？"
+!!! note "作者的 reward 是 baseline"
 
-    reward 描述的是任務（甩上、站直、站穩），不是硬體。它用的是物理量（rad、rad/s）與正規化的動作（−1 到 1），換馬達、換配重都不影響它。作者在開發時反覆調過 reward，現在的預設值就是他最後驗證的版本，他自己跑這一步也是直接用。每台機台真正不同的是**動態**，這由 Step 0 的 sysid 與 Step 2 的實機微調處理。
+    reward 描述的是任務（甩上、站直、站穩），用的是物理量（rad、rad/s）與正規化的動作（−1 到 1）。作者在開發時反覆調過 reward，[下面的公式](#reward)是他最後驗證的版本，他自己跑這一步也是直接用，課程把它當成 baseline。每台機台不同的**動態**由 Step 0 的 sysid 與 Step 2 的實機微調處理；reward 要不要改、怎麼改，由你決定，改的位置見[修改 reward](#edit-reward)。
 
 ## 參數怎麼送進 MuJoCo { #params }
 
@@ -134,6 +138,39 @@ $$
 
 作者網站「The transition contract」頁的 reward 是舊版，以程式 `policy/reward.py` 與 `train_sac.py` 的預設值為準。
 
+### 修改 reward { #edit-reward }
+
+**用工具改的 7 個權重。** `06_train_teacher` 問 `要改 reward 權重嗎？` 時輸入 `y`，會逐項問下表的值（`[ ]` 裡是作者的值）。
+
+| 工具上的名稱 | 在 reward 裡的位置 | 作者的值 | `train_sac.py` 選項 |
+| --- | --- | --- | --- |
+| 存活偏移 | 每步加上的常數（公式裡的 15） | 15 | `--reward-alive-offset` |
+| 接住的直立獎勵 | \|θ\| ≤ 15° 且 \|θ̇\| ≤ 2 rad/s 時加上的值（公式裡的第一個 5） | 5 | `--reward-upright-alive-weight` |
+| 靜止獎勵 | 靜止獎勵前面的係數（公式裡的第二個 5） | 5 | `--reward-stillness-bonus-weight` |
+| 手臂角度² 懲罰 | α² 的係數 | 0.5 | `--reward-motor-pos-weight` |
+| 手臂角速度² 懲罰 | α̇² 的係數 | 0.005 | `--reward-motor-vel-weight` |
+| 手臂角速度變化² 懲罰 | 額外一項：係數 ×（這一步 α̇ − 上一步 α̇）²，作者的值是 0（關閉），所以不在上面的公式裡 | 0 | `--reward-motor-jerk-weight` |
+| 動作變化² 懲罰 | 額外一項：係數 ×（這一步 a − 上一步 a）²，作者的值是 0（關閉） | 0 | `--reward-action-rate-weight` |
+
+**要改程式的部分。** 下面這些工具不會問，要直接改 `policy/` 裡的程式：
+
+| 要改的東西 | 作者的值 | 位置 |
+| --- | --- | --- |
+| 公式本身（每一項怎麼算、加新的項） | — | `policy/reward.py` 的 `compute_reward()`。模擬訓練和實機微調都呼叫這一個函式 |
+| θ² 的係數 | 1（寫死在公式裡） | `policy/reward.py` 的 `compute_reward()` |
+| θ̇² 的係數 | 0.001 | `policy/pendulum_env.py`（模擬）和 `policy/real_env.py`（實機微調）的 `reward_pen_vel_weight` 預設值，兩個檔案都要改 |
+| a² 的係數 | 0.2 | 同上，`reward_action_weight` |
+| 靜止獎勵的寬度 0.3 rad、1 rad/s | 0.3、1.0 | 同上，`reward_stillness_sigma_theta_rad`、`reward_stillness_sigma_motor_vel_rad_s` |
+| 接住的直立的條件 15°、2 rad/s | 0.2618 rad、2.0 | `policy/reward.py` 的 `RewardWeights`：`alive_theta_band`、`alive_pen_vel_limit` |
+
+改了 reward 之後會連帶影響的地方：
+
+- **記錄與沿用**：工具問的 7 個權重會寫進每個階段的 `runs/<名稱>_stageN/config.json`。從中斷處接續第 2、3 階段時，工具沿用前一階段 `config.json` 的權重。Step 2 的 `07_finetune` 會讀起點模型的 `config.json`，沿用同一組權重（見 [Step 2](step2-finetune.md#options)）。
+- **改程式的部分不會被記錄**：每次執行時用的是當時檔案裡的程式。Step 1 訓練完再改程式，Step 2 微調時用的就是改過的版本。
+- **實機微調少一項**：`real_env.py` 沒有「手臂角速度變化²」這一項，在 Step 2 一律是 0。
+- **best_model 的挑法跟著變**：Step 1 每個階段的 `best_model.zip` 和 Step 2 的 `best_model.zip`，都是用 reward 總和挑的。改了 reward，「分數最高」指的就是新 reward 下的最高分，不同 reward 的分數不能直接比。
+- **誠實指標不受影響**：balanced fraction、最長連續平衡、擺錘標準差等指標，不用 reward 計算，改 reward 前後可以直接比。
+
 ## 在 MuJoCo 視窗看訓練成果 { #mujoco }
 
 訓練完就可以在 MuJoCo 視窗看策略在模擬裡怎麼動。這是作者自己看訓練成果的方式。
@@ -190,7 +227,7 @@ $$
 
     | 項目 | 工具做什麼 | 參考門檻 |
     | --- | --- | --- |
-    | 設定 header | 訓練開始時用眼睛確認這 4 行（工具會印出 12 行，其他行不用看） | `mirror augmentation: ON`、`obs staleness DR: up to 0.02 s`、`rig sysid: sysid_params.json`、`control rate: 50 Hz, max accel: 150` 全部符合；不符就按 ++ctrl+c++ 停止，找助教 |
+    | 設定 header | 訓練開始時用眼睛確認這 4 行（其他行是步數、reward 權重等你選的設定） | `mirror augmentation: ON`、`obs staleness DR: up to 0.02 s`、`rig sysid: sysid_params.json`、`control rate: 50 Hz, max accel: 150` 全部符合；不符就按 ++ctrl+c++ 停止，找助教 |
     | 對稱性 | 從垂下的狀態開始，看策略能不能自己甩上 | 從垂下的狀態能自己甩上（工具印出 `從垂下自己甩上：是／否`） |
     | 敏感度關卡 | 在模擬裡各跑 20 回合：開著與關掉韌體量測模型 | 關掉後的 balanced fraction ≥ 0.7 |
 
