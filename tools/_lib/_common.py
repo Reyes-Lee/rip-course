@@ -80,6 +80,21 @@ def ask(prompt: str, default: str | None = None) -> str:
     return ans if ans else (default or "")
 
 
+def ask_number(prompt: str, default, lo, hi=None):
+    """問一個數字（int 或 float，跟預設值同型別），範圍 lo ≤ x ≤ hi。直接按 Enter 用預設值。"""
+    kind = type(default)
+    rng = f"{lo} 以上" if hi is None else f"{lo} 到 {hi} "
+    while True:
+        ans = ask(prompt, str(default))
+        try:
+            x = kind(ans)
+        except ValueError:
+            x = None
+        if x is not None and x >= lo and (hi is None or x <= hi):
+            return x
+        warn(f"請輸入 {rng}的{'整數' if kind is int else '數字'}")
+
+
 def ask_yes(prompt: str, default: bool = True) -> bool:
     d = "Y/n" if default else "y/N"
     try:

@@ -2,12 +2,13 @@
 
 設定照作者的標準配方：velocity 模式、50 Hz、±3.5 rad/s、150 rad/s²、K=4、gSDE、
 靜止獎勵 5、韌體量測模型、4-tap 動作平滑、鏡像增強、觀測延遲 DR 到 20 ms。
+每階段步數會在畫面上問，直接按 Enter 是作者的 100,000 步。
 """
 from __future__ import annotations
 
 import re
 
-from _common import (RUNS, ask, ask_yes, banner, color, fail, finish, heading, info, is_done, mark_done,
+from _common import (RUNS, ask, ask_number, ask_yes, banner, color, fail, finish, heading, info, is_done, mark_done,
                      need_sysid, ok, run_policy_script, warn)
 from _checks import print_sensitivity, sensitivity, symmetry
 from _progress import StageProgress
@@ -36,7 +37,7 @@ def common_args(params: str) -> list[str]:
     ]
 
 
-def print_header(params: str, name: str, seed: str) -> None:
+def print_header(params: str, name: str, seed: str, steps: int) -> None:
     heading("設定 header（作者的標準配方）")
     lines = [
         "action mode: velocity",
@@ -50,6 +51,7 @@ def print_header(params: str, name: str, seed: str) -> None:
         "stage 2 delay: [0, 1] ticks + lag tau [0, 20] ms",
         "stage 3 delay: [1, 1] ticks + lag tau [0, 15] ms",
         "action_smooth_window: 4 (firmware boxcar on the action)",
+        f"steps per stage: {steps:,}",
         f"run: {name}_stage1..3　seed: {seed}　device: cpu",
     ]
     for ln in lines:
@@ -82,14 +84,15 @@ def main() -> int:
         if ask_yes(f"已完成第 {last} 階段，從第 {last + 1} 階段接續？", default=True):
             start = last + 1
 
-    print_header(params, name, seed)
+    steps = ask_number("每階段步數", STEPS_PER_STAGE, 1000)
+    print_header(params, name, seed, steps)
     for stage in (1, 2, 3):
         if stage < start:
             continue
         run_dir = RUNS / f"{name}_stage{stage}"
         heading(f"Stage {stage}" + (" (no DR)" if stage == 1 else
                 f" (delay {STAGES[stage]['delay']} ticks, lag tau {STAGES[stage]['lag']} s)"))
-        args = ["train_sac.py", "--total-steps", str(STEPS_PER_STAGE), "--device", "cpu",
+        args = ["train_sac.py", "--total-steps", str(steps), "--device", "cpu",
                 "--control-freq", str(CONTROL_FREQ), "--max-accel-rad-s2", str(MAX_ACCEL),
                 *common_args(params), "--run-name", run_dir.name, "--seed", seed]
         if stage > 1:
@@ -98,7 +101,7 @@ def main() -> int:
                      "--dr-action-lag-tau-min", cfg["lag"][0], "--dr-action-lag-tau-max", cfg["lag"][1],
                      "--dr-delay-min", cfg["delay"][0], "--dr-delay-max", cfg["delay"][1],
                      "--resume", f"runs/{name}_stage{stage - 1}/best_model.zip"]
-        with StageProgress(run_dir, stage, 3, STEPS_PER_STAGE):
+        with StageProgress(run_dir, stage, 3, steps):
             code, _ = run_policy_script(args)
         if code != 0:
             fail(f"Stage {stage} 沒有完成（代碼 {code}）。再執行 06_train_teacher、輸入同一個名稱就能接續。")

@@ -10,12 +10,12 @@ Nano 用 USB-C 線接上電腦、燒好對應的韌體，再執行工具，就�
 | `03_check_motor` | LowLevelServer | 加速度逐級升到 150 rad/s²，檢查失步 | [上電測試](hardware.md#power-on) |
 | `04_check_direction` | LowLevelServer | 擺錘方向跟模擬一致，結果存進 Nano 的 EEPROM | [上電測試、換零件後](hardware.md#direction) |
 | `05_sysid` | LowLevelServer | 系統識別精靈 | [Step 0](../steps/step0-sysid.md) |
-| `06_train_teacher` | — | 三階段模擬訓練＋印出檢查點數字 | [Step 1](../steps/step1-train.md) |
-| `07_finetune` | LowLevelServer | 實機微調，自動接續上一段 | [Step 2](../steps/step2-finetune.md) |
-| `08_test_policy` | LowLevelServer | 接線測試 30 秒，印誠實指標 | [Step 2–3](../steps/step2-finetune.md) |
-| `09_distill` | — | BC＋DAgger＋敏感度關卡 | [Step 3](../steps/step3-distill.md) |
+| `06_train_teacher` | — | 三階段模擬訓練＋印出檢查點數字（會問每階段步數） | [Step 1](../steps/step1-train.md) |
+| `07_finetune` | LowLevelServer | 實機微調，接續上一段（會問回合數、每回合秒數、從哪個模型接續等） | [Step 2](../steps/step2-finetune.md) |
+| `08_test_policy` | LowLevelServer | 接線測試，印誠實指標（會問測試秒數） | [Step 2–3](../steps/step2-finetune.md) |
+| `09_distill` | — | BC＋DAgger＋敏感度關卡（會問 SEED、教師模型等） | [Step 3](../steps/step3-distill.md) |
 | `10_export_weights` | — | 核對 sketch 常數，匯出 `policy_weights_student.h` | [Step 4](../steps/step4-deploy.md) |
-| `11_score_onboard` | RLControl | 獨立執行 60 秒評分 | [Step 4](../steps/step4-deploy.md) |
+| `11_score_onboard` | RLControl | 獨立執行評分（會問評分秒數） | [Step 4](../steps/step4-deploy.md) |
 | `12_view_policy` | — | 在 MuJoCo 視窗播放策略 30 秒 | [Step 1–2](../steps/step1-train.md#mujoco) |
 | `13_check_sim` | — | 對稱性＋敏感度關卡，印出數字 | [Step 1–3](../steps/step1-train.md#checkpoint) |
 
@@ -59,4 +59,6 @@ Nano 用 USB-C 線接上電腦、燒好對應的韌體，再執行工具，就�
 
     執行工具前先關掉 Arduino IDE 的序列埠監控視窗。工具會自動找 Nano 的序列埠，接了不只一個裝置時會請你選。
 
-所有工具都一律使用 `best_model.zip`（訓練中評估分數最高的版本），不會用同一個資料夾裡的 `last.zip`（最後一步的版本，不一定最好），你不用選。
+會問設定的工具，`[ ]` 裡的預設值都是作者的設定，直接按 Enter 就照作者的流程走。每個設定改了會影響什麼，寫在用到它的那一步。工具沒有問的選項，可以照每一步「背後執行的指令」自己在 `policy/` 執行，加 `--help` 會列出全部選項。
+
+模型檔：Step 1 的三個階段一律從前一階段的 `best_model.zip`（訓練中評估分數最高的版本）接續。Step 2 之後，`07_finetune`、`08_test_policy`、`09_distill` 會讓你選 `best_model.zip` 或 `last.zip`（最後一回合的版本），`08_test_policy` 另外可以選每 10 回合存的 `checkpoint_epNNN.zip`；兩者的差別見 [Step 2](../steps/step2-finetune.md#best-model)。

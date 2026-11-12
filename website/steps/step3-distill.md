@@ -15,7 +15,8 @@
     1. 執行 `tools/09_distill`。
     2. 清單的預設是最後一段微調（例如 `ft3`），直接按 Enter。如果 [Step 2 的回歸測試](step2-finetune.md#regression)改用了前一段，就輸入那一段的編號。
     3. `SEED [0]:` 直接按 Enter。
-    4. 約 3 分鐘後，工具印出結果表（見[檢查點](#checkpoint)）。學生存在 `runs/ftN/distill_h16_dagger_dev/student.pt`。
+    4. 接著問教師用那一段的 `best_model.zip` 還是 `last.zip`（差別見 [Step 2](step2-finetune.md#best-model)），以及要不要改進階設定。直接按 Enter 是作者的預設值（`best_model.zip`、不改）。
+    5. 約 3 分鐘後，工具印出結果表（見[檢查點](#checkpoint)）。學生存在 `runs/ftN/distill_h16_dagger_dev/student.pt`。
 
 ??? cmd "背後執行的指令"
 
@@ -33,7 +34,19 @@
     uv run python analyze_sim.py runs/ft3/best_model.zip
     ```
 
-    SEED 不是 0 時，資料夾名稱會多一個後綴，例如 `distill_h16_dagger_dev_s1`。
+    設定不是預設值時，資料夾名稱會多一個後綴，不同設定的結果不會互相覆蓋：
+
+    | 設定 | 預設 | 後綴例子 |
+    | --- | --- | --- |
+    | 教師模型 | `best_model.zip` | `last.zip` → `_last` |
+    | SEED | 0 | 1 → `_s1` |
+    | 行為克隆 epoch 數（進階） | 800 | 400 → `_e400` |
+    | DAgger 輪數 × 每輪步數（進階） | 5 × 40000 | 3 × 40000 → `_r3x40000`（只加在 DAgger 的資料夾） |
+
+    - 教師模型：蒸餾時當「老師」的那組權重，學生學的是它在每個狀態輸出的動作。資料集裡的真實狀態一律來自那一段的 `replay_buffer.pkl`，跟選哪個教師模型無關。
+    - SEED：決定網路初始權重和資料打亂的順序。同樣設定換 SEED，結果會有差異。
+    - 行為克隆 epoch 數：學生把整個資料集看過幾遍。
+    - DAgger 輪數：每一輪讓學生自己在模擬裡跑，把它走到的狀態交給教師標上動作、加進資料集再訓練。每輪結束都會用模擬分數（gate）檢查，只保留分數最好的那一輪；0 輪就是只用行為克隆的結果。每輪步數是每輪讓學生跑幾步來收集新狀態。
 
 ## 它在做什麼 { #what }
 
@@ -87,4 +100,4 @@ DAgger gate 要跟教師比、不跟絕對門檻比，是因為模擬會系統�
     1. Nano 燒 `LowLevelServer`，等擺錘靜止垂下。
     2. 執行 `tools/08_test_policy`。
     3. 清單輸入 `ftN/distill_h16_dagger_dev/student.pt` 那一個的編號。
-    4. 跑 30 秒。學生是為獨立執行最佳化的，接線分數略低於教師是正常的。
+    4. `測試秒數 [30]:` 直接按 Enter，或輸入想測的秒數。學生是為獨立執行最佳化的，接線分數略低於教師是正常的。
