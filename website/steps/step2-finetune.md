@@ -11,7 +11,7 @@
 
 !!! info "為什麼要微調"
 
-    只在模擬裡訓練的策略，上實機通常甩得上去，但平衡不穩。微調是讓策略適應你這台機台。效果會因機台和每次訓練而不同，**段數多不保證比較穩**；要不要再加一段，看每一段 `08_test_policy` 的結果決定（見下方「要微調多久」）。
+    只在模擬裡訓練的策略，上實機通常甩得上去，但平衡不穩。微調是讓策略適應你這台機台。效果會因機台和每次訓練而不同，**段數多不保證比較穩**；要不要再加一段，看每一段 `08_test_policy` 的結果決定。
 
 ## 2-1 燒錄 LowLevelServer { #flash }
 
@@ -131,31 +131,11 @@
 
 | balanced fraction | 下一步 |
 | --- | --- |
-| ≥ 0.85 | :material-check-circle:{ style="color: var(--rip-green)" } 教師夠穩了。仍照[下一節](#how-long)決定要不要再加一段，然後進 Step 3 |
+| ≥ 0.85 | :material-check-circle:{ style="color: var(--rip-green)" } 教師夠穩了。可以進 Step 3，也可以再加一段微調看看 |
 | 0.4–0.85 | :material-trending-up:{ style="color: var(--rip-amber)" } 還在進步。再執行一次 `07_finetune`（自動加一段 30 回合），然後再跑 `08_test_policy` |
 | < 0.4 | :material-close-circle:{ style="color: var(--rip-red)" } 先停止微調，依序檢查硬體：燒 `LowLevelServer` 跑 `04_check_direction`（方向被修正的話，丟掉 `runs/ftN` 從教師重跑）；燒 `EncoderCheck` 跑 `02_check_encoder`；確認桌面水平、機台沒有被移動。都正常就燒 `LowLevelServer` 重跑 `05_sysid`，對照 [Step 0 檢查點](step0-sysid.md#checkpoint)。仍然沒問題就找助教，帶著 `policy/recordings/` 裡最新的 `.npz` |
 
-## 要微調多久？ { #how-long }
-
-作者的量測：eval reward 很早就持平，實機平衡品質卻還在明顯變好。
-
-| 驅動板／微調回合 | 擺錘標準差 | 手臂速度 RMS（rad/s） | \|動作\| 平均 | balanced |
-| --- | --- | --- | --- | --- |
-| DRV8825／30 | 6.74° | 2.98 | 0.623 | 0.972 |
-| DRV8825／60 | 3.23° | 1.43 | 0.313 | 1.000 |
-| DRV8825／90 | 1.83° | 0.86 | 0.275 | 1.000 |
-| TMC2209／30 | 1.62° | 0.76 | 0.236 | 0.993 |
-| TMC2209／60 | 1.23° | 0.58 | 0.177 | 1.000 |
-
-這是作者那台機台的結果，只能當參考。你的機台可能幾段之後就不再變好，也可能變差，所以每一段都要實測。
-
-!!! checkpoint "什麼時候停（建議）"
-
-    每加一段就跑一次 `08_test_policy`，把 balanced fraction 與擺錘標準差記下來。只要其中一個還在變好，就再加一段；**連續兩段都沒有變好才停**。
-
-    Step 3 的蒸餾會用到 replay buffer 裡所有的真實狀態，所以加段除了更新教師，也會增加蒸餾用的資料。
-
-### 停止後：回歸測試 { #regression }
+## 進 Step 3 前：回歸測試 { #regression }
 
 !!! tool "進 Step 3 前做一次（不需要機台）"
 
