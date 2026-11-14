@@ -42,6 +42,21 @@
 
     **要重新開始**：用手把手臂轉回正中間，等擺錘靜止垂下，按 Nano 上的 RESET 鍵。
 
+### `RLControl.ino` 固定了什麼 { #fixed .rip-learn }
+
+`RLControl.ino` 是課程版，**不修改**。燒進 Nano 時，你能換的只有權重檔 `policy_weights_student.h`。所以從 Step 1 訓練到 Step 3 蒸餾，下面這些設定都要維持課程的值，策略才能在這份 sketch 上正確執行：
+
+| 固定的東西 | 課程的值 | 為什麼 |
+| --- | --- | --- |
+| 網路結構 | 24 → H → H → 1，隱藏層 ReLU、輸出 tanh，float32 | sketch 的前向計算照這個結構寫。H 由 `.h` 決定 |
+| 觀測 | 最近 4 幀，每幀 `[手臂角, sin θ, cos θ, 手臂角速度, 擺錘角速度, 上一個動作]`；速度用 8 ms 視窗的差分估計 | 跟 `LowLevelServer` 同一套算法，微調時策略看到的就是這些數字 |
+| 控制頻率 | 50 Hz | 訓練、微調、部署三處必須一樣 |
+| 動作 | 速度指令，上限 3.5 rad/s；加速度上限 150 rad/s²；對最近 4 個動作取平均 | 150 rad/s² 是 `03_check_motor` 驗過不會失步的範圍 |
+| 手臂保護 | 超過 ±125° 不再往外加速，超過 ±132° 斷電 | 保護機台 |
+| 接線、微步、方向標定、開機抓零點 | 見[硬體與上電測試](../prepare/hardware.md) | 硬體設定 |
+
+能變的是 `.h` 裡的權重和隱藏層大小 H，也就是 Step 1–3 怎麼訓練、怎麼蒸餾，包括 reward 和蒸餾方法。H 越大推論越慢：H=16 約 12 ms，超過 20 ms 的控制週期，頻率就會往下掉。所以換 H 之後要看 `11_score_onboard` 第一行的頻率是不是約 50 Hz，以及 Arduino IDE 編譯訊息裡的大小是不是 ≤ 30720 bytes。
+
 ### 工具核對的 sketch 常數 { #constants .rip-learn }
 
 標頭檔只有權重，控制迴路的設定寫在 sketch 裡，兩邊必須一致。`10_export_weights` 匯出前會讀 `firmware/RLControl/RLControl.ino` 與策略的 `config.json`，印出下表逐項比對。repo 的預設值是對齊的；有一項不一致，工具就會停止匯出，這時找助教，不要自己改 sketch。
