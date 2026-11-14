@@ -1,4 +1,4 @@
-"""06_train_teacher、09_distill、13_check_sim 共用：模擬裡的檢查點（只印數字，不替你判斷）。"""
+"""06_train_teacher、09_distill、13_check_sim 共用：模擬裡的檢查點（只印數字，由使用者自行判斷）。"""
 from __future__ import annotations
 
 import re
