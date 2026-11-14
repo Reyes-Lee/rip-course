@@ -119,7 +119,7 @@
 | --- | --- |
 | ≥ 0.85 | :material-check-circle:{ style="color: var(--rip-green)" } 教師夠穩了。可以進 Step 3，也可以再加一段微調看看 |
 | 0.4–0.85 | :material-trending-up:{ style="color: var(--rip-amber)" } 還在進步。再執行一次 `07_finetune`（從最新一段接續，預設 30 回合），然後再跑 `08_test_policy` |
-| < 0.4 | :material-close-circle:{ style="color: var(--rip-red)" } 先停止微調，依序檢查硬體：燒 `LowLevelServer` 跑 `04_check_direction`（方向被修正的話，丟掉 `runs/ftN` 從教師重跑）；燒 `EncoderCheck` 跑 `02_check_encoder`；確認桌面水平、機台沒有被移動。都正常就燒 `LowLevelServer` 重跑 `05_sysid`，對照 [Step 0 檢查點](step0-sysid.md#checkpoint)。仍然沒問題就找助教，帶著 `policy/recordings/` 裡最新的 `.npz` |
+| < 0.4 | :material-close-circle:{ style="color: var(--rip-red)" } 先停止微調，依序檢查硬體：燒 `LowLevelServer` 跑 `04_check_direction`（方向被修正的話，丟掉 `runs/ftN` 從教師重跑）；燒 `EncoderCheck` 跑 `02_check_encoder`；確認桌面水平、機台沒有被移動。都正常就燒 `LowLevelServer` 重跑 `05_sysid`，對照 [Step 0 檢查點](step0-sysid.md#checkpoint)。硬體和 sysid 都沒問題，就是策略本身的問題：照[依序查什麼](../theory.md#debug-order)自己調整，例如換一支教師、換 SEED 重訓，或檢查 reward 的修改 |
 
 ## 4. 進 Step 3 前：回歸測試 { #regression .rip-do }
 
@@ -128,8 +128,8 @@
     1. 執行 `tools/13_check_sim`。
     2. 清單選最後一段微調（例如 `ft3/best_model.zip`）。
     3. 參考門檻與 [Step 1 檢查點](step1-train.md#checkpoint)相同：關掉韌體量測模型後的 balanced fraction ≥ 0.7 就進 Step 3。
-    4. 如果掉到 0.7 以下，代表最後幾段微調讓策略變脆弱。對前一段（例如 `ft2`）再跑一次，用通過的那一段進 Step 3，並告訴助教。
-    5. **教師在 Step 1 就落在 0.3–0.7 的情況**（例如教師本身只有 0.37）：每一段都可能到不了 0.7，這時門檻改成「不比教師自己的分數低超過 0.1」。用符合的段裡 [接線測試](#test) balanced fraction 最高的那段進 Step 3。每一段都比教師低超過 0.1，就用接線測試最好的那段進 Step 3，並把每段的分數一起給助教。
+    4. 如果掉到 0.7 以下，代表最後幾段微調讓策略變脆弱。對前一段（例如 `ft2`）再跑一次，用通過的那一段進 Step 3。
+    5. **教師在 Step 1 就落在 0.3–0.7 的情況**（例如教師本身只有 0.37）：每一段都可能到不了 0.7，這時門檻改成「不比教師自己的分數低超過 0.1」。用符合的段裡 [接線測試](#test) balanced fraction 最高的那段進 Step 3。每一段都比教師低超過 0.1，就用接線測試最好的那段進 Step 3，並記下每段的分數，之後比較時用得到。
 
     實機的接線測試才是主要依據；回歸測試是用來抓「微調讓策略在模擬裡明顯變差」的情況。
 

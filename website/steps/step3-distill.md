@@ -74,7 +74,7 @@ DAgger gate 要跟教師比、不跟絕對門檻比，是因為模擬會系統�
     1. 再執行 `tools/09_distill`。
     2. 選同一段微調。
     3. `SEED [0]:` 輸入 `1`。
-    4. 換兩個 SEED 都明顯低於教師就找助教。
+    4. 換了幾個 SEED 都明顯低於教師，可以在 `09_distill` 的進階設定增加行為克隆 epoch 數或 DAgger 輪數，或回 Step 2 改用另一段微調當教師。
 
 ## 3. （選做）燒進 Nano 前先接線測學生 { #tethered .rip-do }
 

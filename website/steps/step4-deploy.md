@@ -121,4 +121,4 @@ DAgger 用 `--transport device` 就是為了讓學生適應獨立執行的時序
     1. 再跑一次 `11_score_onboard`，確認不是單次運氣不好。
     2. 回到 [Step 3](step3-distill.md#checkpoint) 用 `SEED 1` 重新蒸餾，再匯出、燒錄、評分。`09_distill` 印出的 DAgger gate 如果和第 0 輪一樣，代表 DAgger 沒有改善，換 SEED 最值得一試。
     3. 回 [Step 2](step2-finetune.md#finetune) 再加一段微調，用 `08_test_policy` 確認教師有變好，再重新蒸餾。
-    4. 都試過仍然遠低於參考值，帶著 `policy/recordings/` 裡的 `onboard_*.npz` 找助教。
+    4. 都試過仍然遠低於參考值，回頭檢查前面每一步的選擇（教師、微調段數、蒸餾設定），照[依序查什麼](../theory.md#debug-order)往前找原因。

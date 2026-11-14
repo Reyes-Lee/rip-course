@@ -116,7 +116,15 @@
         git pull
         ```
 
-看到 `Already up to date.` 代表已經是最新版。如果出現 `error: Your local changes ... would be overwritten`，代表你改過 repo 裡的檔案；把整段訊息截圖給助教，不要自己刪檔案。
+看到 `Already up to date.` 代表已經是最新版。如果出現 `error: Your local changes ... would be overwritten`，代表你改過 repo 裡的檔案（例如 `policy/reward.py`）。依序執行下面三行：先把你的修改收起來、更新、再把修改放回來。
+
+```bash
+git stash
+git pull
+git stash pop
+```
+
+最後一行如果出現 `CONFLICT`，代表助教也改了同一個檔案，把整段訊息截圖給助教，不要自己刪檔案。
 
 ## 4. 執行 `00_setup` { #setup .rip-do }
 
