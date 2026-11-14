@@ -21,3 +21,4 @@ policy/sysid_params.json
 policy/MUJOCO_LOG.TXT
 MUJOCO_LOG.TXT
 tools/.settings.json
+firmware/RLControl/policy_weights_student.h

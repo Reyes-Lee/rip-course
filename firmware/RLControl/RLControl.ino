@@ -83,9 +83,14 @@
 //     --build-property 'build.extra_flags=-DPOLICY_WEIGHTS_H="<your_header>.h"' \
 //     firmware/RLControl
 #ifndef POLICY_WEIGHTS_H
-// 課程版：預設載入學生自己匯出的權重（tools/10_export_weights 會覆寫這個檔）。
-// repo 裡附的初始版本是作者 rig1 的冠軍權重，燒進去就能先確認機台會動。
+// 課程版：載入你自己匯出的權重（tools/10_export_weights 會寫出這個檔）。
+// repo 不附任何權重；還沒匯出就編譯，會停在下面的 #error。
 #define POLICY_WEIGHTS_H "policy_weights_student.h"
+#endif
+#if defined(__has_include)
+#if !__has_include(POLICY_WEIGHTS_H)
+#error "No policy weights yet: run tools/10_export_weights first (writes firmware/RLControl/policy_weights_student.h)."
+#endif
 #endif
 #include POLICY_WEIGHTS_H
 
