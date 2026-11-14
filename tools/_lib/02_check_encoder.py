@@ -16,7 +16,7 @@ import serial
 
 from _common import POLICY, ask_yes, banner, fail, finish, get_port, heading, info, ok, wait_enter, warn
 
-# ---- 門檻（暫定值，助教用正常機台校準後更新） -------------------------------
+# ---- 門檻 -------------------------------------------------------------------
 JUMP_LSB = 500              # 相鄰取樣差超過這個值 = 跳點（同作者韌體的門檻）
 AGC_SAT_FRAC_MAX = 0.01     # AGC 為 0 或 255 的取樣比例上限
 AGC_RANGE_MAX = 12          # 靜態時 AGC 最大值 − 最小值
