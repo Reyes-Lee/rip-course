@@ -196,7 +196,7 @@ AS5600 讀的是磁場方向，系統裡所有的擺錘角度都來自它。磁�
 | 微步 | 1/32（MS1 接 5V、MS2 接 GND） | 所有 sketch 的 `MICROSTEPS = 32` |
 | 控制板 | Arduino Nano（USB-C） | flash 上限 30720 bytes |
 | 擺錘編碼器 | AS5600 | DIR 不接，方向由 `04_check_direction` 存進 EEPROM，每台都要[標定](#direction) |
-| 擺錘配重 | 新台幣 10 元，貼在擺錘大頭外側 | `model/model.urdf` 已依此設定 |
+| 擺錘配重 | 新台幣 10 元，貼在擺錘大頭外側 | |
 | 擺臂 | 3D 列印 | `pendulum_env.py` 的 `ARM_*` 已對應這個設計 |
 | 底座 | 壓克力雙層底座 | 已經調平，放在水平的桌面上即可 |
 

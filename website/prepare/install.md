@@ -68,7 +68,7 @@
 
     === ":material-apple: macOS"
 
-        放在家目錄，**不要放在有 iCloud 同步的「桌面」或「文件」**：Python 環境約 850 MB，Step 2 每段微調又會產生幾百 MB 的檔案，iCloud 在背景上傳時會搶 CPU 和磁碟，可能拖慢 50 Hz 的實機控制。打開「終端機」，執行：
+        打開「終端機」，執行：
 
         ```bash
         cd ~
@@ -79,7 +79,7 @@
 
     === ":material-microsoft-windows: Windows"
 
-        路徑**不要有中文或空格**，也不要放在會被 OneDrive 同步的「桌面」或「文件」（很多電腦預設會同步，原因同 macOS 的 iCloud），建議放在 `C:\rip-course`。打開 PowerShell，執行：
+        路徑**不要有中文或空格**。打開 PowerShell，執行：
 
         ```powershell
         cd C:\
@@ -90,7 +90,7 @@
 
 ??? info "不想用 git：下載 ZIP"
 
-    在 [GitHub 頁面](https://github.com/Reyes-Lee/rip-course)按綠色的「Code → Download ZIP」，解壓到上面建議的位置，資料夾改名成 `rip-course`。
+    在 [GitHub 頁面](https://github.com/Reyes-Lee/rip-course)按綠色的「Code → Download ZIP」，解壓到家目錄（macOS）或 `C:\`（Windows），資料夾改名成 `rip-course`。
 
     - macOS 解壓後要在終端機多跑一行，工具才能執行：`chmod +x ~/rip-course/tools/macOS/*.command`
     - 缺點：之後助教更新時，要重新下載 ZIP，並把舊資料夾裡的 `policy/runs/`、`policy/sysid_params.json` 搬到新資料夾。用 git 就不用。
@@ -158,7 +158,7 @@ rip-course/
 │   └── RLControl/         獨立執行的策略
 ├── policy/          Python：模擬、訓練、sysid、蒸餾（來自作者）
 ├── model/
-│   └── model.urdf         擺錘質量與慣量（已更新為 10 元硬幣配重）
+│   └── model.urdf         擺錘質量與慣量
 └── tools/           流程工具
     ├── macOS/             macOS 點這裡的 .command（00_setup.command …）
     ├── Windows/           Windows 點這裡的 .bat（00_setup.bat …）
