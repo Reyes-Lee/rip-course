@@ -1,13 +1,13 @@
 # Step 2：在實機上微調
 
 <div class="rip-meta" markdown>
-  <span class="rip-chip rip-chip--cyan">:material-clock-outline: 每段 30 回合約 6–11 分鐘，共 2–4 段</span>
+  <span class="rip-chip rip-chip--cyan">:material-clock-outline: 30 回合約 6–11 分鐘，段數自己決定</span>
   <span class="rip-chip rip-chip--amber">:material-robot-industrial: 需要機台</span>
   <span class="rip-chip">:material-chip: LowLevelServer</span>
   <span class="rip-chip">:material-file-outline: 產出 ftN/best_model.zip</span>
 </div>
 
-模擬訓練出來的策略，第一次上實機時通常平衡得不好。這一步用 30–90 個真實回合繼續跑 SAC，把模擬沒涵蓋到的動態（傳動細節、實際延遲分布、步進馬達行為）直接學進去。
+模擬訓練出來的策略，第一次上實機時通常平衡得不好。這一步用真實回合繼續跑 SAC，把模擬沒涵蓋到的動態（傳動細節、實際延遲分布、步進馬達行為）直接學進去。每段跑幾個回合、總共跑幾段，由你根據每一段的測試結果決定。
 
 !!! info "為什麼要微調"
 
