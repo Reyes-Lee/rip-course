@@ -136,6 +136,8 @@ body, .md-main {
   border-radius: 5px;
 }
 .rip-countdown.is-urgent strong { background: var(--rip-red); }
+.md-banner .rip-countdown__link { color: var(--rip-on-yellow); text-decoration: underline; text-underline-offset: 3px; font-weight: 800; }
+.md-banner .rip-countdown__link:hover { color: var(--rip-pink); }
 .rip-countdown.is-over .rip-countdown__clock { font-weight: 800; }
 
 /* ---------- 內文字體與標題 ---------- */

@@ -120,6 +120,7 @@ nav:
       - "Step 2 實機微調": steps/step2-finetune.md
       - "Step 3 蒸餾": steps/step3-distill.md
       - "Step 4 燒錄與評分": steps/step4-deploy.md
+  - 專題規則: rules.md
   - 原理:
       - sim2real 理論: theory.md
   - 疑難排解: troubleshooting.md
