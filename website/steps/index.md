@@ -5,7 +5,7 @@ hide:
 
 # 五個步驟
 
-每一步都有檢查點，**沒過不要往下走**。每一步的產出檔就是下一步的輸入；Step 2 可以重複多段，直到實機測試不再變好。
+每一步都有檢查點，用來判斷這一步做得好不好、要不要回頭調整。每一步的產出檔就是下一步的輸入；Step 2 可以重複多段，跑幾段由你決定。最後的模型要燒進 Nano 獨立執行。
 
 <ul class="rip-steps">
   <li><a class="rip-step" href="step0-sysid/"><span class="rip-step__n">STEP 0 · 實機 15 分</span><span class="rip-step__t">系統識別</span><span class="rip-step__d">量擺錘鉸鏈的摩擦，讓模擬對上你的機台。</span><span class="rip-step__out">sysid_params.json</span></a></li>

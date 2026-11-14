@@ -27,9 +27,9 @@
 
 ## 注意事項 { #notes }
 
-!!! danger "不要改韌體常數，也不要改 reward 以外的程式"
+!!! danger "不要改 `RLControl.ino`"
 
-    reward 可以照 [Step 1「修改 reward」](steps/step1-train.md#edit-reward) 改。`firmware/` 裡的常數和 `policy/` 的其他程式不要改：訓練、微調、部署三處的設定必須一致，工具會檢查，改了就會對不上。
+    最後燒進 Nano 的是課程版 `RLControl.ino`，你能換的只有權重檔。控制頻率、動作上限、觀測這些設定在訓練、微調、部署三處必須一致，見 [Step 4「`RLControl.ino` 固定了什麼」](steps/step4-deploy.md#fixed)。reward、蒸餾方法、隱藏層大小這些可以改，改了就自己用實機指標比較效果。
 
 !!! danger "不要轉 TMC2209 的可變電阻"
 

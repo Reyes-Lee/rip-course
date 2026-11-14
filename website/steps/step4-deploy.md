@@ -23,7 +23,7 @@
 
     1. 執行 `tools/10_export_weights`。清單預設是最新的學生，直接按 Enter。工具核對[下面的 sketch 常數](#constants)，全部 OK 才匯出到 `firmware/RLControl/policy_weights_student.h`。
     2. 用 Arduino IDE 開 `firmware/RLControl/RLControl.ino`，按「上傳」。sketch 載入的是第 1 步匯出的 `policy_weights_student.h`；repo 不附任何權重，還沒匯出就上傳，編譯會停在 `No policy weights yet` 的錯誤。
-    3. 看 IDE 下方的編譯訊息：「草稿碼使用了 N 位元組」的 N 必須 ≤ 30720（Old Bootloader 的上限）。超過會上傳失敗，找助教。
+    3. 看 IDE 下方的編譯訊息：「草稿碼使用了 N 位元組」的 N 必須 ≤ 30720（Old Bootloader 的上限）。超過會上傳失敗：照預設的 H=16 不會超過；你改大了 H 的話，要改小再重新蒸餾。
     4. 上傳完 Nano 會自動重開。前 1 秒 LED 恆亮，這時擺錘要**靜止垂下**（這個姿勢會被當成編碼器零點），之後它會自己甩上、平衡。如果馬達完全不動，打開序列埠監控（500000）看有沒有 `[DIR] not calibrated`：這塊 Nano 沒做過[方向標定](../prepare/hardware.md#direction)，改燒 `LowLevelServer` 跑 `04_check_direction`，再重新上傳 `RLControl`。
 
 ??? cmd "第 1 步背後執行的指令"
@@ -59,7 +59,7 @@
 
 ### 工具核對的 sketch 常數 { #constants .rip-learn }
 
-標頭檔只有權重，控制迴路的設定寫在 sketch 裡，兩邊必須一致。`10_export_weights` 匯出前會讀 `firmware/RLControl/RLControl.ino` 與策略的 `config.json`，印出下表逐項比對。repo 的預設值是對齊的；有一項不一致，工具就會停止匯出，這時找助教，不要自己改 sketch。
+標頭檔只有權重，控制迴路的設定寫在 sketch 裡，兩邊必須一致。`10_export_weights` 匯出前會讀 `firmware/RLControl/RLControl.ino` 與策略的 `config.json`，印出下表逐項比對。repo 的預設值是對齊的；有一項不一致，工具就會停止匯出。這代表你的策略用了和課程版 sketch 不同的設定；sketch 不能改，要回頭用一致的設定重新訓練。
 
 | `RLControl.ino` 常數 | 必須等於 | 預設值 |
 | --- | --- | --- |

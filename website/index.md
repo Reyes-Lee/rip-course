@@ -44,7 +44,7 @@ hide:
 
 ## 五個步驟
 
-每一步都有檢查點，**沒過不要往下走**。每一步的產出檔就是下一步的輸入。
+每一步都有檢查點，用來判斷這一步做得好不好、要不要回頭調整。每一步的產出檔就是下一步的輸入，最後的模型要燒進 Nano 獨立執行。
 
 <ul class="rip-steps">
   <li><a class="rip-step" href="steps/step0-sysid/"><span class="rip-step__n">STEP 0 · 實機 15 分</span><span class="rip-step__t">系統識別</span><span class="rip-step__d">量擺錘鉸鏈的摩擦，讓模擬對上你的機台。</span><span class="rip-step__out">sysid_params.json</span></a></li>
@@ -53,8 +53,6 @@ hide:
   <li><a class="rip-step" href="steps/step3-distill/"><span class="rip-step__n">STEP 3 · CPU 3 分</span><span class="rip-step__t">蒸餾學生</span><span class="rip-step__d">行為克隆＋DAgger，縮小成 16 個神經元的小網路。</span><span class="rip-step__out">distill_h16_dagger_dev/student.pt</span></a></li>
   <li><a class="rip-step" href="steps/step4-deploy/"><span class="rip-step__n">STEP 4 · 實機 5 分</span><span class="rip-step__t">燒錄與評分</span><span class="rip-step__d">燒進 Nano，拔掉電腦也能自己甩上、平衡。</span><span class="rip-step__out">policy_weights_student.h</span></a></li>
 </ul>
-
-只想用筆電接線控制的話，做到 Step 2 就是一個完整的控制器；Step 3–4 是為了拔掉電腦。
 
 ## 你會用到的東西
 
@@ -96,4 +94,4 @@ hide:
 
 ## 來源
 
-整套流程與程式來自作者 ferrolho 的開源專案 [rotary-inverted-pendulum](https://github.com/ferrolho/rotary-inverted-pendulum)（[文件網站](https://ferrolho.github.io/rotary-inverted-pendulum/)，MIT License）。課程只改了硬體相關的常數，並加上一組測試與流程工具。作者的 reward、domain randomization、超參數是本專題的**標準配方**，照作者的實際做法直接沿用。
+整套流程與程式來自作者 ferrolho 的開源專案 [rotary-inverted-pendulum](https://github.com/ferrolho/rotary-inverted-pendulum)（[文件網站](https://ferrolho.github.io/rotary-inverted-pendulum/)，MIT License）。課程只改了硬體相關的常數，並加上一組測試與流程工具。作者的 reward、domain randomization、超參數是本專題的 **baseline**：照著做就能跑完整個流程，你也可以在這個基礎上修改。

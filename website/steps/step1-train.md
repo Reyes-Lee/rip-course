@@ -220,7 +220,7 @@ SEED 是亂數種子，決定網路初始權重與探索過程；同一套配方
 手臂角度限制
 :   策略的指令最多到 ±125°；手臂碰到 ±135° 就當成撞到硬限位，扣 5 分並結束回合。實機韌體有對應的保護（見 [Step 4](step4-deploy.md#flash)）。
 
-## Reward（標準配方） { #reward .rip-learn }
+## Reward（作者的版本） { #reward .rip-learn }
 
 $$
 \begin{aligned}
