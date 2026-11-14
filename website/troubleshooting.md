@@ -23,7 +23,7 @@
 
 !!! danger "不要改韌體常數，也不要改 reward 以外的程式"
 
-    reward 可以照 [Step 1「修改 reward」](steps/step1-train.md#edit-reward) 改。`firmware/` 裡的常數和 `policy/` 的其他程式不要改：訓練、微調、部署三處的設定必須一致，工具會自動檢查，改了就會對不上。
+    reward 可以照 [Step 1「修改 reward」](steps/step1-train.md#edit-reward) 改。`firmware/` 裡的常數和 `policy/` 的其他程式不要改：訓練、微調、部署三處的設定必須一致，工具會檢查，改了就會對不上。
 
 !!! danger "不要轉 TMC2209 的可變電阻"
 

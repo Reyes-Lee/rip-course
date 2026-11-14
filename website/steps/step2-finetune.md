@@ -132,7 +132,7 @@
 | balanced fraction | 下一步 |
 | --- | --- |
 | ≥ 0.85 | :material-check-circle:{ style="color: var(--rip-green)" } 教師夠穩了。可以進 Step 3，也可以再加一段微調看看 |
-| 0.4–0.85 | :material-trending-up:{ style="color: var(--rip-amber)" } 還在進步。再執行一次 `07_finetune`（自動加一段 30 回合），然後再跑 `08_test_policy` |
+| 0.4–0.85 | :material-trending-up:{ style="color: var(--rip-amber)" } 還在進步。再執行一次 `07_finetune`（從最新一段接續，預設 30 回合），然後再跑 `08_test_policy` |
 | < 0.4 | :material-close-circle:{ style="color: var(--rip-red)" } 先停止微調，依序檢查硬體：燒 `LowLevelServer` 跑 `04_check_direction`（方向被修正的話，丟掉 `runs/ftN` 從教師重跑）；燒 `EncoderCheck` 跑 `02_check_encoder`；確認桌面水平、機台沒有被移動。都正常就燒 `LowLevelServer` 重跑 `05_sysid`，對照 [Step 0 檢查點](step0-sysid.md#checkpoint)。仍然沒問題就找助教，帶著 `policy/recordings/` 裡最新的 `.npz` |
 
 ## 進 Step 3 前：回歸測試 { #regression }

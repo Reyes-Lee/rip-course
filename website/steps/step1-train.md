@@ -19,7 +19,7 @@
     5. 畫面問 `SEED [0]:`，直接按 Enter。
     6. 畫面問 `每階段步數 [100000]:` 和 `要改 reward 權重嗎？ [y/N]:`，直接按 Enter 是作者的設定（見[三個階段](#stages)與[修改 reward](#edit-reward)）。
     7. 工具印出設定 header（用眼睛確認，見[檢查點](#checkpoint)），然後開始訓練。畫面會一直捲動英文統計表，那張表不用看；每 30 秒會印一行中文進度，例如 `[Stage 1/3] ████████░░ 45,600 / 100,000 步（46%）｜……預估還要約 43 分鐘`。總時間取決於電腦速度，作者的電腦約 25 分鐘，Apple M1 約 50 分鐘。印出 `Stage 3 完成` 和檢查點結果，才算跑完。
-    8. 訓練結束後，工具會自動跑檢查點並印出數字（見[檢查點](#checkpoint)）。工具不替你判斷，請對照參考門檻決定下一步。
+    8. 訓練結束後，工具接著跑檢查點並印出數字（見[檢查點](#checkpoint)）。工具不替你判斷，請對照參考門檻決定下一步。
 
 !!! tip "中途中斷了（關掉視窗、筆電睡眠）"
 
@@ -83,19 +83,19 @@
 
 ## 參數怎麼送進 MuJoCo { #params }
 
-全部自動，不用改任何檔案。`06_train_teacher` 會自動帶上你的 `sysid_params.json`；每次建立模擬時，`pendulum_env.py` 的 `build_mjcf()` 會用下表的來源組出 MuJoCo 模型。
+`06_train_teacher` 會把你的 `sysid_params.json` 傳給訓練程式（指令裡的 `--params-path`）。每次建立模擬時，`pendulum_env.py` 的 `build_mjcf()` 依下表的來源組出 MuJoCo 模型；想知道某個參數實際用了多少，就到表上的位置去看。
 
-| 參數 | 來源 | 誰負責 |
+| 參數 | 來源 | 數值從哪裡來 |
 | --- | --- | --- |
-| 擺錘鉸鏈的黏滯與庫倫摩擦 | `sysid_params.json` | Step 0 量測，自動帶入 |
-| 擺錘質量、質心、轉動慣量 | `model/model.urdf`（已更新為 10 元外貼） | 助教已改好 |
-| 手臂長度與質量 | `pendulum_env.py` 常數（作者值） | 不用改 |
-| 動作延遲、觀測延遲 | 三個訓練階段的 DR 範圍（作者實測） | 不用改 |
-| 控制頻率、速度與加速度上限 | `train_sac.py` 預設值，與韌體一致 | 不用改 |
+| 擺錘鉸鏈的黏滯與庫倫摩擦 | `sysid_params.json` | 你在 Step 0 量的 |
+| 擺錘質量、質心、轉動慣量 | `model/model.urdf`（10 元外貼） | 由擺錘和硬幣的幾何算出 |
+| 手臂長度與質量 | `pendulum_env.py` 常數 | 作者機台的值，擺臂相同 |
+| 動作延遲、觀測延遲 | 三個訓練階段的 DR 範圍 | 作者實測 |
+| 控制頻率、速度與加速度上限 | `train_sac.py` 預設值 | 作者配方，必須和韌體一致 |
 
 !!! warning "sysid 只把摩擦送進模擬"
 
-    質量與慣量用的是 URDF。硬幣貼歪不會被 sysid 自動修正，只會在 [Step 0 檢查點](step0-sysid.md#checkpoint)的「慣量誤差」看出來，所以那一項要認真看。
+    質量與慣量用的是 URDF。硬幣貼歪，sysid 不會修正，只會在 [Step 0 檢查點](step0-sysid.md#checkpoint)的「慣量誤差」看出來，所以那一項要認真看。
 
 ## 三個階段在做什麼 { #stages }
 
@@ -240,7 +240,7 @@ reward 有三種改法：
 
 ??? cmd "背後執行的指令"
 
-    Windows 用 `python`，macOS 用 `mjpython`，工具會自動選。
+    Windows 用 `python`，macOS 用 `mjpython`，工具會依系統選擇。
 
     ```bash
     cd policy
@@ -250,7 +250,7 @@ reward 有三種改法：
 
 ## 檢查點 { #checkpoint }
 
-`06_train_teacher` 訓練結束時會自動跑下面三項並印出結果；全部只印數字，不替你判斷。之後想對任何一支策略重跑，執行 `tools/13_check_sim`，從清單選那支策略即可。
+`06_train_teacher` 訓練結束時會接著跑下面三項並印出結果；全部只印數字，不替你判斷。之後想對任何一支策略重跑，執行 `tools/13_check_sim`，從清單選那支策略即可。
 
 !!! checkpoint "參考門檻（作者的建議，由你判斷）"
 
