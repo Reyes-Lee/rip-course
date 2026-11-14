@@ -194,7 +194,7 @@ AS5600 讀的是磁場方向，系統裡所有的擺錘角度都來自它。磁�
 | 步進馬達 | 17HS3401S（34 mm 機身，額定 1.3 A） | |
 | 馬達驅動 | TMC2209，Vref 約 1.0 V（約 0.7 A RMS） | 助教已調好；**Vref 設的是 RMS 不是峰值**，不要照抄 DRV8825 的數字 |
 | 微步 | 1/32（MS1 接 5V、MS2 接 GND） | 所有 sketch 的 `MICROSTEPS = 32` |
-| 控制板 | Arduino Nano（Old Bootloader） | IDE 處理器選 Old Bootloader；flash 上限 30720 bytes |
+| 控制板 | Arduino Nano（USB-C） | flash 上限 30720 bytes |
 | 擺錘編碼器 | AS5600 | DIR 不接，方向由 `04_check_direction` 存進 EEPROM，每台都要[標定](#direction) |
 | 擺錘配重 | 新台幣 10 元，貼在擺錘大頭外側 | `model/model.urdf` 已依此設定 |
 | 擺臂 | 3D 列印 | `pendulum_env.py` 的 `ARM_*` 已對應這個設計 |

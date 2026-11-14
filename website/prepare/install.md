@@ -11,7 +11,7 @@
 !!! todo "這一步要做的事"
 
     1. [安裝軟體](#install)：Arduino IDE、Git、uv。
-    2. [設定 Arduino IDE](#arduino)：選開發板、處理器，安裝三個程式庫。
+    2. [設定 Arduino IDE](#arduino)：選開發板和連接埠，安裝三個程式庫。
     3. [取得課程檔案](#get-files)：`git clone` 課程 repo。
     4. [執行 `00_setup`](#setup)：建立 Python 環境、確認找得到 Nano。
 
@@ -57,9 +57,8 @@
 
     1. 打開 Arduino IDE，Nano 用 USB-C 傳輸線接上電腦。
     2. 選單「工具 → 開發板」選 **Arduino Nano**。
-    3. 「工具 → 處理器」選 **ATmega328P (Old Bootloader)**。選錯會上傳逾時，看起來像線壞了。
-    4. 「工具 → 連接埠」選 Nano 對應的那個。
-    5. 「工具 → 管理程式庫」，搜尋並安裝三個程式庫：**AS5600**（作者 Rob Tillaart）、**FastAccelStepper**、**AccelStepper**（`TestMotor` 用）。
+    3. 「工具 → 連接埠」選 Nano 對應的那個。
+    4. 「工具 → 管理程式庫」，搜尋並安裝三個程式庫：**AS5600**（作者 Rob Tillaart）、**FastAccelStepper**、**AccelStepper**（`TestMotor` 用）。
 
 ## 3. 取得課程檔案 { #get-files .rip-do }
 
