@@ -112,6 +112,32 @@ body, .md-main {
   margin-right: .3em;
 }
 
+/* 公告列的期末專題倒數 */
+.rip-countdown {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: .35em .9em;
+}
+.md-banner .rip-countdown strong { margin-right: 0; }
+.rip-countdown__clock { white-space: nowrap; }
+.rip-countdown__clock b {
+  display: inline-block;
+  min-width: 1.9em;
+  margin: 0 .12em;
+  padding: 0 .3em;
+  font-family: "Anton", var(--rip-display);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--rip-yellow);
+  background: var(--rip-on-yellow);
+  border-radius: 5px;
+}
+.rip-countdown.is-urgent strong { background: var(--rip-red); }
+.rip-countdown.is-over .rip-countdown__clock { font-weight: 800; }
+
 /* ---------- 內文字體與標題 ---------- */
 .md-typeset {
   font-size: .8rem;
