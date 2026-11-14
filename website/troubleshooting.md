@@ -5,7 +5,7 @@
 | 症狀 | 怎麼處理（照順序） |
 | --- | --- |
 | 手臂一直往同一個方向飄，最後撞限位 | 先確認桌面是水平、不會晃的，機台四角都著地（[Step 0 開始前](steps/step0-sysid.md#level)）。換了桌子仍然飄就找助教 |
-| 接線時會平衡，燒進 Nano 後一直繞圈 | 1. 執行 `11_score_onboard`，第一行頻率不是約 50 Hz 就找助教。2. 確認 4-2 匯出的是 `09_distill` 產生的 `student.pt`（路徑含 `distill_h16_dagger_dev`）。3. 按 RESET 前擺錘要靜止垂下、手臂在正中間 |
+| 接線時會平衡，燒進 Nano 後一直繞圈 | 1. 執行 `11_score_onboard`，第一行頻率不是約 50 Hz 就找助教。2. 確認 [Step 4 匯出](steps/step4-deploy.md#flash)的是 `09_distill` 產生的 `student.pt`（路徑含 `distill_h16_dagger_dev`）。3. 按 RESET 前擺錘要靜止垂下、手臂在正中間 |
 | 燒進 Nano 後會平衡，但比接線測試明顯不穩 | 頻率與延遲正常的話，這是傳輸條件的差異，照 [Step 4「獨立執行比接線測試差時」](steps/step4-deploy.md#gap) 的順序試 |
 | 擺錘會擺但怎麼都甩不上去 | 燒 `LowLevelServer`，執行 `03_check_motor`。FAIL 就找助教檢查 Vref |
 | 馬達只轉一小段就卡住、來回抖，驅動板很燙 | 先拔 12 V。最常見是馬達線接觸不良：重新插好馬達線與 TMC2209 的接頭，確認 Nano 只用 USB 供電、12 V 只接 TMC2209（[供電](prepare/hardware.md#power-on)），再接 12 V 跑 `03_check_motor`。還是一樣就找助教 |

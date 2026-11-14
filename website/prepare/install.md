@@ -8,71 +8,86 @@
 
 兩個系統的流程完全一樣，只有安裝方式不同。每個工具都有 macOS 的 `.command`（在 `tools/macOS/`）與 Windows 的 `.bat`（在 `tools/Windows/`）兩個入口檔，執行後呼叫同一支 Python 腳本。下面每個區塊都可以切換 macOS／Windows，選一次之後整個網站都會記住。
 
-## 1. 安裝軟體
+!!! todo "這一步要做的事"
 
-=== ":material-apple: macOS"
+    1. [安裝軟體](#install)：Arduino IDE、Git、uv。
+    2. [設定 Arduino IDE](#arduino)：選開發板、處理器，安裝三個程式庫。
+    3. [取得課程檔案](#get-files)：`git clone` 課程 repo。
+    4. [執行 `00_setup`](#setup)：建立 Python 環境、確認找得到 Nano。
 
-    | 項目 | 怎麼裝 |
-    | --- | --- |
-    | Arduino IDE | 到 [arduino.cc](https://www.arduino.cc/en/software) 下載 macOS 版，拖進「應用程式」 |
-    | Git | 打開「終端機」，執行 `xcode-select --install`，照視窗指示安裝 |
-    | USB 驅動（CH340） | 系統內建，通常不用裝 |
-    | uv | 在終端機執行下面這行 |
+    標題前標「說明」的段落是原理說明，讀懂就好，不用操作。
 
-    ```bash
-    curl -LsSf https://astral.sh/uv/install.sh | sh
-    ```
+## 1. 安裝軟體 { #install .rip-do }
 
-    裝完 uv **要關掉終端機再重開**，`uv` 指令才會生效。
+!!! tool "操作步驟（選你的系統）"
 
-=== ":material-microsoft-windows: Windows"
+    === ":material-apple: macOS"
 
-    | 項目 | 怎麼裝 |
-    | --- | --- |
-    | Arduino IDE | 到 [arduino.cc](https://www.arduino.cc/en/software) 下載 Windows 版安裝 |
-    | Git | 安裝 [Git for Windows](https://git-scm.com/download/win)，選項都用預設 |
-    | USB 驅動（CH340） | Nano 插上後，打開「裝置管理員 → 連接埠」。看不到 `USB-SERIAL CH340 (COMx)` 時，安裝 WCH 的 CH341SER 驅動（助教會附連結） |
-    | uv | 打開 PowerShell，執行下面這行 |
+        | 項目 | 怎麼裝 |
+        | --- | --- |
+        | Arduino IDE | 到 [arduino.cc](https://www.arduino.cc/en/software) 下載 macOS 版，拖進「應用程式」 |
+        | Git | 打開「終端機」，執行 `xcode-select --install`，照視窗指示安裝 |
+        | USB 驅動（CH340） | 系統內建，通常不用裝 |
+        | uv | 在終端機執行下面這行 |
 
-    ```powershell
-    powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-    ```
+        ```bash
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        ```
 
-    裝完 uv **要關掉 PowerShell 再重開**，`uv` 指令才會生效。
+        裝完 uv **要關掉終端機再重開**，`uv` 指令才會生效。
 
-## 2. 設定 Arduino IDE
+    === ":material-microsoft-windows: Windows"
 
-1. 打開 Arduino IDE，Nano 用 USB-C 傳輸線接上電腦。
-2. 選單「工具 → 開發板」選 **Arduino Nano**。
-3. 「工具 → 處理器」選 **ATmega328P (Old Bootloader)**。選錯會上傳逾時，看起來像線壞了。
-4. 「工具 → 連接埠」選 Nano 對應的那個。
-5. 「工具 → 管理程式庫」，搜尋並安裝三個程式庫：**AS5600**（作者 Rob Tillaart）、**FastAccelStepper**、**AccelStepper**（`TestMotor` 用）。
+        | 項目 | 怎麼裝 |
+        | --- | --- |
+        | Arduino IDE | 到 [arduino.cc](https://www.arduino.cc/en/software) 下載 Windows 版安裝 |
+        | Git | 安裝 [Git for Windows](https://git-scm.com/download/win)，選項都用預設 |
+        | USB 驅動（CH340） | Nano 插上後，打開「裝置管理員 → 連接埠」。看不到 `USB-SERIAL CH340 (COMx)` 時，安裝 WCH 的 CH341SER 驅動（助教會附連結） |
+        | uv | 打開 PowerShell，執行下面這行 |
 
-## 3. 取得課程檔案 { #get-files }
+        ```powershell
+        powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+        ```
+
+        裝完 uv **要關掉 PowerShell 再重開**，`uv` 指令才會生效。
+
+## 2. 設定 Arduino IDE { #arduino .rip-do }
+
+!!! tool "操作步驟"
+
+    1. 打開 Arduino IDE，Nano 用 USB-C 傳輸線接上電腦。
+    2. 選單「工具 → 開發板」選 **Arduino Nano**。
+    3. 「工具 → 處理器」選 **ATmega328P (Old Bootloader)**。選錯會上傳逾時，看起來像線壞了。
+    4. 「工具 → 連接埠」選 Nano 對應的那個。
+    5. 「工具 → 管理程式庫」，搜尋並安裝三個程式庫：**AS5600**（作者 Rob Tillaart）、**FastAccelStepper**、**AccelStepper**（`TestMotor` 用）。
+
+## 3. 取得課程檔案 { #get-files .rip-do }
 
 所有檔案（程式、韌體、模型、流程工具）都放在助教的 GitHub：[Reyes-Lee/rip-course](https://github.com/Reyes-Lee/rip-course)。用 `git clone` 下載一份到自己的電腦，之後助教更新時用 `git pull` 拿新版。
 
-=== ":material-apple: macOS"
+!!! tool "操作步驟（選你的系統）"
 
-    放在家目錄，**不要放在有 iCloud 同步的「桌面」或「文件」**：Python 環境約 850 MB，Step 2 每段微調又會產生幾百 MB 的檔案，iCloud 在背景上傳時會搶 CPU 和磁碟，可能拖慢 50 Hz 的實機控制。打開「終端機」，執行：
+    === ":material-apple: macOS"
 
-    ```bash
-    cd ~
-    git clone https://github.com/Reyes-Lee/rip-course.git
-    ```
+        放在家目錄，**不要放在有 iCloud 同步的「桌面」或「文件」**：Python 環境約 850 MB，Step 2 每段微調又會產生幾百 MB 的檔案，iCloud 在背景上傳時會搶 CPU 和磁碟，可能拖慢 50 Hz 的實機控制。打開「終端機」，執行：
 
-    完成後會多出 `~/rip-course` 資料夾。在 Finder 按 ++cmd+shift+g++，輸入 `~/rip-course` 就能打開。
+        ```bash
+        cd ~
+        git clone https://github.com/Reyes-Lee/rip-course.git
+        ```
 
-=== ":material-microsoft-windows: Windows"
+        完成後會多出 `~/rip-course` 資料夾。在 Finder 按 ++cmd+shift+g++，輸入 `~/rip-course` 就能打開。
 
-    路徑**不要有中文或空格**，也不要放在會被 OneDrive 同步的「桌面」或「文件」（很多電腦預設會同步，原因同 macOS 的 iCloud），建議放在 `C:\rip-course`。打開 PowerShell，執行：
+    === ":material-microsoft-windows: Windows"
 
-    ```powershell
-    cd C:\
-    git clone https://github.com/Reyes-Lee/rip-course.git
-    ```
+        路徑**不要有中文或空格**，也不要放在會被 OneDrive 同步的「桌面」或「文件」（很多電腦預設會同步，原因同 macOS 的 iCloud），建議放在 `C:\rip-course`。打開 PowerShell，執行：
 
-    完成後會多出 `C:\rip-course` 資料夾。
+        ```powershell
+        cd C:\
+        git clone https://github.com/Reyes-Lee/rip-course.git
+        ```
+
+        完成後會多出 `C:\rip-course` 資料夾。
 
 ??? info "不想用 git：下載 ZIP"
 
@@ -81,27 +96,29 @@
     - macOS 解壓後要在終端機多跑一行，工具才能執行：`chmod +x ~/rip-course/tools/macOS/*.command`
     - 缺點：之後助教更新時，要重新下載 ZIP，並把舊資料夾裡的 `policy/runs/`、`policy/sysid_params.json` 搬到新資料夾。用 git 就不用。
 
-### 助教更新檔案時 { #update }
+### 之後：助教更新檔案時 { #update .rip-do }
 
 助教在課堂或公告說「有更新」時，照下面做。你自己產生的檔案（訓練結果、sysid、紀錄檔）不在 repo 裡，**更新不會蓋掉它們**。
 
-=== ":material-apple: macOS"
+!!! tool "操作步驟（選你的系統）"
 
-    ```bash
-    cd ~/rip-course
-    git pull
-    ```
+    === ":material-apple: macOS"
 
-=== ":material-microsoft-windows: Windows"
+        ```bash
+        cd ~/rip-course
+        git pull
+        ```
 
-    ```powershell
-    cd C:\rip-course
-    git pull
-    ```
+    === ":material-microsoft-windows: Windows"
+
+        ```powershell
+        cd C:\rip-course
+        git pull
+        ```
 
 看到 `Already up to date.` 代表已經是最新版。如果出現 `error: Your local changes ... would be overwritten`，代表你改過 repo 裡的檔案；把整段訊息截圖給助教，不要自己刪檔案。
 
-## 4. 執行 `00_setup` { #setup }
+## 4. 執行 `00_setup` { #setup .rip-do }
 
 !!! tool "操作步驟"
 
@@ -123,7 +140,7 @@
 
     **沒看到序列埠**：先換一條 USB-C 線（有些線只能充電，不能傳資料），Windows 再確認 CH340 驅動，然後重新執行 `00_setup`。
 
-## 課程 repo 的結構
+## 課程 repo 的結構 { #layout .rip-learn }
 
 ```text
 rip-course/

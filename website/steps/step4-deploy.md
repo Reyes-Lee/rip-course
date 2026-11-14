@@ -9,23 +9,19 @@
 
 把學生權重匯出成 C 標頭檔（存在 PROGMEM），燒進 `RLControl.ino`，拔掉筆電也能自己甩上、平衡。
 
-## 4-1 sketch 常數與策略一致 { #constants }
+!!! todo "這一步要做的事"
 
-標頭檔只有權重，控制迴路的設定寫在 sketch 裡，兩邊必須一致。`10_export_weights` 匯出前會讀 `firmware/RLControl/RLControl.ino` 與策略的 `config.json`，印出下表逐項比對。repo 的預設值是對齊的；有一項不一致，工具就會停止匯出，這時找助教，不要自己改 sketch。
+    1. [匯出與燒錄](#flash)：執行 `10_export_weights`，再用 Arduino IDE 上傳 `RLControl`。
+    2. [用誠實指標評分](#score)：執行 `11_score_onboard`。
+    3. （需要時）[獨立執行比接線測試差時](#gap)：依序嘗試。
 
-| `RLControl.ino` 常數 | 必須等於 | 預設值 |
-| --- | --- | --- |
-| `CONTROL_FREQUENCY_HZ` | `config.json` 的 `control_freq_hz` | 50 |
-| `ACTION_SMOOTH_WINDOW` | `action_smooth_window` | 4 |
-| `OBS_FRAMES` | `obs_history_len` | 4 |
-| `MAX_VELOCITY_RAD_S` | `max_velocity_rad_s` | 3.5 |
-| `MICROSTEPS` | 驅動板接線 | 32 |
+    標題前標「說明」的段落是原理說明，讀懂就好，不用操作。
 
-## 4-2 匯出與燒錄 { #flash }
+## 1. 匯出與燒錄 { #flash .rip-do }
 
 !!! tool "操作步驟"
 
-    1. 執行 `tools/10_export_weights`。清單預設是最新的學生，直接按 Enter。工具核對 4-1 的表，全部 OK 才匯出到 `firmware/RLControl/policy_weights_student.h`。
+    1. 執行 `tools/10_export_weights`。清單預設是最新的學生，直接按 Enter。工具核對[下面的 sketch 常數](#constants)，全部 OK 才匯出到 `firmware/RLControl/policy_weights_student.h`。
     2. 用 Arduino IDE 開 `firmware/RLControl/RLControl.ino`，按「上傳」。sketch 預設載入的就是 `policy_weights_student.h`。
     3. 看 IDE 下方的編譯訊息：「草稿碼使用了 N 位元組」的 N 必須 ≤ 30720（Old Bootloader 的上限）。超過會上傳失敗，找助教。
     4. 上傳完 Nano 會自動重開。前 1 秒 LED 恆亮，這時擺錘要**靜止垂下**（這個姿勢會被當成編碼器零點），之後它會自己甩上、平衡。如果馬達完全不動，打開序列埠監控（500000）看有沒有 `[DIR] not calibrated`：這塊 Nano 沒做過[方向標定](../prepare/hardware.md#direction)，改燒 `LowLevelServer` 跑 `04_check_direction`，再重新上傳 `RLControl`。
@@ -46,11 +42,23 @@
 
     **要重新開始**：用手把手臂轉回正中間，等擺錘靜止垂下，按 Nano 上的 RESET 鍵。
 
-## 4-3 用誠實指標評分 { #score }
+### 工具核對的 sketch 常數 { #constants .rip-learn }
+
+標頭檔只有權重，控制迴路的設定寫在 sketch 裡，兩邊必須一致。`10_export_weights` 匯出前會讀 `firmware/RLControl/RLControl.ino` 與策略的 `config.json`，印出下表逐項比對。repo 的預設值是對齊的；有一項不一致，工具就會停止匯出，這時找助教，不要自己改 sketch。
+
+| `RLControl.ino` 常數 | 必須等於 | 預設值 |
+| --- | --- | --- |
+| `CONTROL_FREQUENCY_HZ` | `config.json` 的 `control_freq_hz` | 50 |
+| `ACTION_SMOOTH_WINDOW` | `action_smooth_window` | 4 |
+| `OBS_FRAMES` | `obs_history_len` | 4 |
+| `MAX_VELOCITY_RAD_S` | `max_velocity_rad_s` | 3.5 |
+| `MICROSTEPS` | 驅動板接線 | 32 |
+
+## 2. 用誠實指標評分 { #score .rip-do }
 
 !!! tool "操作步驟"
 
-    1. Nano 燒的是 `RLControl`（4-2），Arduino IDE 的序列埠監控已關掉。這時策略可能已經在甩，不用先停它。
+    1. Nano 燒的是 `RLControl`（[第 1 節](#flash)），Arduino IDE 的序列埠監控已關掉。這時策略可能已經在甩，不用先停它。
     2. 執行 `tools/11_score_onboard`。`評分秒數 [60]:` 直接按 Enter 是作者的 60 秒，也可以輸入其他秒數（5–600；作者的參考值是用 300 秒量的）。工具打開 serial 時 Nano 會重開，接著工具讓馬達斷電，印出「馬達已斷電」。
     3. 用手把手臂轉回正中間，等擺錘**完全靜止垂下**，按 Enter。Nano 在這一刻抓零點並開始甩。
     4. 之後在「評分秒數 + 5 秒」內不要碰機台（前 5 秒是甩上去的時間，不計分；預設約 65 秒）。結束時印出結果，紀錄檔存在 `policy/recordings/onboard_<時間>.npz`。照下面的順序看。
@@ -81,7 +89,7 @@
 
 「獨立重跑」是作者在配方定案後，用預設設定從頭重跑整套流程一次的結果（重新訓練教師、重新實機微調、蒸餾、燒錄）。照流程做，結果應該在這附近。
 
-### 獨立執行比接線測試差時 { #gap }
+## 3. （需要時）獨立執行比接線測試差時 { #gap .rip-do }
 
 同一個學生在 Nano 上獨立執行，分數通常會比 Step 3 的接線測試低一些。網路是同一個，差別在於由誰計算、指令多久之後才生效：
 
@@ -93,7 +101,9 @@
 
 DAgger 用 `--transport device` 就是為了讓學生適應獨立執行的時序。頻率約 50 Hz、延遲在範圍內，但 balanced fraction 明顯低於參考值（例如手臂大幅來回、一直倒下又接回）時，照這個順序試：
 
-1. 再跑一次 `11_score_onboard`，確認不是單次運氣不好。
-2. 回到 [Step 3](step3-distill.md#checkpoint) 用 `SEED 1` 重新蒸餾，再匯出、燒錄、評分。`09_distill` 印出的 DAgger gate 如果和第 0 輪一樣，代表 DAgger 沒有改善，換 SEED 最值得一試。
-3. 回 [Step 2](step2-finetune.md#finetune) 再加一段微調，用 `08_test_policy` 確認教師有變好，再重新蒸餾。
-4. 都試過仍然遠低於參考值，帶著 `policy/recordings/` 裡的 `onboard_*.npz` 找助教。
+!!! tool "依序嘗試"
+
+    1. 再跑一次 `11_score_onboard`，確認不是單次運氣不好。
+    2. 回到 [Step 3](step3-distill.md#checkpoint) 用 `SEED 1` 重新蒸餾，再匯出、燒錄、評分。`09_distill` 印出的 DAgger gate 如果和第 0 輪一樣，代表 DAgger 沒有改善，換 SEED 最值得一試。
+    3. 回 [Step 2](step2-finetune.md#finetune) 再加一段微調，用 `08_test_policy` 確認教師有變好，再重新蒸餾。
+    4. 都試過仍然遠低於參考值，帶著 `policy/recordings/` 裡的 `onboard_*.npz` 找助教。

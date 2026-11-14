@@ -162,6 +162,41 @@ body, .md-main {
   transform: translateY(-.08em);
 }
 .md-typeset .headerlink { color: var(--rip-pink); }
+
+/* ---------- 標題標籤：「操作」要動手做，「說明」只是讀 ---------- */
+.md-typeset h2.rip-do, .md-typeset h2.rip-learn { padding-left: 0; }
+.md-typeset h2.rip-do::before, .md-typeset h2.rip-learn::before,
+.md-typeset h3.rip-do::before, .md-typeset h3.rip-learn::before {
+  position: static;
+  display: inline-block;
+  vertical-align: .22em;
+  width: auto; height: auto;
+  transform: none;
+  margin-right: .6em;
+  padding: .2em .75em .22em;
+  font-family: "Noto Sans TC", sans-serif;
+  font-size: .48em;
+  font-weight: 800;
+  letter-spacing: .1em;
+  line-height: 1.3;
+  border-radius: 999px;
+  border: 2px solid var(--rip-ink-shadow);
+  text-shadow: none;
+}
+.md-typeset h3.rip-do::before, .md-typeset h3.rip-learn::before { font-size: .62em; vertical-align: .12em; }
+.md-typeset h2.rip-do::before, .md-typeset h3.rip-do::before {
+  content: "操作";
+  background: var(--rip-yellow);
+  color: var(--rip-on-yellow);
+  box-shadow: 2px 2px 0 var(--rip-pink);
+}
+.md-typeset h2.rip-learn::before, .md-typeset h3.rip-learn::before {
+  content: "說明";
+  background: var(--rip-surface-2);
+  color: var(--rip-muted);
+  border-color: var(--rip-border);
+  box-shadow: none;
+}
 .md-typeset code {
   border-radius: 6px;
   padding: .1em .4em;
@@ -564,6 +599,7 @@ body, .md-main {
   --md-admonition-icon--checkpoint: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.4 6 14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>');
   --md-admonition-icon--tool: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13.64 21.97a.99.99 0 0 1-1.33-.47l-2.18-4.74-2.51 2.02c-.17.14-.38.22-.62.22a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1c.24 0 .47.09.64.23l.01-.01 11.49 9.64a1.001 1.001 0 0 1-.44 1.75l-3.16.62 2.2 4.73c.26.5.02 1.09-.48 1.32z"/></svg>');
   --md-admonition-icon--cmd: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 19V7H4v12zm0-16a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm-7 14v-2h5v2zm-3.42-4L5.57 9H8.4l3.3 3.3c.39.39.39 1.03 0 1.42L8.42 17H5.59z"/></svg>');
+  --md-admonition-icon--todo: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 5h6v6H3zm2 2v2h2V7zm6 0h10v2H11zm0 8h10v2H11zm-6 5-3.5-3.5 1.41-1.41L5 17.17l4.59-4.58L11 14z"/></svg>');
   --md-admonition-icon--ta: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 3 1 9l11 6 9-4.91V17h2V9M5 13.18v4L12 21l7-3.82v-4L12 17z"/></svg>');
 }
 .md-typeset .admonition, .md-typeset details {
@@ -589,6 +625,7 @@ body, .md-main {
 .md-typeset .tool       { --rip-c: var(--rip-yellow); --rip-c-soft: rgba(255, 210, 63, .2); }
 .md-typeset .checkpoint { --rip-c: var(--rip-lime);   --rip-c-soft: rgba(62, 224, 122, .18); }
 .md-typeset .cmd        { --rip-c: var(--rip-cyan);   --rip-c-soft: rgba(45, 226, 230, .14); }
+.md-typeset .todo       { --rip-c: var(--rip-pink);   --rip-c-soft: rgba(255, 46, 136, .14); }
 .md-typeset .ta         { --rip-c: #a78bfa;           --rip-c-soft: rgba(167, 139, 250, .18); }
 .md-typeset .warning    { --rip-c: var(--rip-orange); --rip-c-soft: rgba(255, 122, 26, .18); }
 .md-typeset .danger     { --rip-c: var(--rip-red);    --rip-c-soft: rgba(255, 77, 94, .18); }
@@ -606,6 +643,9 @@ body, .md-main {
 .md-typeset .cmd > .admonition-title::before, .md-typeset .cmd > summary::before {
   -webkit-mask-image: var(--md-admonition-icon--cmd); mask-image: var(--md-admonition-icon--cmd);
 }
+.md-typeset .todo > .admonition-title::before, .md-typeset .todo > summary::before {
+  -webkit-mask-image: var(--md-admonition-icon--todo); mask-image: var(--md-admonition-icon--todo);
+}
 .md-typeset .ta > .admonition-title::before, .md-typeset .ta > summary::before {
   -webkit-mask-image: var(--md-admonition-icon--ta); mask-image: var(--md-admonition-icon--ta);
 }
@@ -613,20 +653,20 @@ body, .md-main {
 .md-typeset details.cmd { box-shadow: 3px 3px 0 var(--rip-c); }
 
 /* 操作步驟的編號：粉紅墨點 */
-.md-typeset .tool ol, .md-typeset ol.rip-ol {
+.md-typeset .tool ol, .md-typeset .todo ol, .md-typeset ol.rip-ol {
   counter-reset: rip;
   list-style: none;
   padding-left: 0;
   margin-left: 0;
 }
-.md-typeset .tool ol > li, .md-typeset ol.rip-ol > li {
+.md-typeset .tool ol > li, .md-typeset .todo ol > li, .md-typeset ol.rip-ol > li {
   counter-increment: rip;
   position: relative;
   padding-left: 2.3em;
   margin-left: 0;
   margin-bottom: .5em;
 }
-.md-typeset .tool ol > li::before, .md-typeset ol.rip-ol > li::before {
+.md-typeset .tool ol > li::before, .md-typeset .todo ol > li::before, .md-typeset ol.rip-ol > li::before {
   content: counter(rip);
   position: absolute;
   left: 0; top: .05em;

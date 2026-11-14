@@ -8,7 +8,15 @@
 
 256×256 的教師網路太大，放不進 Nano。這一步用「模仿學習」把它縮小成只有 16 個隱藏神經元的學生網路。
 
-## 操作步驟 { #run }
+!!! todo "這一步要做的事"
+
+    1. [蒸餾](#run)：執行 `09_distill`。
+    2. [看檢查點](#checkpoint)：學生和教師的分數接近嗎？需要時換 SEED 重做。
+    3. （選做）[燒進 Nano 前先接線測學生](#tethered)。
+
+    標題前標「說明」的段落是原理說明，讀懂就好，不用操作。
+
+## 1. 蒸餾 { #run .rip-do }
 
 !!! tool "蒸餾"
 
@@ -48,7 +56,36 @@
     - 行為克隆 epoch 數：學生把整個資料集看過幾遍。
     - DAgger 輪數：每一輪讓學生自己在模擬裡跑，把它走到的狀態交給教師標上動作、加進資料集再訓練。每輪結束都會用模擬分數（gate）檢查，只保留分數最好的那一輪；0 輪就是只用行為克隆的結果。每輪步數是每輪讓學生跑幾步來收集新狀態。
 
-## 它在做什麼 { #what }
+## 2. 看檢查點 { #checkpoint .rip-do }
+
+`09_distill` 結束時會印出下面兩項的數字，由你判斷；之後要重跑敏感度關卡，可以執行 `tools/13_check_sim` 選 `student.pt`。
+
+!!! checkpoint "參考門檻（由你判斷）"
+
+    | 項目 | 參考門檻 |
+    | --- | --- |
+    | DAgger gate | 學生的 gate 接近教師自己的 gate（工具並排印出兩個數字）。作者沒有給數字，我們建議相差 0.05 以內 |
+    | 敏感度關卡 | 同 Step 1：關掉韌體量測模型後的 balanced fraction ≥ 0.7 |
+
+DAgger gate 要跟教師比、不跟絕對門檻比，是因為模擬會系統性低估實機微調過的策略：作者的冠軍在模擬 gate 只有 0.655，實機是 0.996。
+
+!!! tool "判斷要重做時"
+
+    1. 再執行 `tools/09_distill`。
+    2. 選同一段微調。
+    3. `SEED [0]:` 輸入 `1`。
+    4. 換兩個 SEED 都明顯低於教師就找助教。
+
+## 3. （選做）燒進 Nano 前先接線測學生 { #tethered .rip-do }
+
+!!! tool "接線測試學生"
+
+    1. Nano 燒 `LowLevelServer`，等擺錘靜止垂下。
+    2. 執行 `tools/08_test_policy`。
+    3. 清單輸入 `ftN/distill_h16_dagger_dev/student.pt` 那一個的編號。
+    4. `測試秒數 [30]:` 直接按 Enter，或輸入想測的秒數。學生是針對獨立執行最佳化的，接線分數略低於教師是正常的。
+
+## 它在做什麼 { #what .rip-learn }
 
 <div class="rip-flow" markdown>
   <div class="rip-flow__node rip-flow__node--rig" markdown="span">教師 256×256<small>Step 2 微調完的 best_model.zip</small></div>
@@ -72,32 +109,3 @@
 ??? question "為什麼是 16 個神經元？"
 
     Nano 沒有浮點運算單元，每次乘加約 19 µs。H=16 約 12 ms，放得進 50 Hz 的 20 ms 週期；H=32 要 35–40 ms，迴路會掉到 25 Hz，原本會平衡的策略會變成一直繞圈。
-
-## 檢查點 { #checkpoint }
-
-`09_distill` 結束時會印出下面兩項的數字，由你判斷；之後要重跑敏感度關卡，可以執行 `tools/13_check_sim` 選 `student.pt`。
-
-!!! checkpoint "參考門檻（由你判斷）"
-
-    | 項目 | 參考門檻 |
-    | --- | --- |
-    | DAgger gate | 學生的 gate 接近教師自己的 gate（工具並排印出兩個數字）。作者沒有給數字，我們建議相差 0.05 以內 |
-    | 敏感度關卡 | 同 Step 1：關掉韌體量測模型後的 balanced fraction ≥ 0.7 |
-
-DAgger gate 要跟教師比、不跟絕對門檻比，是因為模擬會系統性低估實機微調過的策略：作者的冠軍在模擬 gate 只有 0.655，實機是 0.996。
-
-!!! tool "判斷要重做時"
-
-    1. 再執行 `tools/09_distill`。
-    2. 選同一段微調。
-    3. `SEED [0]:` 輸入 `1`。
-    4. 換兩個 SEED 都明顯低於教師就找助教。
-
-## （選做）燒進 Nano 前先接線測學生 { #tethered }
-
-!!! tool "接線測試學生"
-
-    1. Nano 燒 `LowLevelServer`，等擺錘靜止垂下。
-    2. 執行 `tools/08_test_policy`。
-    3. 清單輸入 `ftN/distill_h16_dagger_dev/student.pt` 那一個的編號。
-    4. `測試秒數 [30]:` 直接按 Enter，或輸入想測的秒數。學生是針對獨立執行最佳化的，接線分數略低於教師是正常的。
