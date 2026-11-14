@@ -7,7 +7,7 @@
   <span class="rip-chip">:material-file-outline: 產出 policy_weights_student.h</span>
 </div>
 
-把學生權重匯出成 C 標頭檔（存在 PROGMEM），燒進 `RLControl.ino`，拔掉筆電也能自己甩上、平衡。
+把學生權重匯出成 C 標頭檔（存在 PROGMEM），燒進 `RLControl.ino`，由 Nano 自己算動作、甩上、平衡。
 
 !!! todo "這一步要做的事"
 

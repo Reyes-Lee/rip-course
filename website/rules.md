@@ -14,7 +14,7 @@
 
     ---
 
-    demo 時拔掉筆電，Arduino Nano 自己甩上、平衡。接著筆電跑的控制器不算。
+    demo 時由助教把你們繳交的程式碼燒進 Nano。筆電會接著，負責供電和記錄分數，甩上、平衡的動作全部由 Nano 上的網路計算。在筆電上算動作的控制器（例如 `08_test_policy`）不算。
 
 -   :material-brain:{ .lg .middle } **一定要用 RL**
 
