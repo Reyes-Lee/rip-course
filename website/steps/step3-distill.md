@@ -6,7 +6,7 @@
   <span class="rip-chip">:material-file-outline: 產出 distill_h16_dagger_dev/student.pt</span>
 </div>
 
-256×256 的教師塞不進 Nano。這一步用「模仿學習」把它壓成 16 個隱藏神經元的學生網路。
+256×256 的教師網路太大，放不進 Nano。這一步用「模仿學習」把它縮小成只有 16 個隱藏神經元的學生網路。
 
 ## 操作步驟 { #run }
 
@@ -54,24 +54,24 @@
   <div class="rip-flow__node rip-flow__node--rig" markdown="span">教師 256×256<small>Step 2 微調完的 best_model.zip</small></div>
   <div class="rip-flow__edge" markdown="span">對 replay buffer 的每個狀態標動作<span>BC</span></div>
   <div class="rip-flow__node" markdown="span">學生 H=16（第 0 輪）<small>只模仿過教師看過的狀態</small></div>
-  <div class="rip-flow__edge rip-flow__edge--loop" markdown="span">學生自己開 → 收集走到的狀態 → 請教師標動作 → 重新訓練，重複數輪<span>DAgger</span></div>
+  <div class="rip-flow__edge rip-flow__edge--loop" markdown="span">學生自己控制 → 收集走到的狀態 → 請教師標動作 → 重新訓練，重複數輪<span>DAgger</span></div>
   <div class="rip-flow__node rip-flow__node--rig" markdown="span">DAgger 學生<small>student.pt</small></div>
 </div>
 
 1. **行為克隆（BC）**：用教師對 replay buffer 裡每個狀態的動作當標籤，做監督式學習。
-2. **DAgger**：讓學生自己開，收集學生會走到的狀態，再請教師標籤、重新訓練。rollout 在「Nano 獨立執行」的傳輸條件下進行（`--transport device`）。
+2. **DAgger**：讓學生自己控制擺錘，收集學生會走到的狀態，再請教師標上動作、重新訓練。rollout 在「Nano 獨立執行」的傳輸條件下進行（`--transport device`）。
 
 ??? question "為什麼只做 BC 不夠？"
 
-    倒單擺在直立附近是不穩定的，學生一點點誤差就會走到教師沒示範過的狀態（covariate shift）。作者實測 BC 學生的閉迴路分數只有 0.12。
+    倒單擺在直立附近是不穩定的，學生只要有一點點誤差，就會走到教師沒示範過的狀態（covariate shift）。作者實測 BC 學生的閉迴路分數只有 0.12。
 
 ??? question "為什麼不直接用 RL 訓練小網路？"
 
-    作者試過兩次，小網路在模擬與接線微調都很好，一旦獨立執行就只剩約 0.24。RL 容易學出利用特定時序的銳利控制器，傳輸條件一變就壞；蒸餾學生輕微的欠擬合反而像降低增益，換來強健性。
+    作者試過兩次：小網路在模擬和接線微調時都表現很好，但一換成獨立執行就只剩約 0.24。RL 容易學出依賴特定時序、反應很激進的控制器，傳輸條件一變就失效；蒸餾出來的學生有輕微的欠擬合，效果反而像把增益調低，換來強健性。
 
 ??? question "為什麼是 16 個神經元？"
 
-    Nano 沒有浮點運算單元，每次乘加約 19 µs。H=16 約 12 ms，放得進 50 Hz 的 20 ms 週期；H=32 要 35–40 ms，迴路會掉到 25 Hz，平衡策略會變成繞圈。
+    Nano 沒有浮點運算單元，每次乘加約 19 µs。H=16 約 12 ms，放得進 50 Hz 的 20 ms 週期；H=32 要 35–40 ms，迴路會掉到 25 Hz，原本會平衡的策略會變成一直繞圈。
 
 ## 檢查點 { #checkpoint }
 
@@ -100,4 +100,4 @@ DAgger gate 要跟教師比、不跟絕對門檻比，是因為模擬會系統�
     1. Nano 燒 `LowLevelServer`，等擺錘靜止垂下。
     2. 執行 `tools/08_test_policy`。
     3. 清單輸入 `ftN/distill_h16_dagger_dev/student.pt` 那一個的編號。
-    4. `測試秒數 [30]:` 直接按 Enter，或輸入想測的秒數。學生是為獨立執行最佳化的，接線分數略低於教師是正常的。
+    4. `測試秒數 [30]:` 直接按 Enter，或輸入想測的秒數。學生是針對獨立執行最佳化的，接線分數略低於教師是正常的。

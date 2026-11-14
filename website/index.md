@@ -17,7 +17,7 @@ hide:
 
 <p class="rip-hero__tag">TRAIN IN SIM · BALANCE FOR REAL</p>
 
-<p class="rip-hero__lead">用強化學習在 MuJoCo 裡訓練一支策略，搬到真實機台上微調，最後壓成 16 個神經元的小網路，燒進 Arduino Nano 獨立執行。</p>
+<p class="rip-hero__lead">用強化學習在 MuJoCo 裡訓練一支策略，搬到真實機台上微調，最後縮小成 16 個神經元的小網路，燒進 Arduino Nano 獨立執行。</p>
 
 <div class="rip-hero__actions" markdown>
 [開始準備 :material-arrow-right:](prepare/index.md){ .md-button .md-button--primary }
@@ -47,10 +47,10 @@ hide:
 每一步都有檢查點，**沒過不要往下走**。每一步的產出檔就是下一步的輸入。
 
 <ul class="rip-steps">
-  <li><a class="rip-step" href="steps/step0-sysid/"><span class="rip-step__n">STEP 0 · 實機 15 分</span><span class="rip-step__t">系統識別</span><span class="rip-step__d">量擺錘鉸鏈的摩擦，把模擬釘在你的機台上。</span><span class="rip-step__out">sysid_params.json</span></a></li>
+  <li><a class="rip-step" href="steps/step0-sysid/"><span class="rip-step__n">STEP 0 · 實機 15 分</span><span class="rip-step__t">系統識別</span><span class="rip-step__d">量擺錘鉸鏈的摩擦，讓模擬對上你的機台。</span><span class="rip-step__out">sysid_params.json</span></a></li>
   <li><a class="rip-step" href="steps/step1-train/"><span class="rip-step__n">STEP 1 · CPU 25–60 分</span><span class="rip-step__t">模擬訓練教師</span><span class="rip-step__d">三階段 domain randomization，訓練 256×256 的 SAC 策略。</span><span class="rip-step__out">v1_stage3/best_model.zip</span></a></li>
   <li><a class="rip-step" href="steps/step2-finetune/"><span class="rip-step__n">STEP 2 · 實機 15–50 分</span><span class="rip-step__t">實機微調</span><span class="rip-step__d">用 30–90 個真實回合，學會模擬沒涵蓋的動態。</span><span class="rip-step__out">ftN/best_model.zip</span></a></li>
-  <li><a class="rip-step" href="steps/step3-distill/"><span class="rip-step__n">STEP 3 · CPU 3 分</span><span class="rip-step__t">蒸餾學生</span><span class="rip-step__d">行為克隆＋DAgger，壓成 16 個神經元的小網路。</span><span class="rip-step__out">distill_h16_dagger_dev/student.pt</span></a></li>
+  <li><a class="rip-step" href="steps/step3-distill/"><span class="rip-step__n">STEP 3 · CPU 3 分</span><span class="rip-step__t">蒸餾學生</span><span class="rip-step__d">行為克隆＋DAgger，縮小成 16 個神經元的小網路。</span><span class="rip-step__out">distill_h16_dagger_dev/student.pt</span></a></li>
   <li><a class="rip-step" href="steps/step4-deploy/"><span class="rip-step__n">STEP 4 · 實機 5 分</span><span class="rip-step__t">燒錄與評分</span><span class="rip-step__d">燒進 Nano，拔掉電腦也能自己甩上、平衡。</span><span class="rip-step__out">policy_weights_student.h</span></a></li>
 </ul>
 
@@ -64,25 +64,25 @@ hide:
 
     ---
 
-    步進馬達轉動手臂，以「速度指令」換成加速度驅動，不是位置指令。
+    步進馬達帶動手臂。策略送出的是速度指令，由韌體換成加速度來驅動馬達，不是位置指令。
 
 -   :material-magnet:{ .lg .middle } **AS5600 磁性編碼器**
 
     ---
 
-    量擺錘角度，12-bit（4096 格／圈），I²C。整套系統對角度的認知都來自它。
+    量擺錘角度，12-bit（4096 格／圈），I²C。系統裡所有的擺錘角度都來自它。
 
 -   :material-chip:{ .lg .middle } **Arduino Nano**
 
     ---
 
-    ATmega328P、2 KB RAM、沒有浮點運算單元。最後策略就跑在它上面。
+    ATmega328P、2 KB RAM、沒有浮點運算單元。最後的策略就在它上面執行。
 
 -   :material-circle-multiple:{ .lg .middle } **10 元硬幣配重**
 
     ---
 
-    貼在擺錘外側、距鉸鏈 64 mm。整台機器唯一需要你認真量的尺寸。
+    貼在擺錘外側、距鉸鏈 64 mm。這是整台機台唯一需要你仔細對準的尺寸。
 
 </div>
 
@@ -90,9 +90,9 @@ hide:
 
 !!! tip "做這個專題時記住"
 
-    - **一次只處理一個問題。** 同時換兩樣東西，壞了就不知道是誰。
+    - **一次只處理一個問題。** 同時換兩樣東西，出問題時就不知道是哪一樣造成的。
     - **訓練、微調、部署的設定必須一致。** 控制頻率、動作尺度、堆疊幀數、平滑窗口三處要一樣；工具會自動檢查，不一致就中止，不要繞過它。
-    - **用實機的誠實指標判斷好壞。** 模擬分不出策略優劣：作者的冠軍學生在模擬只有 0.655，實機是 0.996。
+    - **用實機的誠實指標判斷好壞。** 模擬分數分不出策略的好壞：作者的冠軍學生在模擬只有 0.655，實機是 0.996。
 
 ## 來源
 

@@ -1,6 +1,6 @@
 # 工具一覽
 
-Nano 用 USB-C 線接上電腦、燒好對應的韌體，再執行工具，就會由 Python 直接控制機台。執行方式：macOS 在 Finder 打開 `tools/macOS/<名稱>.command`，Windows 在檔案總管打開 `tools\Windows\<名稱>.bat`（兩者都是點兩下）。網站其他地方寫「執行 `tools/05_sysid`」，指的就是你的系統資料夾裡的那一個。每個工具開頭會提醒你該燒哪個韌體，結束時印出結果與檔案位置。
+Nano 用 USB-C 線接上電腦、燒好對應的韌體，再執行工具，就會由 Python 直接控制機台。執行方式：macOS 在 Finder 打開 `tools/macOS/<名稱>.command`，Windows 在檔案總管打開 `tools\Windows\<名稱>.bat`（兩者都是點兩下）。網站寫「執行 `tools/05_sysid`」時，指的是你的作業系統資料夾裡的那一個。每個工具開頭會提醒你該燒哪個韌體，結束時印出結果與檔案位置。
 
 | 工具 | 先燒的韌體 | 做什麼 | 用在 |
 | --- | --- | --- | --- |
@@ -37,7 +37,7 @@ Nano 用 USB-C 線接上電腦、燒好對應的韌體，再執行工具，就�
 
     ---
 
-    例如畫面問 `run 名稱 [g3_v1]:`，直接按 Enter 就是用 `g3_v1`。
+    例如畫面問 `run 名稱 [v1]:`，直接按 Enter 就是用 `v1`。
 
 -   :material-stop-circle-outline:{ .lg .middle } **中途停止：++ctrl+c++**
 
