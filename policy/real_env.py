@@ -267,8 +267,8 @@ class RealRotaryInvertedPendulumEnv(gym.Env):
             self._client.__enter__()
             if not self._client.wait_until_ready():
                 raise RuntimeError(
-                    "LowLevelServer did not respond. Is the sketch flashed and "
-                    "the port correct?"
+                    "LowLevelServer 沒有回應。確認 Nano 燒的是 LowLevelServer、"
+                    "序列埠正確，而且 Arduino IDE 的序列埠監控已關掉。"
                 )
         return self._client
 
@@ -305,10 +305,9 @@ class RealRotaryInvertedPendulumEnv(gym.Env):
                 consecutive_rest = 0
             time.sleep(poll_dt_s)
         print(
-            f"  [warn] pendulum did not settle within "
-            f"{self.reset_settle_s:.1f}s (last |pen_vel|={abs(last_pen_vel):.3f} "
-            f"rad/s, threshold={REST_THRESHOLD_RAD_S:.3f}); "
-            f"skipping tare for this episode"
+            f"  [警告] 擺錘 {self.reset_settle_s:.1f} 秒內沒有靜止"
+            f"（最後的擺錘角速度 {abs(last_pen_vel):.3f} rad/s，門檻 {REST_THRESHOLD_RAD_S:.3f}），"
+            f"這一回合不重新標定擺錘零點"
         )
         return False
 
@@ -381,8 +380,9 @@ class RealRotaryInvertedPendulumEnv(gym.Env):
         # encoder zero, polluting the bias signal we rely on.
         client.disengage_motor()
         self._motor_engaged = False
-        print("  [reset] re-centre the arm and let the pendulum settle — the "
-              "next episode starts once it is at rest")
+        print("  [回合之間] 馬達已斷電。現在用手把手臂轉回正中間（對齊膠帶），"
+              "從前面轉回來、不要繞到後面；轉好就放手，手離開機台。"
+              "擺錘靜止約 1 秒後下一回合會自動開始。")
         rested = self._wait_for_pendulum_rest(client)
 
         # Re-tare the pendulum encoder — but ONLY if the pendulum is
@@ -403,8 +403,8 @@ class RealRotaryInvertedPendulumEnv(gym.Env):
             ok = client.tare_pendulum()
             if not ok:
                 raise RuntimeError(
-                    "tare_pendulum did not ack — re-flash LowLevelServer.ino "
-                    "to pick up the CMD_TARE_PENDULUM=0x06 handler."
+                    "標定擺錘零點（tare_pendulum）沒有回應：請重新燒錄課程 repo 的 "
+                    "LowLevelServer.ino（需要 CMD_TARE_PENDULUM=0x06）。"
                 )
             # Verify the tare captured HANGING, not a perfectly-balanced
             # upright. A well-balancing policy can leave the pendulum at
@@ -426,11 +426,11 @@ class RealRotaryInvertedPendulumEnv(gym.Env):
                     time.sleep(0.05)
                 if not fell:
                     break
-                print("  [reset] tare captured a balanced-upright pendulum "
-                      "(it fell during verification) — re-settling + re-taring")
+                print("  [回合之間] 剛才標定到的是平衡在正上方的擺錘（確認時倒下來了），"
+                      "等它靜止後重新標定")
                 self._wait_for_pendulum_rest(client)
                 if not client.tare_pendulum():
-                    raise RuntimeError("tare_pendulum did not ack on re-tare")
+                    raise RuntimeError("重新標定擺錘零點（tare_pendulum）沒有回應")
 
         # Read current state, engage, then prime the firmware's command state.
         # Priming must come AFTER engage: the firmware drops SET_ACCEL /
@@ -446,8 +446,8 @@ class RealRotaryInvertedPendulumEnv(gym.Env):
         # re-centred the arm; otherwise the stale position drifts further every
         # episode until it trips the hard-stop check.
         if not client.zero_motor():
-            raise RuntimeError("zero_motor did not ack — firmware older "
-                               "than CMD_ZERO_MOTOR (0x08)?")
+            raise RuntimeError("手臂歸零（zero_motor）沒有回應：LowLevelServer 韌體太舊"
+                               "（沒有 CMD_ZERO_MOTOR 0x08），請重新燒錄課程 repo 的版本。")
         motor_pos = 0.0
 
         if self.action_mode == "accel":

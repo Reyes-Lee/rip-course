@@ -39,7 +39,9 @@ Resume from a previous async session preserving the real-data buffer:
 from __future__ import annotations
 
 import argparse
+import contextlib
 import csv
+import io
 import signal
 import sys
 import threading
@@ -115,12 +117,11 @@ def _save_artifacts(model: SAC, run_dir: Path, *, suffix: str = "") -> None:
     # invisibly, because SB3 pre-allocates the arrays so the file size is
     # unchanged and the printed count comes from the live object, not the file.
     if model.replay_buffer.size() == 0 and buf_path.exists():
-        print(f"  REFUSING to overwrite {buf_path.name} with an empty buffer "
-              f"(this session collected nothing). Existing file kept.")
-        print(f"  saved policy → {pol_path.name}")
+        print(f"  這次沒有收集到任何資料，不會用空的 buffer 覆蓋 {buf_path.name}，保留原本的檔案。")
+        print(f"  已存模型 → {pol_path.name}")
         return
     model.save_replay_buffer(buf_path)
-    print(f"  saved policy → {pol_path.name}, buffer ({model.replay_buffer.size()} transitions) → {buf_path.name}")
+    print(f"  已存模型 → {pol_path.name}，replay buffer（{model.replay_buffer.size()} 筆資料）→ {buf_path.name}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -344,7 +345,7 @@ def main(argv: list[str] | None = None) -> int:
     run_name = args.run_name or f"async_finetune_{time.strftime('%Y-%m-%d_%H%M')}"
     run_dir = RUNS_ROOT / run_name
     run_dir.mkdir(parents=True, exist_ok=True)
-    print(f"Run directory: {run_dir}")
+    print(f"輸出資料夾：{run_dir}")
 
     # Record provenance for this run's own checkpoints: carry the source
     # policy's config forward, overridden by the knobs used here.
@@ -380,7 +381,7 @@ def main(argv: list[str] | None = None) -> int:
     env_kwargs["reward_action_rate_weight"] = reward_action_rate_weight
     env_kwargs["reward_stillness_bonus_weight"] = reward_stillness_bonus_weight
     env = RealRotaryInvertedPendulumEnv(**env_kwargs)
-    print(f"Control: {args.control_freq} Hz, action_mode={args.action_mode}")
+    print(f"控制：{args.control_freq} Hz，動作模式 {args.action_mode}")
 
     # Mirror map for the augmentation, derived from the env's ACTUAL
     # observation space rather than from the flags, so a K/layout mismatch
@@ -393,11 +394,12 @@ def main(argv: list[str] | None = None) -> int:
             int(env.observation_space.shape[0]),
             obs_history_len=obs_history_len,
         )
-        print(f"Mirror augmentation ON — every rig transition is stored with "
-              f"its mirror (K={obs_history_len}, obs_dim={len(obs_sign)})")
+        print(f"鏡像增強：開啟，每筆實機資料同時存一份鏡像（K={obs_history_len}，obs_dim={len(obs_sign)}）")
 
-    print(f"Loading policy from {args.policy}")
-    model = SAC.load(args.policy, env=env, device=args.device)
+    print(f"載入模型：{args.policy}")
+    # SB3 載入時會印兩行英文的 "Wrapping the env..."，對學生沒有資訊量，先吞掉。
+    with contextlib.redirect_stdout(io.StringIO()):
+        model = SAC.load(args.policy, env=env, device=args.device)
     # Override the loaded checkpoint's tensorboard_log (often a foreign
     # absolute path from the box that trained it).
     model.tensorboard_log = str(run_dir / "tb")
@@ -410,17 +412,17 @@ def main(argv: list[str] | None = None) -> int:
     if args.resume_buffer:
         rb_path = Path(args.resume_buffer)
         if not rb_path.exists():
-            print(f"ERROR: --resume-buffer path does not exist: {rb_path}", file=sys.stderr)
+            print(f"錯誤：找不到 --resume-buffer 指定的檔案：{rb_path}", file=sys.stderr)
             return 2
-        print(f"Loading replay buffer from {rb_path}")
+        print(f"載入 replay buffer：{rb_path}")
         model.load_replay_buffer(str(rb_path))
         # Sanity check spaces match
         if model.replay_buffer.observation_space.shape != env.observation_space.shape:
-            print("ERROR: loaded buffer's observation space does not match env's. "
-                  "Was the buffer collected with a different obs construction?",
+            print("錯誤：載入的 replay buffer 觀測維度跟現在的設定不一樣，"
+                  "可能是用不同的觀測設定收集的。",
                   file=sys.stderr)
             return 2
-        print(f"  loaded {model.replay_buffer.size()} transitions")
+        print(f"  已載入 {model.replay_buffer.size()} 筆資料")
 
     # Reset num_timesteps to reflect actual real-data buffer size — checkpoints
     # carry their sim-training step counter (e.g. 280k from the curriculum)
@@ -435,7 +437,7 @@ def main(argv: list[str] | None = None) -> int:
     # bypass since we're not calling `learn()`. Build an equivalent logger
     # by hand.
     model._logger = configure_logger(
-        verbose=1,
+        verbose=0,  # 課程版：SB3 的英文統計表只寫進 tensorboard，不印到畫面
         tensorboard_log=str(run_dir / "tb"),
         tb_log_name="async",
         reset_num_timesteps=True,
@@ -450,7 +452,7 @@ def main(argv: list[str] | None = None) -> int:
     # Signal handlers (main thread only — Python guarantee).
     def _on_signal(*_):
         if not stop_flag.is_set():
-            print("\nSIGINT/SIGTERM received — shutting down cleanly.")
+            print("\n收到 Ctrl+C／停止訊號：馬達斷電、存檔後結束，請稍等。")
             stop_flag.set()
             env.disengage_safely()
     signal.signal(signal.SIGINT, _on_signal)
@@ -477,11 +479,10 @@ def main(argv: list[str] | None = None) -> int:
         ])
         timing_f.flush()
 
-    print(f"\nStarting async fine-tune: {args.episodes} episodes × "
-          f"{args.episode_length_s} s @ {args.control_freq} Hz, "
-          f"K={args.gradient_steps}, lr={args.learning_rate}")
-    print(f"Buffer starts with {model.replay_buffer.size()} transitions, "
-          f"learning_starts={args.learning_starts}")
+    print(f"\n開始實機微調：{args.episodes} 回合 × {args.episode_length_s} 秒，"
+          f"{args.control_freq} Hz，每次更新 {args.gradient_steps} 個梯度步，學習率 {args.learning_rate}")
+    print(f"replay buffer 目前有 {model.replay_buffer.size()} 筆資料，"
+          f"累積到 {args.learning_starts} 筆後開始更新模型")
 
     # Rolling window over the last 100 episodes for SB3-style running-mean
     # scalars (rollout/ep_rew_mean, rollout/ep_len_mean). Same default
@@ -496,13 +497,12 @@ def main(argv: list[str] | None = None) -> int:
             if stop_flag.is_set():
                 break
             is_eval = args.eval_every > 0 and (ep_idx + 1) % args.eval_every == 0
-            print(f"\n[ep {ep_idx + 1}/{args.episodes}] reset (settle "
-                  f"{args.reset_settle_s} s) → engage → run"
-                  + ("  [deterministic eval]" if is_eval else ""))
+            print(f"\n[第 {ep_idx + 1}/{args.episodes} 回合]"
+                  + ("（評估回合：不加探索雜訊，分數用來挑 best_model）" if is_eval else ""))
             try:
                 env.reset()
             except Exception as e:
-                print(f"ERROR during env.reset(): {e}", file=sys.stderr)
+                print(f"錯誤：回合開始前的重設失敗：{e}", file=sys.stderr)
                 break
 
             loop = AsyncControlLoop(
@@ -556,22 +556,20 @@ def main(argv: list[str] | None = None) -> int:
 
             ep_stats = loop.last_episode_stats
             if ep_stats is None:
-                print(f"  WARNING: episode {ep_idx} produced no stats "
-                      "(thread crashed before completion).", file=sys.stderr)
+                print(f"  警告：第 {ep_idx + 1} 回合沒有產生統計（控制執行緒提前結束）。", file=sys.stderr)
                 continue
 
-            print(f"  steps={ep_stats.n_steps}  reward={ep_stats.cumulative_reward:+.1f}  "
-                  f"mean_dt={ep_stats.mean_dt_ms:.2f}ms  "
-                  f"max_overrun={ep_stats.tick_stats.max_overrun_ms:.2f}ms  "
-                  f"violations={ep_stats.tick_stats.n_violations}  "
-                  f"train_calls={n_train}  train_s={train_s:.2f}")
+            print(f"  步數 {ep_stats.n_steps}  reward {ep_stats.cumulative_reward:+.1f}  "
+                  f"平均週期 mean_dt={ep_stats.mean_dt_ms:.2f}ms  "
+                  f"最大延遲 max_overrun={ep_stats.tick_stats.max_overrun_ms:.2f}ms  "
+                  f"延遲次數 violations={ep_stats.tick_stats.n_violations}  "
+                  f"模型更新 {n_train} 次（{train_s:.2f} 秒）")
             _log_episode(ep_stats, n_train, train_s)
 
             if is_eval and ep_stats.cumulative_reward > best_eval_reward:
                 best_eval_reward = ep_stats.cumulative_reward
                 model.save(run_dir / "best_model.zip")
-                print(f"  new best deterministic eval ({best_eval_reward:+.1f}) "
-                      f"→ best_model.zip")
+                print(f"  評估回合分數創新高（{best_eval_reward:+.1f}）→ 已存成 best_model.zip")
 
             # Flush logger to TB once per episode. SB3's `train()` records
             # scalars internally but doesn't dump — that normally happens in
@@ -608,10 +606,10 @@ def main(argv: list[str] | None = None) -> int:
             env.close()
         except Exception:
             pass
-        print("\nFinal save:")
+        print("\n最後存檔：")
         _save_artifacts(model, run_dir)
         timing_f.close()
-        print(f"Run artifacts in: {run_dir}")
+        print(f"所有檔案在：{run_dir}")
 
     return 0
 

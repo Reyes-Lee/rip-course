@@ -127,8 +127,10 @@ def main() -> int:
     port = get_port()
     lo, hi = episodes * (length + 5) / 60, episodes * (length + 15) / 60
     info(f"每回合 {length:g} 秒；回合之間馬達斷電，最多等 15 秒讓擺錘停下來。這一段約 {lo:.0f}–{hi:.0f} 分鐘。")
+    warn("每回合結束、畫面出現「[回合之間] 馬達已斷電」時，要馬上用手把手臂轉回正中間（對齊膠帶）：")
+    warn("  從前面轉回來，不要繞到後面（後方有接線）；轉好就放手。工具不會自動回正。")
     info("前幾個回合要聽馬達：嘶嘶或磨擦聲代表失步，立刻按 Ctrl + C 停止。")
-    wait_enter("擺錘靜止垂下、手臂周圍淨空後按 Enter")
+    wait_enter("手臂轉到正中間（對齊膠帶）、擺錘靜止垂下、手臂周圍淨空後按 Enter")
     # 每一段開始前都確認方向沒變（AS5600 的 DIR 腳沒接時方向可能改變），最多浪費一段。
     require_or_exit(port, quick_check=True)
     code, out = run_policy_script([*args, "--port", port, "--run-name", run_dir.name, "--params-path", params],

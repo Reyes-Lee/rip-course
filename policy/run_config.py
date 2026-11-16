@@ -84,17 +84,16 @@ def check_config(policy_path: str | Path, expected: dict, *,
             same = cli_val == saved_val
         if not same:
             mismatches.append(
-                f"  {key}: policy trained with {saved_val!r}, CLI gives {cli_val!r}"
+                f"  {key}：模型訓練時是 {saved_val!r}，這次是 {cli_val!r}"
             )
     if not mismatches:
         return
-    msg = (f"config mismatch against the policy's {CONFIG_NAME}:\n"
+    msg = (f"設定跟模型的 {CONFIG_NAME} 不一致：\n"
            + "\n".join(mismatches))
     if ignore:
-        print(f"WARNING: {msg}\n  (--ignore-config-mismatch given; continuing)")
+        print(f"警告：{msg}\n  （有加 --ignore-config-mismatch，照樣執行）")
     else:
         raise SystemExit(
-            f"ERROR: {msg}\n"
-            "Fix the flags to match the training config, or pass "
-            "--ignore-config-mismatch to run anyway."
+            f"錯誤：{msg}\n"
+            "請把設定改成跟訓練時一樣，或加上 --ignore-config-mismatch 照樣執行。"
         )
