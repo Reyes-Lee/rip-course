@@ -24,6 +24,7 @@ def main() -> int:
     print()
     info(f"紀錄檔：policy/{rel(log)}")
     info("照順序看：1. 第一行頻率約 50 Hz　2. sample→command 延遲　3. balanced fraction 等指標。")
+    info("swing-up time 是按下 Enter（Nano 開始甩）到第一次連續平衡滿 1 秒的秒數；never caught 代表整段都沒接住。")
     return code
 
 

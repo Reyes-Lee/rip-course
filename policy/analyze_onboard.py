@@ -23,6 +23,10 @@ sketch reboots, re-zeroes the encoder (pendulum must hang still!), and
 re-engages after its 1 s settle delay. Capture starts after boot. If the
 sketch was already running, pass --rearm: the reboot drops the pendulum
 mid-swing, so the zero must be re-captured once the rig is still again.
+
+課程版：--rearm 時遙測在送 'E' 之前就打開，從串流裡 state 0→1 的那一拍
+得到啟動時刻，另外印出甩上時間（啟動到第一次連續平衡滿 1 秒）。平衡指標
+照舊只算啟動 --settle-s 秒之後的部分。
 """
 
 from __future__ import annotations
@@ -62,6 +66,11 @@ def rearm(ser: serial.Serial) -> None:
         input("準備好就按 Enter（Nano 會在這時抓零點並開始甩，之後不要碰機台）")
     except EOFError:
         pass
+    # 遙測先打開、隔幾拍再 'E'：串流裡會有幾行 state=0，第一行 state=1
+    # 就是啟動那一拍（Nano 的時鐘，誤差一個控制週期），甩上時間從這裡算。
+    ser.reset_input_buffer()
+    ser.write(b"P")
+    time.sleep(0.2)
     ser.write(b"E")
     print("已啟動。")
 
@@ -89,12 +98,11 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Opening {args.port} (this resets the Nano — pendulum should hang still)")
     ser = serial.Serial(args.port, args.baud, timeout=2.0)
     if args.rearm:
-        rearm(ser)
-        time.sleep(0.5)  # engage is immediate; keep the same swing-up allowance
+        rearm(ser)  # leaves telemetry enabled, engage included in the stream
     else:
         time.sleep(3.0)  # bootloader + setup() + magnet check + settle delay
-    ser.reset_input_buffer()
-    ser.write(b"P")  # enable telemetry
+        ser.reset_input_buffer()
+        ser.write(b"P")  # enable telemetry
 
     rows = []
     t_end = time.monotonic() + args.duration_s + args.settle_s
@@ -137,8 +145,24 @@ def main(argv: list[str] | None = None) -> int:
     v_cmd = arr[:, 11] / 1000.0
     vel_span_ms = arr[:, 12] / 1000.0
 
+    # 啟動時刻：--rearm 時是串流裡第一行 RUNNING（前面有 state=0 的行）；
+    # 沒有 --rearm 時串流從啟動之後才開始，沿用第一行。
+    t_engage = 0.0
+    swingup_s = None
+    if args.rearm and running.any():
+        i0 = int(np.argmax(running))
+        t_engage = float(t_s[i0])
+        if i0 == 0:
+            print("*** 串流第一行就已經在跑，甩上時間會少算一點 ***")
+        # 甩上：從啟動那一拍到第一次撞到硬限位（或結束）之前的連續 RUNNING 段。
+        stop = i0 + int(np.argmin(running[i0:])) if not running[i0:].all() else len(running)
+        if stop - i0 >= 50:
+            seg = balance_metrics.score(phi=phi[i0:stop], motor_pos=motor_pos[i0:stop],
+                                        action=action[i0:stop], t_s=t_s[i0:stop])
+            swingup_s = seg.first_catch_s
+
     # Drop the settle window and any non-RUNNING rows (hard-limit trips).
-    keep = (t_s >= args.settle_s) & running
+    keep = (t_s - t_engage >= args.settle_s) & running
     t_s, motor_pos, phi, action = t_s[keep], motor_pos[keep], phi[keep], action[keep]
     motor_vel, pen_vel, v_cmd = motor_vel[keep], pen_vel[keep], v_cmd[keep]
     vel_span_ms = vel_span_ms[keep]
@@ -162,6 +186,11 @@ def main(argv: list[str] | None = None) -> int:
           f"{n * dt:.1f}s scored, {overruns} loop overruns):")
     for line in m.report_lines():
         print(line)
+    if args.rearm:
+        if swingup_s is not None:
+            print(f"  swing-up time (engage -> first 1 s balance): {swingup_s:.2f} s")
+        else:
+            print("  swing-up time (engage -> first 1 s balance): never caught")
 
     if latency_us is not None:
         lat = latency_us[keep]
@@ -200,6 +229,8 @@ def main(argv: list[str] | None = None) -> int:
         # away a capture that already cost rig time.
         Path(args.log).parent.mkdir(parents=True, exist_ok=True)
         extra = {} if latency_us is None else {"latency_us": latency_us[keep]}
+        if args.rearm:
+            extra["swingup_s"] = np.nan if swingup_s is None else swingup_s
         np.savez_compressed(args.log, t_s=t_s, motor_pos_rad=motor_pos,
                             pendulum_pos_rad=phi, action=action,
                             motor_vel_rad_s=motor_vel, pendulum_vel_rad_s=pen_vel,

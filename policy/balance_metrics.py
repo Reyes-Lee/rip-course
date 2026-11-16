@@ -92,6 +92,10 @@ class BalanceMetrics:
     # 課程版：離垂下的最大擺幅（度）。來回擺也會累加 gross revolutions，
     # 只看那個數字分不出「甩不上去」和「繞圈」。
     max_swing_deg: float | None = None
+    # 課程版：從第一個樣本到第一次連續平衡滿 1 秒（第一次 catch）開始的秒數；
+    # 從沒接住是 None。只有軌跡從啟動那一刻開始時才等於「甩上時間」，
+    # 所以不放進 report_lines，由呼叫端決定要不要印。
+    first_catch_s: float | None = None
 
     @property
     def has_calmness(self) -> bool:
@@ -243,10 +247,13 @@ def score(*, phi, motor_pos, action, t_s=None, hz=None, motor_cmd=None
 
     one_s = max(1, int(round(1.0 / dt)))
     best = cur = catches = 0
-    for b in balanced:
+    first_catch_s = None
+    for i, b in enumerate(balanced):
         cur = cur + 1 if b else 0
         if cur == one_s:
             catches += 1
+            if first_catch_s is None:
+                first_catch_s = float(t_s[i - one_s + 1] - t_s[0])
         best = max(best, cur)
     travel_rev = float(np.sum(np.abs(np.diff(np.unwrap(phi)))) / (2 * np.pi))
 
@@ -272,6 +279,7 @@ def score(*, phi, motor_pos, action, t_s=None, hz=None, motor_cmd=None
         verdict=verdict,
         balanced_mask=balanced,
         max_swing_deg=max_swing_deg,
+        first_catch_s=first_catch_s,
         **_direction_stats(theta, pen_vel, balanced, one_s),
     )
 
