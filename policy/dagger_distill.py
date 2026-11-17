@@ -62,7 +62,8 @@ TRANSPORTS = {
 
 
 def make_env(cfg: dict, *, dr: bool, transport: str,
-             episode_length_s: float = 8.0) -> RotaryInvertedPendulumEnv:
+             episode_length_s: float = 8.0,
+             obs_staleness_s: float | None = None) -> RotaryInvertedPendulumEnv:
     (delay_range, lag_range), (gate_delay, gate_lag, gate_stale) = TRANSPORTS[transport]
     kwargs = dict(
         # Which rig's measured friction to build the sim from; inherited from
@@ -85,7 +86,9 @@ def make_env(cfg: dict, *, dr: bool, transport: str,
         kwargs.update(dr_theta_bias_max_rad=0.0,
                       action_delay_steps=gate_delay,
                       action_lag_tau_s=gate_lag)
-        if gate_stale is not None:
+        if obs_staleness_s is not None:
+            kwargs["obs_staleness_s"] = obs_staleness_s
+        elif gate_stale is not None:
             kwargs["obs_staleness_s"] = gate_stale
     for key in ("max_accel_rad_s2", "max_velocity_rad_s", "max_action_delta_rad"):
         if cfg.get(key) is not None:

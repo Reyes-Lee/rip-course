@@ -69,6 +69,11 @@
  * latency_* are the sample->command delay (what the sim calls
  * obs_staleness_s); analyze_onboard.py treats them as optional so older
  * seven-column captures still parse.
+ *
+ * 進階任務：額外延遲（latency_profile.h）。policy 讀的樣本可以比最新的再舊
+ * extra_ms，另外每一拍再隨機多 0..jitter_ms，都以 2 ms（取樣週期）為單位，
+ * 依 engage 後的秒數分段。課程版的 latency_profile.h 不注入任何延遲。
+ * 遙測的位置來自最新樣本（不受注入影響），latency_us 則包含注入的延遲。
  */
 
 #include <FastAccelStepper.h>
@@ -93,6 +98,20 @@
 #endif
 #endif
 #include POLICY_WEIGHTS_H
+
+// 延遲注入設定。沒有這個檔就不注入（等同課程版）。
+struct LatencyStage { uint16_t start_s; uint8_t extra_ms; uint8_t jitter_ms; };
+#if defined(__has_include)
+#if __has_include("latency_profile.h")
+#include "latency_profile.h"
+#endif
+#endif
+#ifndef LATENCY_STAGES
+#define LATENCY_STAGES { {0, 0, 0} }
+#endif
+#ifndef LATENCY_PROFILE_NAME
+#define LATENCY_PROFILE_NAME "none"
+#endif
 
 // =============================================================================
 // PINS
@@ -191,8 +210,15 @@ const float MOTOR_HARD_LIMIT_RAD = 2.30383f;   // 132° × π/180
 // policy was trained and fine-tuned on exactly these statistics.
 // =============================================================================
 const uint16_t SAMPLE_PERIOD_US = 2000;
-const uint8_t SAMPLE_BUFFER_SIZE = 16;
+const uint8_t SAMPLE_BUFFER_SIZE = 28;
 const uint8_t VEL_WINDOW = 5;
+// Oldest sample the injected delay may reach while still leaving a full
+// velocity window behind it: 22 samples = 44 ms.
+const uint8_t MAX_DELAY_SAMPLES = SAMPLE_BUFFER_SIZE - VEL_WINDOW - 1;
+
+static const LatencyStage latency_stages[] = LATENCY_STAGES;
+const uint8_t N_LATENCY_STAGES = sizeof(latency_stages) / sizeof(latency_stages[0]);
+static uint32_t engaged_ms = 0;
 
 static int32_t motor_step_buf[SAMPLE_BUFFER_SIZE];
 static float pen_rad_buf[SAMPLE_BUFFER_SIZE];
@@ -346,11 +372,26 @@ static uint32_t used_sample_us = 0;
 static uint16_t latency_us = 0;
 static uint16_t latency_max_us = 0;
 
-/** GET_STATE-equivalent snapshot: newest positions + window-diff velocities. */
+/** Samples to step back from the newest this tick (latency_profile.h). */
+static uint8_t injected_delay_samples()
+{
+    uint32_t s = (millis() - engaged_ms) / 1000UL;
+    uint8_t i = 0;
+    while (i + 1 < N_LATENCY_STAGES && s >= latency_stages[i + 1].start_s) i++;
+    uint8_t d = latency_stages[i].extra_ms / 2;
+    uint8_t j = latency_stages[i].jitter_ms / 2;
+    if (j) d += (uint8_t)random(j + 1);
+    return d < MAX_DELAY_SAMPLES ? d : MAX_DELAY_SAMPLES;
+}
+
+/** GET_STATE-equivalent snapshot: positions + window-diff velocities from
+ *  the newest sample, or an older one when a delay is injected. */
 static void read_measured_state(float* motor_pos, float* phi,
                                 float* motor_vel, float* pen_vel)
 {
     uint8_t n_samples = buf_filled ? SAMPLE_BUFFER_SIZE : buf_head;
+    uint8_t d = injected_delay_samples();
+    if (n_samples > 0 && d > n_samples - 1) d = n_samples - 1;
     if (n_samples == 0)
     {
         used_sample_us = micros();
@@ -361,18 +402,18 @@ static void read_measured_state(float* motor_pos, float* phi,
         return;
     }
 
-    uint8_t newest = (uint8_t)((buf_head + SAMPLE_BUFFER_SIZE - 1) % SAMPLE_BUFFER_SIZE);
+    uint8_t newest = (uint8_t)((buf_head + SAMPLE_BUFFER_SIZE - 1 - d) % SAMPLE_BUFFER_SIZE);
     used_sample_us = time_us_buf[newest];
     *motor_pos = (float)motor_step_buf[newest] * RAD_PER_STEP;
     *phi = pen_rad_buf[newest];
 
-    if (n_samples < VEL_WINDOW)
+    if (n_samples < VEL_WINDOW + d)
     {
         *motor_vel = 0.0f;
         *pen_vel = 0.0f;
         return;
     }
-    uint8_t oldest = (uint8_t)((buf_head + SAMPLE_BUFFER_SIZE - VEL_WINDOW) % SAMPLE_BUFFER_SIZE);
+    uint8_t oldest = (uint8_t)((buf_head + SAMPLE_BUFFER_SIZE - VEL_WINDOW - d) % SAMPLE_BUFFER_SIZE);
     float dt_s = (float)((uint32_t)(time_us_buf[newest] - time_us_buf[oldest])) * 1e-6f;
     tele_vel_span_us = (uint16_t)((uint32_t)(time_us_buf[newest] - time_us_buf[oldest]));
     if (dt_s <= 0.0f)
@@ -500,6 +541,7 @@ static void transition_to_running()
     // of how the user reset/positioned the rig.
     reset_pendulum_tracking();
     stepper->setCurrentPosition(0);
+    engaged_ms = millis();
     prime_initial_state();
     stepper->enableOutputs();
     state = RUNNING;
@@ -753,6 +795,10 @@ void setup()
     {
         delay(500);
     }
+
+    randomSeed(1);
+    Serial.print(F("[boot] latency profile = "));
+    Serial.println(F(LATENCY_PROFILE_NAME));
 
     // Forward-pass self-test: compute the action for a fixed reference obs
     // and print it. Compare against the PyTorch student's prediction for
