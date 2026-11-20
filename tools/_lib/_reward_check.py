@@ -32,7 +32,8 @@ FIELDS = {
 
 THETA = [0.0, 0.1, -0.1, 0.2618, 1.0, -1.0, math.pi / 2, math.pi, -math.pi]
 PEN_VEL = [0.0, 2.0, -2.0, 10.0, -10.0, 40.0, -40.0]
-MOTOR_POS = [0.0, 1.0, -1.0, math.radians(125), -math.radians(125), math.radians(135), -math.radians(135)]
+MOTOR_POS = [0.0, 1.0, -1.0, math.radians(100), -math.radians(100), math.radians(110), -math.radians(110),
+             math.radians(135), -math.radians(135)]
 MOTOR_VEL = [0.0, 3.5, -3.5, 15.0, -15.0]
 ACTION = [0.0, 1.0, -1.0]
 PREV_MOTOR_VEL = [0.0, 15.0, -15.0]

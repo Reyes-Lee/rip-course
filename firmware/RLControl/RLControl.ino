@@ -178,11 +178,12 @@ const uint8_t FRAME_DIM = 6;
 #endif
 
 // Motor position safety limits in policy frame.
-//   SAFE_LIMIT (±125°) — matches MOTOR_SAFE_LIMIT_RAD in pendulum_env.py.
-//   HARD_LIMIT (±132°) — slightly inside the ±135° mechanical hard stops.
+//   SAFE_LIMIT (±100°) — matches MOTOR_SAFE_LIMIT_RAD in pendulum_env.py.
+//   HARD_LIMIT (±107°) — slightly inside the ±110° episode end in pendulum_env.py.
+//   (Course version: the author's were ±125° / ±132°; mechanical stops are ±135°.)
 //     Crossing it disengages the motor and returns to WAITING.
-const float MOTOR_SAFE_LIMIT_RAD = 2.18166f;   // 125° × π/180
-const float MOTOR_HARD_LIMIT_RAD = 2.30383f;   // 132° × π/180
+const float MOTOR_SAFE_LIMIT_RAD = 1.74533f;   // 100° × π/180
+const float MOTOR_HARD_LIMIT_RAD = 1.86750f;   // 107° × π/180
 
 // =============================================================================
 // MEASUREMENT SAMPLER — port of LowLevelServer's 500 Hz ring buffer.

@@ -22,9 +22,9 @@ Reset behaviour:
 Termination/Truncation:
     - Truncated when `episode_length_s` elapses.
     - Terminated (with `hard_stop_penalty`) if the motor
-      position |motor_pos| exceeds MOTOR_LIMIT_RAD (the firmware also
-      enforces this in hardware, so the policy should never command
-      past it; the check here is the policy's "feedback" if it does).
+      position |motor_pos| exceeds MOTOR_LIMIT_RAD (±110°). Commands stop
+      pushing outward at MOTOR_SAFE_LIMIT_RAD (±100°), where LowLevelServer
+      also brakes, so this is the policy's "feedback" for an overshoot.
 
 Safety:
     - SIGINT/SIGTERM handlers disengage the motor and close the serial
@@ -50,6 +50,7 @@ from reward import RewardWeights, compute_reward
 from pendulum_env import (
     MAX_ACTION_DELTA_RAD,
     MOTOR_LIMIT_RAD,
+    MOTOR_MECH_STOP_RAD,
     MOTOR_SAFE_LIMIT_RAD,
     PendulumParams,
     _wrap_pi,
@@ -233,9 +234,9 @@ class RealRotaryInvertedPendulumEnv(gym.Env):
         # Observation bounds match the sim env exactly. Last dim is
         # prev_action ∈ [-1, 1], present from the accel-mode rework.
         frame_high = (
-            np.array([MOTOR_LIMIT_RAD, 1.0, 1.0, 200.0, 200.0, 1.0], dtype=np.float32)
+            np.array([MOTOR_MECH_STOP_RAD, 1.0, 1.0, 200.0, 200.0, 1.0], dtype=np.float32)
             if self.obs_include_velocities
-            else np.array([MOTOR_LIMIT_RAD, 1.0, 1.0, 1.0], dtype=np.float32)
+            else np.array([MOTOR_MECH_STOP_RAD, 1.0, 1.0, 1.0], dtype=np.float32)
         )
         obs_high = np.tile(frame_high, self.obs_history_len)
         self.observation_space = spaces.Box(
