@@ -158,13 +158,24 @@ Nano 大約每 2 ms 讀一次擺錘和手臂的位置（推論時會稍微拉長
 
 一般任務的流程每一步都有預設值，那些值是為約 16 ms 的延遲挑的。下面列出每一步和延遲有關、工具裡就能改的設定。要改哪些、改成多少，由你們自己決定。每個工具在畫面上問「要改延遲設定嗎？」時回答 `y` 才會問這些；一般任務直接按 Enter，行為和以前一樣。
 
+!!! warning "延遲有兩種寫法：總延遲和加上去的延遲"
+
+    | 寫法 | 意思 | 用在哪裡 |
+    | --- | --- | --- |
+    | **總延遲** | 包含原本約 16 ms | `06_train_teacher` 的觀測延遲範圍、`09_distill` 的練習範圍和評分延遲 |
+    | **加上去的延遲** | 加在原本約 16 ms 上面 | `finetune_latency.h`、延遲階梯的 +X、`eval_latency.py` 的 `--extra-ms`、`latency_profile.h` |
+
+    例如要讓策略練到實機的 +70，06 和 09 的上限要設到約 86 ms（16 + 70），`finetune_latency.h` 則是寫 70。06 預設的 2–20 ms 只涵蓋到大約 +4。
+
+    所有範圍都是**每回合在上下限之間均勻抽一個**；上下限設成一樣就是固定延遲。
+
 | 步驟 | 工具 | 可以改的設定 | 預設 |
 | --- | --- | --- | --- |
-| Step 1 模擬訓練教師 | `06_train_teacher` | 觀測延遲的範圍（每回合在上下限之間抽一個）；第 3 階段的動作延遲（幾拍）和動作 lag 時間常數範圍 | 2–20 ms；1 拍；0–15 ms |
+| Step 1 模擬訓練教師 | `06_train_teacher` | 觀測延遲的範圍（總延遲，最多 100 ms）；第 3 階段的動作延遲（幾拍）和動作 lag 時間常數範圍 | 2–20 ms；1 拍；0–15 ms |
 | Step 1 | `06_train_teacher` | 「從現有的教師接著練、只跑第 3 階段」：換一組設定時不用三個階段從頭練 | 不用 |
-| Step 2 實機微調 | `firmware/LowLevelServer/finetune_latency.h` ＋ `07_finetune` | 每回合在 `FT_LATENCY_MIN_MS`–`FT_LATENCY_MAX_MS` 之間抽一個延遲，加在原本的延遲上面。改完要重新上傳 `LowLevelServer`；07 會印出這個設定並存進 `07_settings.json` | 0–0 ms（不加） |
+| Step 2 實機微調 | `firmware/LowLevelServer/finetune_latency.h` ＋ `07_finetune` | 每回合在 `FT_LATENCY_MIN_MS`–`FT_LATENCY_MAX_MS` 之間抽一個延遲，加在原本的延遲上面。改完要重新上傳 `LowLevelServer`；07 會印出這個設定並存進 `07_settings.json`。上限最多 36 ms（`LowLevelServer` 緩衝區的大小）；要更高得自己加大 `LowLevelServer.ino` 的 `BUFFER_SIZE` | 0–0 ms（不加） |
 | Step 2 | `07_finetune` | 「從教師重新開始一條新的微調」：換了教師時用，不接續舊的 replay buffer | 不用 |
-| Step 3 蒸餾 | `09_distill` | DAgger 練習時的觀測延遲範圍；選學生時用哪些延遲評分（可以給好幾個，取平均） | 2–10 ms；15.6 ms |
+| Step 3 蒸餾 | `09_distill` | DAgger 練習時的觀測延遲範圍（總延遲，最多 100 ms）；選學生時用哪些延遲評分（總延遲）（可以給好幾個，取平均） | 2–10 ms；15.6 ms |
 | 模擬裡測 | `eval_latency.py` | 見[上一節](#sim) | — |
 | 實機上測 | `11_score_onboard` 的延遲階梯 | 見[練習](#practice) | — |
 
