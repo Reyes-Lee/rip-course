@@ -61,10 +61,18 @@ HERE = Path(__file__).resolve().parent
 # `--params-path` for any other rig; see reference/python.md.
 DEFAULT_PARAMS_PATH = HERE / "sysid_params_rig1.json"
 
-# Hard-stop on the motor joint. Matches the lid-boss mechanical limit of ±135°,
-# but we clamp the policy at ±125° so the policy never *commands* a stop hit.
-MOTOR_LIMIT_RAD = math.radians(135.0)
-MOTOR_SAFE_LIMIT_RAD = math.radians(125.0)
+# Arm angle limits (course version: narrowed from the author's ±125° / ±135°).
+#   MOTOR_SAFE_LIMIT_RAD  ±100°  the policy's commands stop pushing outward here
+#                                (LowLevelServer / RLControl brake at the same angle).
+#   MOTOR_LIMIT_RAD       ±110°  episode ends with the hard-stop penalty here; the
+#                                10° gap leaves room for braking overshoot.
+#   MOTOR_MECH_STOP_RAD   ±135°  the lid-boss mechanical limit. Used for the MJCF
+#                                joint range and the observation-space bound; the
+#                                bound is kept at ±135° so models saved before the
+#                                limits changed still load (SB3 compares spaces).
+MOTOR_SAFE_LIMIT_RAD = math.radians(100.0)
+MOTOR_LIMIT_RAD = math.radians(110.0)
+MOTOR_MECH_STOP_RAD = math.radians(135.0)
 
 # Arm geometry, measured 2026-05-02 against the OnShape CAD + a kitchen
 # scale. The arm is 65 mm from the stepper shaft to the pendulum joint
@@ -352,7 +360,7 @@ def build_mjcf(p: PendulumParams) -> str:
 
     <body name="arm" pos="0 0 0">
       <joint name="motor_joint" type="hinge" axis="0 0 1"
-             range="-{MOTOR_LIMIT_RAD} {MOTOR_LIMIT_RAD}" limited="true"
+             range="-{MOTOR_MECH_STOP_RAD} {MOTOR_MECH_STOP_RAD}" limited="true"
              damping="0.0001" frictionloss="0"/>
       <inertial pos="{ARM_COM_M} 0 0" mass="{ARM_MASS_KG}"
                 diaginertia="1e-6 {arm_I} {arm_I}"/>
@@ -447,7 +455,7 @@ class RotaryInvertedPendulumEnv(gym.Env):
         # Weights tuned for the standard quadratic-cost reward (see _reward).
         # At worst-case the per-step cost reaches ~22 (most of which is the
         # θ² term, max ~9.87 at hanging-down).
-        reward_motor_pos_weight: float = 0.5,    # at motor safety limit (±125°): ~2.4
+        reward_motor_pos_weight: float = 0.5,    # at motor safety limit (±100°): ~1.5
         reward_motor_vel_weight: float = 0.005,  # at motor_vel ±12 rad/s: ~0.7
         reward_action_weight: float = 0.20,      # at |action|=1: 0.20
         # Was 0.05, but that was too weak — the active-correction attractor
@@ -736,9 +744,9 @@ class RotaryInvertedPendulumEnv(gym.Env):
         # — gives the policy an implicit read on its own command pipeline,
         # which restores Markov property under action delay (POMDP→MDP).
         frame_high = (
-            np.array([MOTOR_LIMIT_RAD, 1.0, 1.0, 200.0, 200.0, 1.0], dtype=np.float32)
+            np.array([MOTOR_MECH_STOP_RAD, 1.0, 1.0, 200.0, 200.0, 1.0], dtype=np.float32)
             if self.obs_include_velocities
-            else np.array([MOTOR_LIMIT_RAD, 1.0, 1.0, 1.0], dtype=np.float32)
+            else np.array([MOTOR_MECH_STOP_RAD, 1.0, 1.0, 1.0], dtype=np.float32)
         )
         obs_high = np.tile(frame_high, self.obs_history_len)
         self.observation_space = spaces.Box(low=-obs_high, high=obs_high, dtype=np.float32)
@@ -799,8 +807,8 @@ class RotaryInvertedPendulumEnv(gym.Env):
         # diversity so the policy learns to recover from EVERY starting
         # config, not just near-zero. Without this, the policy never
         # practises returning from the limit and gets stuck there at deploy
-        # time. Magnitude 0.7 × safe limit (≈ ±88°) keeps reset clear of
-        # the immediate ±125° clamp while covering most of the working
+        # time. Magnitude 0.7 × safe limit (≈ ±70°) keeps reset clear of
+        # the immediate ±100° clamp while covering most of the working
         # range.
         # A fraction of episodes start near upright (joint phi = pi ± 0.3,
         # gentle spin) so the catch/balance skill gets direct gradient

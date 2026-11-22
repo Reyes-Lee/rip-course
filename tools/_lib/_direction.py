@@ -30,7 +30,8 @@ PULSE_T = 0.04          # s
 N_DOUBLETS = 8
 PAUSE_S = 0.35          # 每個雙脈衝之後回到 0° 並等擺錘的反應被記錄
 
-NOT_CALIBRATED_MSG = "這台機台還沒做方向標定。先執行 tools/04_check_direction（燒 LowLevelServer）。"
+NOT_CALIBRATED_MSG = ("這台 Nano 還沒做方向標定（通常是換過 Nano）。先執行 tools/04_check_direction"
+                      "（燒 LowLevelServer）；跑過還是有問題就找助教。")
 OLD_FIRMWARE_MSG = ("Nano 上的 LowLevelServer 是舊版，不支援方向標定。"
                     "用 Arduino IDE 重新上傳 firmware/LowLevelServer，再執行一次。")
 
@@ -146,7 +147,8 @@ def require_direction(port: str, *, quick_check: bool = False) -> bool:
         return True
     if v == "flipped":
         fail(f"方向快速檢查：擺錘方向跟上次標定相反（相關係數 {r['corr']:+.2f}）。"
-             "AS5600 的方向變了，先執行 04_check_direction 重新標定，並把這件事告訴助教。")
+             "AS5600 的方向變了，通常是編碼器或磁鐵被動過。先執行 04_check_direction 重新標定；"
+             "跑過還是有問題就找助教。")
     else:
         fail(f"方向快速檢查：判讀不出來（相關係數 {r['corr']:+.2f}）。"
              "確認 12 V 有接、手臂和擺錘沒有被擋住，再試一次。")

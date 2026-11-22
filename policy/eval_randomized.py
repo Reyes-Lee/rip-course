@@ -16,7 +16,7 @@ For each episode, the policy is run deterministically for
 
     1. The pendulum was within ±`--upright-threshold-deg` of upright for
        at least `--success-frac` of the last `--hold-window-s` seconds.
-    2. AND the episode did not terminate early on a ±135° hard-stop hit.
+    2. AND the episode did not terminate early on a ±110° hard-stop hit.
 
 Defaults: ±15°, last 1.0 s, 0.9 fraction. Success criterion is then a
 simple per-episode ✓/✗ which is aggregated into an overall solve rate.

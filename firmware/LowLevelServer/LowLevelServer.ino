@@ -61,12 +61,12 @@ const uint32_t MOTOR_MIN_STEP_US =  // ≈ 5 rad/s, derived so it tracks MICROST
 const int32_t MOTOR_ACCEL_STEPS_S2 = 50000;
 
 // Position safety limit (matches MOTOR_SAFE_LIMIT_RAD on the Python side,
-// ±125°). Past the rail the firmware actively brakes (commands a fixed
+// ±100°; course version, the author's was ±125°). Past the rail the firmware actively brakes (commands a fixed
 // opposing accel) so the motor decelerates even if the host stops
 // sending commands (USB hiccup, host hang). Clamping to zero instead
 // would just let moveByAcceleration(0, true) coast the motor past the
 // rail at peak velocity.
-const int32_t MOTOR_SAFE_LIMIT_STEPS = (int32_t)((125.0f * PI / 180.0f) *
+const int32_t MOTOR_SAFE_LIMIT_STEPS = (int32_t)((100.0f * PI / 180.0f) *
                                                   ((float)STEPS_PER_REVOLUTION / (2.0f * PI)));
 // Brake authority when past the rail. 150 rad/s² matches the
 // pendulum_env.py MAX_ACCEL_RAD_S2 — strong enough to bleed off the

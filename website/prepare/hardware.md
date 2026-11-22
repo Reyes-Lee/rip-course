@@ -8,9 +8,14 @@
 !!! todo "這一步要做的事"
 
     1. [貼上配重硬幣](#coin)。
-    2. [上電測試](#power-on)：照表格順序燒 5 個韌體、跑 4 個工具。其中[編碼器測試](#encoder)、[失步測試](#motor)、[方向標定](#direction)下面有詳細步驟。
+    2. [上電測試](#power-on)：照表格順序燒 5 個韌體、跑 3 個工具。其中[編碼器測試](#encoder)、[失步測試](#motor)下面有詳細步驟。
+    3. （需要時）[方向標定](#direction)：助教已經跑過，平常不用做；換了零件或工具提示時才跑。
 
     標題前標「說明」的段落是原理說明，讀懂就好，不用操作。
+
+!!! info "領取當天的快速檢查"
+
+    領到的 Nano 燒的是 `PickupCheck`：接上 USB 與 12 V，它會自己測編碼器、讓你手轉擺錘 2 圈、再讓手臂來回動，約 1 分鐘，LED 恆亮代表通過（細節在序列埠監控，鮑率 115200）。它只確認「硬體沒壞」，下面的完整測試還是要做。之後搬動機台或碰過接線，想快速確認一下，也可以再燒 `PickupCheck` 跑一次。
 
 ## 1. 貼上配重硬幣 { #coin .rip-do }
 
@@ -76,7 +81,7 @@
 
 每個韌體都用 Arduino IDE 開啟 `firmware/<名稱>/<名稱>.ino`，再按「上傳」。照順序做，前一個沒過不要往下。
 
-!!! tool "依序做這 6 項"
+!!! tool "依序做這 5 項"
 
     | 順序 | 燒錄 | 然後 | 通過條件 |
     | --- | --- | --- | --- |
@@ -84,8 +89,7 @@
     | 2 | `EncoderCheck` | 執行 `02_check_encoder` | 全部 PASS（見[編碼器測試](#encoder)） |
     | 3 | `TestMotor` | 看、聽 | 手臂 ±90° 來回，平順的嗡嗡聲，沒有嘶嘶或磨擦聲 |
     | 4 | `LowLevelServer` | 執行 `03_check_motor`（見[失步測試](#motor)） | 每級跑完手臂末端還對齊膠帶記號，聲音平順 |
-    | 5 | `LowLevelServer`（不用重燒） | 執行 `04_check_direction`（見[方向標定](#direction)） | 印出 `PASS`，方向存進 Nano |
-    | 6 | `TestSerial` | 執行 `01_check_serial` | 來回約 2.5 ms |
+    | 5 | `TestSerial` | 執行 `01_check_serial` | 來回約 2.5 ms |
 
 !!! warning "供電：Nano 只用 USB，12 V 只接 TMC2209"
 
@@ -154,7 +158,15 @@ FAIL 時照下表處理：
 
     五級都對齊、聲音都正常，最後印出 `PASS`。FAIL 就把結果拿給助教，檢查 Vref 與韌體加速度設定；不要自己轉可變電阻。
 
-### 方向標定 { #direction .rip-do }
+## 3. （需要時）方向標定 { #direction .rip-do }
+
+助教交機前已經在每台機台跑過 `04_check_direction`，結果存在 Nano 裡，**平常不用再跑**。遇到下面這些情況才要跑：
+
+- 換了 Nano、AS5600 模組，或重裝磁鐵。
+- 工具說「還沒做方向標定」或「方向快速檢查：擺錘方向跟上次標定相反」。
+- 策略好像「反著推」，或擺錘只擺到幾十度就甩不上去（`08_test_policy` 判定 `NO SWING-UP`）。
+
+跑過 `04_check_direction` 還是有問題，就找助教。
 
 策略是在模擬裡學的，模擬有固定的正方向。實機的擺錘角度方向由 AS5600 決定：模組的 DIR 腳出廠可能接 GND、接 VCC，也可能沒接，同一批零件做出來的機台方向不一定一樣。**擺錘方向跟模擬相反時，策略出力的時機剛好錯開半個週期，擺錘怎麼都甩不上去**，而且 `02_check_encoder`、`03_check_motor` 都會 PASS，看不出來。
 
@@ -162,7 +174,7 @@ FAIL 時照下表處理：
 
 !!! tool "操作步驟"
 
-    1. Nano 燒的是 `LowLevelServer`（做完失步測試就不用重燒），關掉序列埠監控，12 V 接好。
+    1. 用 Arduino IDE 上傳 `LowLevelServer`，關掉序列埠監控，12 V 接好。
     2. 手臂轉到正中間，周圍淨空；擺錘自然垂下、靜止。
     3. 執行 `tools/04_check_direction`，按 Enter。
     4. 手臂會小幅來回抖動約 4 秒（左右各約 10°），這段時間不要碰機台。
@@ -172,10 +184,9 @@ FAIL 時照下表處理：
 
     最後印出 `PASS：擺錘方向 ±1 已存在 Nano 的 EEPROM`。相關係數跟模擬一致時是負的，約 −0.9。紀錄與圖存在 `policy/direction_runs/<時間>/`：`direction.png` 的點應該排成往右下的斜線。
 
-    印出「判讀不出來」：擺錘幾乎沒有跟著手臂反應。檢查 12 V 有沒有接（手臂其實沒動）、擺錘有沒有被卡住，再跑一次 `02_check_encoder`。
+    印出「判讀不出來」：擺錘幾乎沒有跟著手臂反應。檢查 12 V 有沒有接（手臂其實沒動）、擺錘有沒有被卡住，再跑一次 `02_check_encoder`。再跑一次 `04_check_direction` 還是判讀不出來，就找助教。
 
 - **存在哪裡**：Nano 的 EEPROM。Arduino IDE 重新上傳 `LowLevelServer` 或 `RLControl` **不會**清掉它，不用每次重做。`RLControl` 開機時讀同一個值。
-- **什麼時候要重做**：換了 Nano、重新安裝 AS5600 或磁鐵、換了 AS5600 模組。
 - **工具會幫你擋**：`05_sysid`、`07_finetune`、`08_test_policy` 開始前會確認 Nano 已經標定，沒有就停止並提示你先跑 `04_check_direction`。`07_finetune` 每一段開始前還會讓手臂抖動約 4 秒，確認方向沒有變；`RLControl` 沒標定就不會啟動馬達。
 - **方向被修正過的話**：在錯的方向下做的實機微調（`runs/ftN`）要丟掉，從教師重新微調。sysid 與模擬訓練不受影響。
 
@@ -195,7 +206,7 @@ FAIL 時照下表處理：
 | 馬達驅動 | TMC2209，Vref 約 1.0 V（約 0.7 A RMS） | 助教已調好；**Vref 設的是 RMS 不是峰值**，不要照抄 DRV8825 的數字 |
 | 微步 | 1/32（MS1 接 5V、MS2 接 GND） | 所有 sketch 的 `MICROSTEPS = 32` |
 | 控制板 | Arduino Nano（USB-C） | flash 上限 30720 bytes |
-| 擺錘編碼器 | AS5600 | DIR 不接，方向由 `04_check_direction` 存進 EEPROM，每台都要[標定](#direction) |
+| 擺錘編碼器 | AS5600 | DIR 不接；方向由 `04_check_direction` 存進 Nano 的 EEPROM，助教已經在每台跑過（[需要時再跑](#direction)） |
 | 擺錘配重 | 新台幣 10 元，貼在擺錘大頭外側 | |
 | 擺臂 | 3D 列印 | `pendulum_env.py` 的 `ARM_*` 已對應這個設計 |
 | 底座 | 壓克力雙層底座 | 已經調平，放在水平的桌面上即可 |

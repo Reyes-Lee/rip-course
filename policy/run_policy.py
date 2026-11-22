@@ -15,8 +15,8 @@ with theta=0 at upright. Velocities are computed by finite difference and
 low-pass filtered to attenuate quantisation noise.
 
 Safety:
-- The commanded motor target is clamped to ±125° (inside the ±135°
-  mechanical hard stops).
+- The commanded motor target is clamped to ±100° (course version; the
+  mechanical hard stops are at ±135°).
 - A staleness check kills the loop if a get_state call returns garbage
   or stalls.
 - Ctrl-C disengages the motor cleanly via LowLevelClient.__exit__.
@@ -48,8 +48,8 @@ from lowlevel_client import LowLevelClient
 from run_config import check_config, find_run_config
 
 
-MOTOR_SAFE_LIMIT_RAD = math.radians(125.0)
-MOTOR_LIMIT_RAD = math.radians(135.0)  # obs-space bound; matches pendulum_env
+MOTOR_SAFE_LIMIT_RAD = math.radians(100.0)  # matches pendulum_env (course version)
+MOTOR_LIMIT_RAD = math.radians(135.0)  # obs-space bound; matches pendulum_env MOTOR_MECH_STOP_RAD
 
 
 def _wrap_pi(x: float) -> float:

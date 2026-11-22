@@ -218,7 +218,7 @@ SEED 是亂數種子，決定網路初始權重與探索過程；同一套配方
 :   8 秒；25% 的回合從接近直立開始，其餘從垂下開始。
 
 手臂角度限制
-:   策略的指令最多到 ±125°；手臂碰到 ±135° 就當成撞到硬限位，扣 5 分並結束回合。實機韌體有對應的保護（見 [Step 4](step4-deploy.md#flash)）。
+:   策略的指令最多到 ±100°；手臂到 ±110° 就當成撞到硬限位，扣 5 分並結束回合（機構真正的擋塊在 ±135°）。實機韌體有對應的保護（見 [Step 4](step4-deploy.md#flash)）。
 
 ## Reward（作者的版本） { #reward .rip-learn }
 
@@ -278,7 +278,7 @@ reward 有三種改法：
 - 輸入固定是這 8 個（都是 keyword 參數）：`theta`（擺錘角，0 是直立，範圍 −π 到 π）、`pen_vel`（擺錘角速度）、`motor_pos`（手臂角）、`motor_vel`（手臂角速度）、`action`（這一步的動作，−1 到 1）、`prev_action`（上一步的動作）、`prev_motor_vel`（上一步的手臂角速度）、`weights`（`RewardWeights`，工具問的權重在這裡面；用不到可以不管）。單位都是 rad、rad/s。
 - 回傳一個數字，代表這一步的 reward。
 - 要用其他資訊（例如回合進行到第幾步），就要連 `pendulum_env.py` 和 `real_env.py` 呼叫 `compute_reward()` 的地方一起改。
-- 手臂撞到 ±135° 硬限位時的 −5 和結束回合，是在兩個環境檔裡另外處理的，不在 `compute_reward()` 裡。
+- 手臂到 ±110° 硬限位時的 −5 和結束回合，是在兩個環境檔裡另外處理的，不在 `compute_reward()` 裡。
 - 改壞了要還原成作者的版本：在 `rip-course` 資料夾執行 `git checkout policy/reward.py`。
 
 **工具的配套**：
