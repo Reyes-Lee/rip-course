@@ -5,7 +5,10 @@
 //   start_s   從 engage（開始甩）後第幾秒開始用這一段，第一段必須是 0
 //   extra_ms  每一拍都額外延遲的毫秒數
 //   jitter_ms 每一拍再隨機多延遲 0..jitter_ms 毫秒
-// 都以 2 ms（取樣週期）為單位，extra_ms + jitter_ms 最多 44（超過的部分會被截掉）。
+// 單位是毫秒。Nano 依樣本的時間戳挑最接近的一筆（取樣間隔實際約 2–3 ms，所以誤差約 ±1 ms），
+// extra_ms + jitter_ms 最多 70（超過的部分會被截掉）。
+//
+// 延遲階梯（11_score_onboard 的選項 2）會用序列埠指令直接設定延遲，不看這個檔案。
 //
 // 例：固定多 20 ms，再加上每拍 0–10 ms 的抖動
 //   #define LATENCY_STAGES { {0, 20, 10} }

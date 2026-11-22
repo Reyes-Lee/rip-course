@@ -1,17 +1,19 @@
 """07_finetune：實機非同步微調（作者的 finetune_async.py），每執行一次跑一段。
 
 第一次（ft1）：從你選的教師開始。之後（ft2、ft3…）：從最新一段接續，帶上它的 replay buffer。
+進階專題換了教師時，可以選「從教師重新開始一條新的微調」（編號照樣往下排，不帶舊的 replay buffer）。
 回合數、每回合秒數、接續用哪個模型等設定都會在畫面上問，直接按 Enter 是作者的預設值。
 reward 權重預設沿用起點模型 config.json 裡的值（也就是 Step 1 訓練時用的），也可以在這裡改。
-每一段實際用的設定存在 runs/ftN/07_settings.json。
+每一段實際用的設定存在 runs/ftN/07_settings.json，包括 firmware/LowLevelServer/finetune_latency.h 的延遲範圍。
 """
 from __future__ import annotations
 
 import csv
 import json
+import re
 import time
 
-from _common import (RUNS, ask_number, ask_yes, banner, check_reward, choose, fail, finish, finetune_runs, get_port,
+from _common import (REPO, RUNS, ask_number, ask_yes, banner, check_reward, choose, fail, finish, finetune_runs, get_port,
                      heading, info, label, mark_done, need_sysid, ok, rel, run_policy_script, same_reward_as,
                      save_reward_copy, teachers, wait_enter, warn)
 from _direction import require_or_exit
@@ -32,6 +34,20 @@ REWARD_WEIGHTS = [
     ("--reward-motor-vel-weight", "reward_motor_vel_weight", "手臂角速度² 懲罰"),
     ("--reward-action-rate-weight", "reward_action_rate_weight", "動作變化² 懲罰"),
 ]
+
+
+LATENCY_HEADER = REPO / "firmware" / "LowLevelServer" / "finetune_latency.h"
+
+
+def finetune_latency() -> tuple[int, int] | None:
+    """讀 firmware/LowLevelServer/finetune_latency.h 的延遲範圍（毫秒）。讀不到回傳 None。"""
+    try:
+        text = LATENCY_HEADER.read_text(encoding="utf-8")
+        lo = int(re.search(r"#define\s+FT_LATENCY_MIN_MS\s+(\d+)", text).group(1))
+        hi = int(re.search(r"#define\s+FT_LATENCY_MAX_MS\s+(\d+)", text).group(1))
+    except (OSError, AttributeError, ValueError):
+        return None
+    return lo, hi
 
 
 def best_eval_episode(run_dir, eval_every: int):
@@ -59,7 +75,11 @@ def main() -> int:
         run_dir.rename(keep)
         warn(f"上次的 {run_dir.name} 沒有跑完，已改名為 {keep.name} 保留，這一段重跑。")
 
-    if not done:
+    # 已經有微調段時，預設接續最新一段；進階專題換了教師時，可以從教師重新開始一條（不帶舊的 replay buffer）。
+    restart = bool(done) and ask_yes(
+        f"要從教師重新開始一條新的微調嗎？（不接續 {done[-1].name}；進階專題換教師時用，一般任務直接按 Enter）",
+        default=False)
+    if not done or restart:
         ts = teachers()
         if not ts:
             fail("找不到完成的教師。請先做 Step 1：執行 06_train_teacher。")
@@ -114,7 +134,7 @@ def main() -> int:
         args += ["--resume-buffer", rel(buffer)]
         heading(f"接續段 {run_dir.name}：從 {label(start)} 接續（帶上 {prev.name} 的 replay buffer），{episodes} 回合")
     else:
-        heading(f"第一段 ft1：從 {label(start)} 開始，{episodes} 回合")
+        heading(f"新的一條 {run_dir.name}：從 {label(start)} 開始，{episodes} 回合")
 
     same = same_reward_as(start.parent)
     if same is None:
@@ -123,6 +143,18 @@ def main() -> int:
         warn(f"policy/reward.py 跟 {label(start.parent)}/reward_used.py（起點模型訓練時的版本）不同，這一段會用現在的 reward.py。")
     if not check_reward({**cfg, **reward}):
         return 1
+
+    lat = finetune_latency()
+    if lat is None:
+        warn(f"讀不到 {LATENCY_HEADER.name}，不知道 LowLevelServer 有沒有加延遲。")
+    elif lat[1] > 0:
+        warn(f"finetune_latency.h：每回合在 {lat[0]}–{lat[1]} ms 之間抽一個延遲，加在原本的延遲上面。")
+        warn("  Nano 上的 LowLevelServer 要是改完這個檔案之後重新上傳的版本，否則實際上沒有加延遲。")
+        if not ask_yes("確認已經上傳這個設定的 LowLevelServer？", default=True):
+            info("改好 firmware/LowLevelServer/finetune_latency.h、用 Arduino IDE 重新上傳後，再執行 07_finetune。")
+            return 1
+    else:
+        info("finetune_latency.h：不加延遲（一般任務的設定）。")
 
     port = get_port()
     lo, hi = episodes * (length + 5) / 60, episodes * (length + 15) / 60
@@ -143,6 +175,7 @@ def main() -> int:
     settings = {"start_model": rel(start), "resume_buffer": rel(buffer) if buffer else None,
                 "episodes": episodes, "episode_length_s": length, "learning_rate": lr,
                 "gradient_steps": grad_steps, "eval_every": eval_every, "reward_changed": reward_changed,
+                "ft_latency_ms": list(lat) if lat else None,
                 **reward}
     (run_dir / "07_settings.json").write_text(json.dumps(settings, indent=2, ensure_ascii=False) + "\n",
                                               encoding="utf-8")

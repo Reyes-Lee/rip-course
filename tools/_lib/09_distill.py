@@ -3,7 +3,7 @@
 1/4 行為克隆（distill.py）→ 2/4 DAgger（dagger_distill.py，Nano 獨立執行的傳輸條件）
 → 3/4 學生的模擬分數與敏感度關卡 → 4/4 教師自己的模擬分數（拿來比較）。
 
-教師用微調段的哪個模型、行為克隆 epoch 數、DAgger 輪數與每輪步數都會在畫面上問，
+教師用微調段的哪個模型、行為克隆 epoch 數、DAgger 輪數與每輪步數、DAgger 的延遲條件都會在畫面上問，
 直接按 Enter 是作者的預設值。不是預設值的設定會寫進資料夾名稱，不同設定的結果不會互相覆蓋。
 """
 from __future__ import annotations
@@ -11,7 +11,7 @@ from __future__ import annotations
 import re
 
 from _common import (ask, ask_number, ask_yes, banner, color, fail, finetune_runs, finish, heading, info, label,
-                     ok, rel, run_policy_script, choose)
+                     ok, rel, run_policy_script, choose, warn)
 from _checks import balanced, print_sensitivity, sensitivity
 
 HIDDEN = 16
@@ -19,6 +19,25 @@ TRANSPORT = "device"
 BC_EPOCHS = 800
 ROUNDS = 5
 STEPS_PER_ROUND = 40_000
+# DAgger 的延遲條件（ms）。預設：練習時用模擬的預設範圍 2–10 ms，評分用 Nano 實測的 15.6 ms。
+ROLL_STALE_MS = (2.0, 10.0)
+GATE_STALE_MS = (15.6,)
+
+
+def ask_latency():
+    """DAgger 的延遲條件。回傳 (練習範圍, 評分用的值們)，都是毫秒。"""
+    lo = ask_number("DAgger 練習時的觀測延遲下限（ms；每回合在上下限之間抽一個）", ROLL_STALE_MS[0], 0.0, 100.0)
+    hi = ask_number("DAgger 練習時的觀測延遲上限（ms）", max(ROLL_STALE_MS[1], lo), lo, 100.0)
+    while True:
+        ans = ask("選學生用的評分延遲（ms，可以給好幾個、用逗號隔開，分數取平均）",
+                  ",".join(f"{x:g}" for x in GATE_STALE_MS))
+        try:
+            gates = tuple(float(x) for x in ans.replace("，", ",").split(",") if x.strip())
+        except ValueError:
+            gates = ()
+        if gates and all(0.0 <= g <= 100.0 for g in gates):
+            return (lo, hi), gates
+        warn("請輸入 0 到 100 之間的數字，用逗號隔開。")
 
 
 def main() -> int:
@@ -39,10 +58,15 @@ def main() -> int:
         epochs = ask_number("行為克隆 epoch 數", BC_EPOCHS, 1)
         rounds = ask_number("DAgger 輪數（0 = 只做行為克隆）", ROUNDS, 0)
         steps = ask_number("DAgger 每輪步數", STEPS_PER_ROUND, 1000)
+    roll, gates = ROLL_STALE_MS, GATE_STALE_MS
+    if ask_yes("要改 DAgger 的延遲條件嗎？（進階專題用；一般任務直接按 Enter）", default=False):
+        roll, gates = ask_latency()
     # 資料夾名稱：預設設定維持作者的名稱，改過的設定加在後面。
     bc_sfx = ("" if teacher.name == "best_model.zip" else "_last") + ("" if seed == "0" else f"_s{seed}") \
         + ("" if epochs == BC_EPOCHS else f"_e{epochs}")
-    dg_sfx = bc_sfx + ("" if (rounds, steps) == (ROUNDS, STEPS_PER_ROUND) else f"_r{rounds}x{steps}")
+    dg_sfx = bc_sfx + ("" if (rounds, steps) == (ROUNDS, STEPS_PER_ROUND) else f"_r{rounds}x{steps}") \
+        + ("" if roll == ROLL_STALE_MS else f"_lat{roll[0]:g}-{roll[1]:g}") \
+        + ("" if gates == GATE_STALE_MS else "_g" + "-".join(f"{g:g}" for g in gates))
     bc_dir = run / f"distill_h{HIDDEN}_aug{bc_sfx}"
     dagger_dir = run / f"distill_h{HIDDEN}_dagger_dev{dg_sfx}"
     student = dagger_dir / "student.pt"
@@ -62,10 +86,17 @@ def main() -> int:
             return code
 
     heading(f"2/4 DAgger（{TRANSPORT} 傳輸）→ {label(dagger_dir)}")
+    info(f"DAgger 練習時的觀測延遲 {roll[0]:g}–{roll[1]:g} ms；評分用 "
+         + "、".join(f"{g:g}" for g in gates) + " ms" + ("（平均）" if len(gates) > 1 else ""))
+    lat_args = []
+    if roll != ROLL_STALE_MS:
+        lat_args += ["--dr-obs-staleness-min", f"{roll[0] / 1000:g}", "--dr-obs-staleness-max", f"{roll[1] / 1000:g}"]
+    if gates != GATE_STALE_MS:
+        lat_args += ["--gate-obs-staleness", *(f"{g / 1000:g}" for g in gates)]
     code, out = run_policy_script(["dagger_distill.py", "--teacher", rel(teacher), "--bc-dir", rel(bc_dir),
                                    "--out-dir", rel(dagger_dir), "--transport", TRANSPORT,
                                    "--rounds", str(rounds), "--steps-per-round", str(steps),
-                                   "--seed", seed], capture=True)
+                                   "--seed", seed, *lat_args], capture=True)
     if code != 0 or not student.exists():
         fail("DAgger 失敗。")
         return code or 1

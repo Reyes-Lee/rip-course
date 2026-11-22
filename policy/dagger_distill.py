@@ -63,7 +63,8 @@ TRANSPORTS = {
 
 def make_env(cfg: dict, *, dr: bool, transport: str,
              episode_length_s: float = 8.0,
-             obs_staleness_s: float | None = None) -> RotaryInvertedPendulumEnv:
+             obs_staleness_s: float | None = None,
+             dr_obs_staleness_range_s: tuple[float, float] | None = None) -> RotaryInvertedPendulumEnv:
     (delay_range, lag_range), (gate_delay, gate_lag, gate_stale) = TRANSPORTS[transport]
     kwargs = dict(
         # Which rig's measured friction to build the sim from; inherited from
@@ -82,6 +83,8 @@ def make_env(cfg: dict, *, dr: bool, transport: str,
     if dr:
         kwargs.update(dr_action_delay_steps_range=delay_range,
                       dr_action_lag_tau_range_s=lag_range)
+        if dr_obs_staleness_range_s is not None:
+            kwargs["dr_obs_staleness_range_s"] = dr_obs_staleness_range_s
     else:
         kwargs.update(dr_theta_bias_max_rad=0.0,
                       action_delay_steps=gate_delay,
@@ -96,9 +99,19 @@ def make_env(cfg: dict, *, dr: bool, transport: str,
     return RotaryInvertedPendulumEnv(**kwargs)
 
 
-def gate(predict_fn, cfg: dict, transport: str, n_ep: int = 10) -> float:
-    """Honest balanced fraction, deterministic. Gate from balance_metrics."""
-    env = make_env(cfg, dr=False, transport=transport)
+def gate(predict_fn, cfg: dict, transport: str, n_ep: int = 10,
+         staleness_s: list[float] | None = None) -> float:
+    """Honest balanced fraction, deterministic. Gate from balance_metrics.
+
+    `staleness_s`: observation staleness values to gate at (mean over them).
+    None keeps the transport's own gate staleness (15.6 ms on the device)."""
+    fracs = []
+    for st in (staleness_s or [None]):
+        fracs += _gate_one(predict_fn, make_env(cfg, dr=False, transport=transport, obs_staleness_s=st), n_ep)
+    return float(np.mean(fracs))
+
+
+def _gate_one(predict_fn, env, n_ep: int) -> list[float]:
     fracs = []
     for ep in range(n_ep):
         obs, _ = env.reset(seed=100 + ep)
@@ -114,12 +127,14 @@ def gate(predict_fn, cfg: dict, transport: str, n_ep: int = 10) -> float:
             n += 1
             done = term or trunc
         fracs.append(bal / max(1, n))
-    return float(np.mean(fracs))
+    return fracs
 
 
 def rollout_and_label(predict_fn, teacher: SAC, cfg: dict, transport: str,
-                      n_steps: int, seed0: int):
-    env = make_env(cfg, dr=True, transport=transport)
+                      n_steps: int, seed0: int,
+                      dr_obs_staleness_range_s: tuple[float, float] | None = None):
+    env = make_env(cfg, dr=True, transport=transport,
+                   dr_obs_staleness_range_s=dr_obs_staleness_range_s)
     obs_l, act_l = [], []
     ep = 0
     while len(obs_l) < n_steps:
@@ -175,6 +190,15 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--transport", choices=tuple(TRANSPORTS), default="device",
                    help="transport regime of the TARGET DEPLOYMENT (default: "
                         "device — the standalone Nano)")
+    p.add_argument("--dr-obs-staleness-min", type=float, default=None,
+                   help="rollout observation-staleness range (s), sampled per "
+                        "episode; default keeps the env's DR range. Give both "
+                        "--dr-obs-staleness-min and --dr-obs-staleness-max.")
+    p.add_argument("--dr-obs-staleness-max", type=float, default=None)
+    p.add_argument("--gate-obs-staleness", type=float, nargs="+", default=None,
+                   help="observation staleness value(s) (s) the gate scores at; "
+                        "with several, the gate is their mean. Default: the "
+                        "transport's own (0.0156 s on the device).")
     p.add_argument("--rounds", type=int, default=5)
     p.add_argument("--steps-per-round", type=int, default=40_000)
     p.add_argument("--epochs", type=int, default=300,
@@ -183,6 +207,16 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--batch-size", type=int, default=1024)
     p.add_argument("--seed", type=int, default=0)
     args = p.parse_args(argv if argv is not None else sys.argv[1:])
+    if (args.dr_obs_staleness_min is None) != (args.dr_obs_staleness_max is None):
+        p.error("give both --dr-obs-staleness-min and --dr-obs-staleness-max")
+    stale_range = ((args.dr_obs_staleness_min, args.dr_obs_staleness_max)
+                   if args.dr_obs_staleness_max is not None else None)
+    if stale_range and stale_range[0] > stale_range[1]:
+        p.error("--dr-obs-staleness-min > --dr-obs-staleness-max")
+    gate_st = args.gate_obs_staleness
+    if stale_range or gate_st:
+        print(f"[dagger] rollout staleness {stale_range or 'env default'} s, "
+              f"gate staleness {gate_st or 'transport default'} s", flush=True)
 
     teacher = SAC.load(str(args.teacher), device="cpu")
     cfg = find_run_config(args.teacher) or {}
@@ -206,7 +240,7 @@ def main(argv: list[str] | None = None) -> int:
                     "val_mse": mse}, args.out_dir / "student.pt")
 
     predict = _student_predict_factory(student)
-    best = gate(predict, cfg, args.transport)
+    best = gate(predict, cfg, args.transport, staleness_s=gate_st)
     print(f"[dagger] round 0 (BC student): gate {best:.3f} "
           f"@ {args.transport} transport, dataset {len(agg_obs)}", flush=True)
     save(float("nan"))
@@ -226,14 +260,15 @@ def main(argv: list[str] | None = None) -> int:
             roll_cfg["firmware_obs_model"] = bool(r % 2)
         obs_new, act_new = rollout_and_label(
             predict, teacher, roll_cfg, args.transport,
-            args.steps_per_round, seed0=args.seed + r * 10_000)
+            args.steps_per_round, seed0=args.seed + r * 10_000,
+            dr_obs_staleness_range_s=stale_range)
         agg_obs = np.concatenate([agg_obs, obs_new])
         agg_act = np.concatenate([agg_act, act_new])
         mse = retrain(student, agg_obs, agg_act,
                       epochs=max(1, args.epochs // r), lr=args.lr,
                       batch=args.batch_size, seed=args.seed)
         predict = _student_predict_factory(student)
-        score = gate(predict, cfg, args.transport)
+        score = gate(predict, cfg, args.transport, staleness_s=gate_st)
         print(f"[dagger] round {r}: +{len(obs_new)} student-visited samples "
               f"(total {len(agg_obs)}), mse {mse:.5f}, gate {score:.3f}", flush=True)
         if score > best:

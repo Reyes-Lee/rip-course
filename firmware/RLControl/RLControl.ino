@@ -62,6 +62,9 @@
  *   'E' / 'e' : engage motor (re-arm after a hard-limit trip)
  *   'D' / 'd' : disengage motor (manual stop)
  *   'M' / 'm' : print AS5600 magnet diagnostics
+ *   'L<ms>[,<jitter>]' : 進階任務（延遲階梯）。只在 WAITING 時有效：之後每次 engage
+ *               都用這個延遲，取代 latency_profile.h；'L-1' 改回 latency_profile.h。
+ *               回覆一行 [latency] ...。extra + jitter 最多 70 ms。
  *
  * Telemetry CSV (when toggled on, one line per control tick):
  *   t_us, motor_pos_rad×1000, phi_rad×1000, action×1000, state, freq_hz,
@@ -71,8 +74,8 @@
  * seven-column captures still parse.
  *
  * 進階任務：額外延遲（latency_profile.h）。policy 讀的樣本可以比最新的再舊
- * extra_ms，另外每一拍再隨機多 0..jitter_ms，都以 2 ms（取樣週期）為單位，
- * 依 engage 後的秒數分段。課程版的 latency_profile.h 不注入任何延遲。
+ * extra_ms，另外每一拍再隨機多 0..jitter_ms（毫秒，依樣本的時間戳挑最接近
+ * 的一筆；取樣間隔實際約 2-3 ms），依 engage 後的秒數分段。課程版的 latency_profile.h 不注入任何延遲。
  * 遙測的位置來自最新樣本（不受注入影響），latency_us 則包含注入的延遲。
  */
 
@@ -210,15 +213,20 @@ const float MOTOR_HARD_LIMIT_RAD = 2.30383f;   // 132° × π/180
 // policy was trained and fine-tuned on exactly these statistics.
 // =============================================================================
 const uint16_t SAMPLE_PERIOD_US = 2000;
-const uint8_t SAMPLE_BUFFER_SIZE = 28;
+const uint8_t SAMPLE_BUFFER_SIZE = 42;
 const uint8_t VEL_WINDOW = 5;
 // Oldest sample the injected delay may reach while still leaving a full
-// velocity window behind it: 22 samples = 44 ms.
+// velocity window behind it: 36 samples, at least 72 ms (the sampler spacing
+// is >= 2 ms), so any extra_ms + jitter_ms <= 70 is reachable.
+const uint8_t MAX_INJECT_MS = 70;
 const uint8_t MAX_DELAY_SAMPLES = SAMPLE_BUFFER_SIZE - VEL_WINDOW - 1;
 
 static const LatencyStage latency_stages[] = LATENCY_STAGES;
 const uint8_t N_LATENCY_STAGES = sizeof(latency_stages) / sizeof(latency_stages[0]);
 static uint32_t engaged_ms = 0;
+// 'L' 指令設定的延遲（延遲階梯）。-1 = 用 latency_profile.h。
+static int8_t latency_override_ms = -1;
+static uint8_t latency_override_jitter_ms = 0;
 
 static int32_t motor_step_buf[SAMPLE_BUFFER_SIZE];
 static float pen_rad_buf[SAMPLE_BUFFER_SIZE];
@@ -309,8 +317,14 @@ static float read_pendulum_rad()
     const long PEN_RAW_MAX_DELTA_LSB = 500;
     const float RAD_PER_SEG = (2.0f * (float)PI) / (float)AS5600_RES;
 
+    // 連續被擋掉的次數上限：25 個樣本約 50–60 ms。正常的 I²C 雜訊只會擋掉零星幾筆；
+    // 連續擋掉這麼多筆，代表被擋的不是新讀值，而是 raw_prev 本身就是一筆壞值
+    // （例如抓零點那一瞬間讀壞），這時改用現在的讀值當基準，不然角度會整段卡死。
+    const uint8_t MAX_REJECT_STREAK = 25;
+
     static long raw_prev = 0;
     static float pos = 0.0f;
+    static uint8_t reject_streak = 0;
 
     long raw = (long)as5600.rawAngle();
 
@@ -318,6 +332,7 @@ static float read_pendulum_rad()
     {
         raw_prev = raw;
         pos = 0.0f;
+        reject_streak = 0;
         _encoder_zero_pending = false;
         return 0.0f;
     }
@@ -331,9 +346,15 @@ static float read_pendulum_rad()
     // flailing against a false vertical). Same guard as LowLevelServer.
     if (delta > PEN_RAW_MAX_DELTA_LSB || delta < -PEN_RAW_MAX_DELTA_LSB)
     {
+        if (++reject_streak >= MAX_REJECT_STREAK)
+        {
+            raw_prev = raw;   // 基準是壞值：重新對齊，pos 不動
+            reject_streak = 0;
+        }
         return pos;
     }
 
+    reject_streak = 0;
     pos += (float)(pen_sign * delta) * RAD_PER_SEG;
     raw_prev = raw;
     return pos;
@@ -369,19 +390,50 @@ static void update_sample_buffer()
 // taken just before moveByAcceleration, it measures sample->command latency —
 // the quantity pendulum_env models as `obs_staleness_s`.
 static uint32_t used_sample_us = 0;
-static uint16_t latency_us = 0;
-static uint16_t latency_max_us = 0;
+static uint32_t latency_us = 0;       // uint32：加上注入的延遲可能超過 65 ms
+static uint32_t latency_max_us = 0;
 
-/** Samples to step back from the newest this tick (latency_profile.h). */
-static uint8_t injected_delay_samples()
+/** Extra sample age this tick in microseconds (latency_profile.h). */
+static uint32_t injected_delay_us()
 {
-    uint32_t s = (millis() - engaged_ms) / 1000UL;
-    uint8_t i = 0;
-    while (i + 1 < N_LATENCY_STAGES && s >= latency_stages[i + 1].start_s) i++;
-    uint8_t d = latency_stages[i].extra_ms / 2;
-    uint8_t j = latency_stages[i].jitter_ms / 2;
-    if (j) d += (uint8_t)random(j + 1);
-    return d < MAX_DELAY_SAMPLES ? d : MAX_DELAY_SAMPLES;
+    uint16_t ms;
+    uint8_t j;
+    if (latency_override_ms >= 0)
+    {
+        ms = (uint16_t)latency_override_ms;
+        j = latency_override_jitter_ms;
+    }
+    else
+    {
+        uint32_t s = (millis() - engaged_ms) / 1000UL;
+        uint8_t i = 0;
+        while (i + 1 < N_LATENCY_STAGES && s >= latency_stages[i + 1].start_s) i++;
+        ms = latency_stages[i].extra_ms;
+        j = latency_stages[i].jitter_ms;
+    }
+    if (j) ms += (uint16_t)random(j + 1);
+    return (uint32_t)ms * 1000UL;
+}
+
+/** Samples to step back so the one read is `target_us` older than the newest.
+ *  Uses the real timestamps: the sampler only fires between policy rows, so
+ *  its spacing is ~2-3 ms, not exactly 2 ms. Picks the closest sample. */
+static uint8_t delay_samples_for(uint32_t target_us, uint8_t n_samples)
+{
+    if (target_us == 0 || n_samples < 2) return 0;
+    uint8_t newest = (uint8_t)((buf_head + SAMPLE_BUFFER_SIZE - 1) % SAMPLE_BUFFER_SIZE);
+    uint32_t t0 = time_us_buf[newest];
+    uint8_t limit = n_samples - 1 < MAX_DELAY_SAMPLES ? n_samples - 1 : MAX_DELAY_SAMPLES;
+    uint32_t prev_gap = 0;
+    for (uint8_t d = 1; d <= limit; d++)
+    {
+        uint8_t k = (uint8_t)((buf_head + SAMPLE_BUFFER_SIZE - 1 - d) % SAMPLE_BUFFER_SIZE);
+        uint32_t gap = t0 - time_us_buf[k];
+        if (gap >= target_us)
+            return (gap - target_us) <= (target_us - prev_gap) ? d : d - 1;
+        prev_gap = gap;
+    }
+    return limit;
 }
 
 /** GET_STATE-equivalent snapshot: positions + window-diff velocities from
@@ -390,8 +442,7 @@ static void read_measured_state(float* motor_pos, float* phi,
                                 float* motor_vel, float* pen_vel)
 {
     uint8_t n_samples = buf_filled ? SAMPLE_BUFFER_SIZE : buf_head;
-    uint8_t d = injected_delay_samples();
-    if (n_samples > 0 && d > n_samples - 1) d = n_samples - 1;
+    uint8_t d = delay_samples_for(injected_delay_us(), n_samples);
     if (n_samples == 0)
     {
         used_sample_us = micros();
@@ -634,7 +685,7 @@ static void control_tick()
     {
         accel_steps_s2 = +MOTOR_BRAKE_ACCEL_STEPS_S2;
     }
-    latency_us = (uint16_t)(micros() - used_sample_us);
+    latency_us = micros() - used_sample_us;
     if (latency_us > latency_max_us) latency_max_us = latency_us;
 
     stepper->moveByAcceleration(accel_steps_s2, true);
@@ -644,10 +695,52 @@ static void control_tick()
 // SERIAL
 // =============================================================================
 
+/** 'L<ms>[,<jitter>]'：設定之後每次 engage 用的延遲（延遲階梯），'L-1' 改回 latency_profile.h。 */
+static void handle_latency_command()
+{
+    Serial.setTimeout(50);
+    long ms = Serial.parseInt();
+    long j = 0;
+    if (Serial.peek() == ',')
+    {
+        Serial.read();
+        j = Serial.parseInt();
+    }
+    while (Serial.available()) Serial.read();
+    if (state != WAITING)
+    {
+        Serial.println(F("[latency] ignored: disengage first"));
+        return;
+    }
+    if (ms < 0)
+    {
+        latency_override_ms = -1;
+        latency_override_jitter_ms = 0;
+        Serial.println(F("[latency] profile"));
+        return;
+    }
+    if (j < 0 || ms + j > MAX_INJECT_MS)
+    {
+        Serial.println(F("[latency] out of range"));
+        return;
+    }
+    latency_override_ms = (int8_t)ms;
+    latency_override_jitter_ms = (uint8_t)j;
+    Serial.print(F("[latency] extra="));
+    Serial.print(ms);
+    Serial.print(F(" jitter="));
+    Serial.println(j);
+}
+
 static void handle_serial()
 {
     if (!Serial.available()) return;
     char cmd = Serial.read();
+    if (cmd == 'L' || cmd == 'l')
+    {
+        handle_latency_command();
+        return;
+    }
     while (Serial.available()) Serial.read();
     switch (cmd)
     {
@@ -708,8 +801,8 @@ static void print_telemetry(unsigned long now_us, unsigned int freq_hz)
     *p++ = (state == RUNNING) ? '1' : '0'; *p++ = ',';
     utoa(freq_hz, p, 10); p += strlen(p); *p++ = ',';
     utoa(loop_overruns, p, 10); p += strlen(p); *p++ = ',';
-    utoa(latency_us, p, 10); p += strlen(p); *p++ = ',';
-    utoa(latency_max_us, p, 10); p += strlen(p); *p++ = ',';
+    ultoa(latency_us, p, 10); p += strlen(p); *p++ = ',';
+    ultoa(latency_max_us, p, 10); p += strlen(p); *p++ = ',';
     // Appended fields (indices 9-11) so older parsers keep working: the
     // velocities the policy consumed this tick, and the P-law integrator.
     ltoa((long)(tele_motor_vel * 1000.0f), p, 10); p += strlen(p); *p++ = ',';

@@ -2,6 +2,7 @@
 #include <AS5600.h>
 #include <Wire.h>
 #include <EEPROM.h>
+#include "finetune_latency.h"
 
 // Communication speed
 const long BAUD_RATE = 2000000;
@@ -80,7 +81,16 @@ const int32_t MOTOR_BRAKE_ACCEL_STEPS_S2 =
 // component of the rig's policy-loop lag. Tradeoff: ~√2× noisier
 // per-sample velocity estimate. See website/src/content/docs/reference/transport-delay.md.
 const uint16_t SAMPLE_PERIOD_US = 2000;
+// 延遲注入關閉時維持 16；打開時加大到 24（2 ms × 19 ≥ 36 ms，加上速度窗 5）。
+#if FT_LATENCY_MAX_MS > 0
+const uint8_t  BUFFER_SIZE      = 24;
+#else
 const uint8_t  BUFFER_SIZE      = 16;
+#endif
+#if FT_LATENCY_MIN_MS < 0 || FT_LATENCY_MAX_MS < FT_LATENCY_MIN_MS || FT_LATENCY_MAX_MS > 36
+#error "finetune_latency.h: 需要 0 <= FT_LATENCY_MIN_MS <= FT_LATENCY_MAX_MS <= 36"
+#endif
+static uint32_t episode_delay_us = 0;         // 這一回合加的延遲（finetune_latency.h）
 const uint8_t  VEL_WINDOW       = 5;
 // Discard impossibly-large per-sample wraps as I²C glitches. Real
 // pendulum tops out at ~50 rad/s, so in one 2 ms sample period the
@@ -119,7 +129,8 @@ bool motor_engaged = false;
 void handleCommand();
 void sendState();
 void sampleState();
-void computeVelocities(float* motor_vel_rad_s, float* pen_vel_rad_s);
+void computeVelocities(float* motor_vel_rad_s, float* pen_vel_rad_s, uint8_t d);
+uint8_t delaySamples();
 
 void setup()
 {
@@ -230,18 +241,19 @@ void sampleState()
  * Compute velocity over the most recent VEL_WINDOW samples as
  * (newest - oldest)/Δt. Returns 0 until the buffer holds enough samples.
  */
-void computeVelocities(float* motor_vel_rad_s, float* pen_vel_rad_s)
+void computeVelocities(float* motor_vel_rad_s, float* pen_vel_rad_s, uint8_t d)
 {
+    // d = 往回退幾個樣本（finetune_latency.h 的延遲；沒開時是 0）。
     uint8_t n_samples = buf_filled ? BUFFER_SIZE : buf_head;
-    if (n_samples < VEL_WINDOW)
+    if (n_samples < VEL_WINDOW + d)
     {
         *motor_vel_rad_s = 0.0f;
         *pen_vel_rad_s   = 0.0f;
         return;
     }
 
-    uint8_t newest = (uint8_t)((buf_head + BUFFER_SIZE - 1)            % BUFFER_SIZE);
-    uint8_t oldest = (uint8_t)((buf_head + BUFFER_SIZE - VEL_WINDOW)   % BUFFER_SIZE);
+    uint8_t newest = (uint8_t)((buf_head + BUFFER_SIZE - 1 - d)            % BUFFER_SIZE);
+    uint8_t oldest = (uint8_t)((buf_head + BUFFER_SIZE - VEL_WINDOW - d)   % BUFFER_SIZE);
 
     uint32_t t_new = time_us_buf[newest];
     uint32_t t_old = time_us_buf[oldest];
@@ -350,6 +362,13 @@ void handleCommand()
 
     case CMD_ENGAGE_MOTOR:
         motor_engaged = true;
+#if FT_LATENCY_MAX_MS > 0
+        {   // 第一次 ENGAGE 用當下的 micros() 當種子，每次開機抽到的延遲順序才會不同。
+            static bool seeded = false;
+            if (!seeded) { randomSeed(micros()); seeded = true; }
+        }
+        episode_delay_us = 1000UL * (uint32_t)random(FT_LATENCY_MIN_MS, FT_LATENCY_MAX_MS + 1);
+#endif
         stepper->enableOutputs();
         // Start in zero-accel state. moveByAcceleration(0, true) means
         // "hold current speed", and since we've just enabled the driver
@@ -469,13 +488,14 @@ void sendState()
     // fresh micros() — so the host gets a self-consistent (t, pos, vel)
     // tuple it can time-align without inheriting up-to-one-sample of
     // bias.
-    uint8_t newest = (uint8_t)((buf_head + BUFFER_SIZE - 1) % BUFFER_SIZE);
+    uint8_t d = delaySamples();
+    uint8_t newest = (uint8_t)((buf_head + BUFFER_SIZE - 1 - d) % BUFFER_SIZE);
     uint32_t current_time = time_us_buf[newest];
     float motor_position_radians = (float)motor_step_buf[newest] * RAD_PER_STEP;
     float pendulum_position_radians = pen_rad_buf[newest];
 
     float motor_velocity_rad_s, pendulum_velocity_rad_s;
-    computeVelocities(&motor_velocity_rad_s, &pendulum_velocity_rad_s);
+    computeVelocities(&motor_velocity_rad_s, &pendulum_velocity_rad_s, d);
 
     // Values go out exactly as the firmware measures them (step counter,
     // AS5600 accumulator with the calibrated pen_sign already applied in
@@ -487,4 +507,27 @@ void sendState()
     Serial.write((byte *)&pendulum_position_radians, sizeof(pendulum_position_radians));
     Serial.write((byte *)&motor_velocity_rad_s, sizeof(motor_velocity_rad_s));
     Serial.write((byte *)&pendulum_velocity_rad_s, sizeof(pendulum_velocity_rad_s));
+}
+
+/*
+ * finetune_latency.h 的延遲：往回退幾個樣本，讓 GET_STATE 讀到的樣本比最新的舊
+ * episode_delay_us（依時間戳挑最接近的）。沒開延遲時永遠回傳 0。
+ */
+uint8_t delaySamples()
+{
+    uint8_t n_samples = buf_filled ? BUFFER_SIZE : buf_head;
+    if (episode_delay_us == 0 || n_samples < VEL_WINDOW + 2) return 0;
+    uint8_t limit = n_samples - VEL_WINDOW;
+    uint8_t newest = (uint8_t)((buf_head + BUFFER_SIZE - 1) % BUFFER_SIZE);
+    uint32_t t0 = time_us_buf[newest];
+    uint32_t prev_gap = 0;
+    for (uint8_t d = 1; d <= limit; d++)
+    {
+        uint8_t k = (uint8_t)((buf_head + BUFFER_SIZE - 1 - d) % BUFFER_SIZE);
+        uint32_t gap = t0 - time_us_buf[k];
+        if (gap >= episode_delay_us)
+            return (gap - episode_delay_us) <= (episode_delay_us - prev_gap) ? d : d - 1;
+        prev_gap = gap;
+    }
+    return limit;
 }
