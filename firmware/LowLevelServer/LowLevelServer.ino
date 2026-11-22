@@ -81,14 +81,17 @@ const int32_t MOTOR_BRAKE_ACCEL_STEPS_S2 =
 // component of the rig's policy-loop lag. Tradeoff: ~√2× noisier
 // per-sample velocity estimate. See website/src/content/docs/reference/transport-delay.md.
 const uint16_t SAMPLE_PERIOD_US = 2000;
-// 延遲注入關閉時維持 16；打開時加大到 24（2 ms × 19 ≥ 36 ms，加上速度窗 5）。
-#if FT_LATENCY_MAX_MS > 0
+// 延遲注入關閉時維持 16；上限 ≤ 36 ms 時 24（2 ms × 19 ≥ 36 ms，加上速度窗 5）；
+// 上限 > 36 ms 時 42（2 ms × 37 ≥ 70 ms，加上速度窗 5），對應延遲階梯的 +70。
+#if FT_LATENCY_MAX_MS > 36
+const uint8_t  BUFFER_SIZE      = 42;
+#elif FT_LATENCY_MAX_MS > 0
 const uint8_t  BUFFER_SIZE      = 24;
 #else
 const uint8_t  BUFFER_SIZE      = 16;
 #endif
-#if FT_LATENCY_MIN_MS < 0 || FT_LATENCY_MAX_MS < FT_LATENCY_MIN_MS || FT_LATENCY_MAX_MS > 36
-#error "finetune_latency.h: 需要 0 <= FT_LATENCY_MIN_MS <= FT_LATENCY_MAX_MS <= 36"
+#if FT_LATENCY_MIN_MS < 0 || FT_LATENCY_MAX_MS < FT_LATENCY_MIN_MS || FT_LATENCY_MAX_MS > 70
+#error "finetune_latency.h: 需要 0 <= FT_LATENCY_MIN_MS <= FT_LATENCY_MAX_MS <= 70"
 #endif
 static uint32_t episode_delay_us = 0;         // 這一回合加的延遲（finetune_latency.h）
 const uint8_t  VEL_WINDOW       = 5;

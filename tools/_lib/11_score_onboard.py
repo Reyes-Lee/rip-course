@@ -1,9 +1,9 @@
 """11_score_onboard：Nano 獨立執行，用誠實指標評分（作者的 analyze_onboard.py）。
 
 1 一般評分：評分秒數會在畫面上問，直接按 Enter 是作者的 60 秒。評分前先丟掉開始的 5 秒（甩上）。
-2 延遲階梯（進階任務）：同一支策略，從 +0 ms 起一階一階加延遲，每一階重新甩上，
+2 延遲階梯（專題任務）：同一支策略，從 +0 ms 起一階一階加延遲，每一階重新甩上，
   連續平衡滿 20 秒算通過，成績是最後通過的那一階（policy/latency_ladder.py）。
-3 甩上計時（進階任務）：不加延遲甩 3 次，每次 20 秒內要站穩（連續平衡滿 10 秒）才算數，
+3 甩上計時（專題任務）：不加延遲甩 3 次，每次 20 秒內要站穩（連續平衡滿 10 秒）才算數，
   甩上時間 = engage 到站穩那一段開始的秒數，成績是中位數（latency_ladder.py --swingup）。
 """
 from __future__ import annotations
@@ -45,7 +45,7 @@ def swingup() -> int:
 def main() -> int:
     banner("11 獨立執行評分", "firmware/RLControl", needs_rig=True)
     mode = choose("要做哪一種評分？", [1, 2, 3],
-                  ["一般評分（60 秒）", "延遲階梯（進階任務）", "甩上計時（進階任務）"], default=0)
+                  ["一般評分（60 秒）", "延遲階梯（專題任務）", "甩上計時（專題任務）"], default=0)
     if mode in (2, 3):
         RECORDINGS.mkdir(parents=True, exist_ok=True)
         return ladder() if mode == 2 else swingup()

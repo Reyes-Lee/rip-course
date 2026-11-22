@@ -30,7 +30,7 @@ REWARD_WEIGHTS = [
     ("--reward-motor-jerk-weight", "reward_motor_jerk_weight", "手臂角速度變化² 懲罰（實機微調不支援）", 0.0),
     ("--reward-action-rate-weight", "reward_action_rate_weight", "動作變化² 懲罰", 0.0),
 ]
-# 延遲設定（進階專題用）：(06_settings.json 的欄位, 畫面上的問題, 作者的值, 下限, 上限)
+# 延遲設定（專題任務用）：(06_settings.json 的欄位, 畫面上的問題, 作者的值, 下限, 上限)
 LATENCY = [
     ("obs_staleness_min_ms", "觀測延遲下限（ms；模擬每回合在上下限之間抽一個，第 2、3 階段）", 2.0, 0.0, 100.0),
     ("obs_staleness_max_ms", "觀測延遲上限（ms）", 20.0, 0.0, 100.0),
@@ -93,7 +93,7 @@ def ask_latency(prev) -> dict:
         except (OSError, ValueError, KeyError):
             info(f"{label(prev)} 沒有存延遲設定，用作者的值。")
             return default
-    if not ask_yes("要改延遲設定嗎？（進階專題用；一般任務直接按 Enter）", default=False):
+    if not ask_yes("要改延遲設定嗎？（專題任務用；不改就直接按 Enter）", default=False):
         return default
     while True:
         lat = {key: ask_number(q, d, lo, hi) for key, q, d, lo, hi in LATENCY}
@@ -155,10 +155,10 @@ def main() -> int:
         if ask_yes(f"已完成第 {last} 階段，從第 {last + 1} 階段接續？", default=True):
             start = last + 1
 
-    # 進階：從一支已經練好的教師接著練第 3 階段（例如換一組延遲設定），不用三個階段從頭來。
+    # 專題任務：從一支已經練好的教師接著練第 3 階段（例如換一組延遲設定），不用三個階段從頭來。
     base = None
     ts = [t for t in teachers() if t.parent.name != f"{name}_stage3"]
-    if start == 1 and ts and ask_yes("要從現有的教師接著練、只跑第 3 階段嗎？（進階專題用；一般任務直接按 Enter）",
+    if start == 1 and ts and ask_yes("要從現有的教師接著練、只跑第 3 階段嗎？（專題任務用；不用就直接按 Enter）",
                                      default=False):
         base = choose("從哪一支教師接著練：", ts, [label(t) for t in ts])
         start = 3

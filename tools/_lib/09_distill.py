@@ -59,7 +59,7 @@ def main() -> int:
         rounds = ask_number("DAgger 輪數（0 = 只做行為克隆）", ROUNDS, 0)
         steps = ask_number("DAgger 每輪步數", STEPS_PER_ROUND, 1000)
     roll, gates = ROLL_STALE_MS, GATE_STALE_MS
-    if ask_yes("要改 DAgger 的延遲條件嗎？（進階專題用；一般任務直接按 Enter）", default=False):
+    if ask_yes("要改 DAgger 的延遲條件嗎？（專題任務用；不改就直接按 Enter）", default=False):
         roll, gates = ask_latency()
     # 資料夾名稱：預設設定維持作者的名稱，改過的設定加在後面。
     bc_sfx = ("" if teacher.name == "best_model.zip" else "_last") + ("" if seed == "0" else f"_s{seed}") \

@@ -62,7 +62,7 @@
 3. 手臂轉回正中間、擺錘靜止垂下，按 RESET 開始；助教用 `11_score_onboard` 記錄。
 4. 助教會請組員說明訓練過程，例如改了哪些地方、為什麼。
 
-要做的任務與評分方式會另外公告。[進階任務：延遲](advanced.md#demo)的 demo 改用 `11_score_onboard` 的延遲階梯和甩上計時，流程見那一頁。
+專題任務見[專題任務：延遲](advanced.md)。demo 用 `11_score_onboard` 的延遲階梯和甩上計時，流程見[那一頁的 Demo](advanced.md#demo)；評分方式另外公告。
 
 ## 器材使用規定 { #equipment }
 

@@ -62,7 +62,7 @@
  *   'E' / 'e' : engage motor (re-arm after a hard-limit trip)
  *   'D' / 'd' : disengage motor (manual stop)
  *   'M' / 'm' : print AS5600 magnet diagnostics
- *   'L<ms>[,<jitter>]' : 進階任務（延遲階梯）。只在 WAITING 時有效：之後每次 engage
+ *   'L<ms>[,<jitter>]' : 專題任務（延遲階梯）。只在 WAITING 時有效：之後每次 engage
  *               都用這個延遲，取代 latency_profile.h；'L-1' 改回 latency_profile.h。
  *               回覆一行 [latency] ...。extra + jitter 最多 70 ms。
  *
@@ -73,7 +73,7 @@
  * obs_staleness_s); analyze_onboard.py treats them as optional so older
  * seven-column captures still parse.
  *
- * 進階任務：額外延遲（latency_profile.h）。policy 讀的樣本可以比最新的再舊
+ * 專題任務：額外延遲（latency_profile.h）。policy 讀的樣本可以比最新的再舊
  * extra_ms，另外每一拍再隨機多 0..jitter_ms（毫秒，依樣本的時間戳挑最接近
  * 的一筆；取樣間隔實際約 2-3 ms），依 engage 後的秒數分段。課程版的 latency_profile.h 不注入任何延遲。
  * 遙測的位置來自最新樣本（不受注入影響），latency_us 則包含注入的延遲。

@@ -1,7 +1,7 @@
 """07_finetune：實機非同步微調（作者的 finetune_async.py），每執行一次跑一段。
 
 第一次（ft1）：從你選的教師開始。之後（ft2、ft3…）：從最新一段接續，帶上它的 replay buffer。
-進階專題換了教師時，可以選「從教師重新開始一條新的微調」（編號照樣往下排，不帶舊的 replay buffer）。
+專題任務換了教師時，可以選「從教師重新開始一條新的微調」（編號照樣往下排，不帶舊的 replay buffer）。
 回合數、每回合秒數、接續用哪個模型等設定都會在畫面上問，直接按 Enter 是作者的預設值。
 reward 權重預設沿用起點模型 config.json 裡的值（也就是 Step 1 訓練時用的），也可以在這裡改。
 每一段實際用的設定存在 runs/ftN/07_settings.json，包括 firmware/LowLevelServer/finetune_latency.h 的延遲範圍。
@@ -75,9 +75,9 @@ def main() -> int:
         run_dir.rename(keep)
         warn(f"上次的 {run_dir.name} 沒有跑完，已改名為 {keep.name} 保留，這一段重跑。")
 
-    # 已經有微調段時，預設接續最新一段；進階專題換了教師時，可以從教師重新開始一條（不帶舊的 replay buffer）。
+    # 已經有微調段時，預設接續最新一段；專題任務換了教師時，可以從教師重新開始一條（不帶舊的 replay buffer）。
     restart = bool(done) and ask_yes(
-        f"要從教師重新開始一條新的微調嗎？（不接續 {done[-1].name}；進階專題換教師時用，一般任務直接按 Enter）",
+        f"要從教師重新開始一條新的微調嗎？（不接續 {done[-1].name}；換教師時用，不用就直接按 Enter）",
         default=False)
     if not done or restart:
         ts = teachers()
@@ -154,7 +154,7 @@ def main() -> int:
             info("改好 firmware/LowLevelServer/finetune_latency.h、用 Arduino IDE 重新上傳後，再執行 07_finetune。")
             return 1
     else:
-        info("finetune_latency.h：不加延遲（一般任務的設定）。")
+        info("finetune_latency.h：不加延遲（預設）。")
 
     port = get_port()
     lo, hi = episodes * (length + 5) / 60, episodes * (length + 15) / 60
