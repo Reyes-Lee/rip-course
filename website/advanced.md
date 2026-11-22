@@ -8,17 +8,13 @@
 
 照五個步驟做，Nano 會自己甩上、平衡。但它只在**一種**延遲下練過：Nano 從讀取感測器到送出馬達指令大約 16 ms，策略在模擬裡也只見過差不多的值。真實系統的延遲會變，例如換一顆比較慢的 MCU、感測器改走通訊匯流排、或是同時要做別的事。
 
-專題任務有兩項：**延遲階梯**和**甩上競速**，第 3 週 demo。
+專題任務有兩項：**延遲階梯**和**甩上競速**，第 3 週 demo，之後繳交分析報告。
+
+這一頁是專題要做的事：任務、繳交、demo，以及練習和訓練用的工具。整個專題共通的規定（兩條硬規定、可以改什麼、教師的格式、器材使用）在[專題規則](rules.md)。
 
 !!! warning "這一頁的規定是草稿"
 
-    配分另外公告。規則可能調整，只會往對學生有利的方向調整。
-
-這一頁只寫專題任務特有的規定。沒寫到的（兩條硬規定、器材使用、教師格式），照[專題規則](rules.md)。
-
-## 配分 { #grading }
-
-延遲階梯、甩上競速和分析報告的配分另外公告。
+    延遲階梯、甩上競速和分析報告的配分另外公告。規則可能調整，只會往對學生有利的方向調整。
 
 ## 延遲的定義 { #latency }
 
@@ -63,19 +59,9 @@
 
 demo 之後繳交事後的分析報告，內容與評分方式另外公告。
 
-## 可以改什麼、不能改什麼 { #scope }
-
-| 可以 | 不可以 |
-| --- | --- |
-| 訓練流程的任何部分：模擬環境、domain randomization、reward、RL 演算法、微調、蒸餾 | Nano 上的網路用 RL 教師以外的東西當標籤（LQR、PID、手動示範） |
-| 改 `LowLevelServer`、`finetune_async.py` 和各個訓練腳本 | 改硬體（Vref、微步、配重等），見[專題規則](rules.md#scope) |
-| 用[可以調的地方](#knobs)列出的任何設定，或自己加新的 | |
-| 在自己的機台上做實機微調，次數不限 | |
-| 甩上競速用另一支策略 | |
-
 ## 繳交 { #submit }
 
-demo 前繳交，demo 時用的就是繳交的檔案，當天不能換。只交下面這些：
+demo 前繳交，繳交方式另外公告。demo 時用的就是繳交的檔案，當天不能換。只交下面這些：
 
 ```text
 ladder/
@@ -91,7 +77,7 @@ swingup/
 | 檔案 | 從哪裡拿 |
 | --- | --- |
 | `policy_weights_student.h` | `10_export_weights` 輸出的 `firmware/RLControl/policy_weights_student.h` |
-| `teacher.zip` | `09_distill` 用來蒸餾的那支教師，例如 `policy/runs/ft2/last.zip`，改名成 `teacher.zip`。不是用 Stable-Baselines3 的話，改交 `teacher_act.py`（格式見[專題規則](rules.md#submit)），並附上訓練這支教師的程式 |
+| `teacher.zip` | `09_distill` 用來蒸餾的那支教師，例如 `policy/runs/ft2/last.zip`，改名成 `teacher.zip`。不是用 Stable-Baselines3 的話，改交 `teacher_act.py`（格式見[專題規則](rules.md#teacher)），並附上訓練這支教師的程式 |
 | `config.json` | 上面那支教師所在的資料夾裡的 `config.json` |
 
 甩上策略和延遲階梯同一支的話，`swingup/` 只放一個寫著「同 ladder」的文字檔。
@@ -101,6 +87,7 @@ swingup/
 1. 用自己的機台。助教先確認硬體照交付狀態。
 2. 助教把課程版 `RLControl.ino` 加上 `ladder/policy_weights_student.h` 燒進 Nano，`11_score_onboard` 選「延遲階梯」，從 +0 開始。每一階由組員把手臂轉回正中間、等擺錘靜止，助教按 Enter。
 3. 換成 `swingup/policy_weights_student.h` 重新燒錄，`11_score_onboard` 選「甩上計時」，甩 3 次。
+4. 助教會請組員說明訓練過程，例如改了哪些地方、為什麼。
 
 **硬體出問題時**：遙測顯示是硬體的問題（擺錘角度讀值卡住、馬達失步、接線鬆脫），由助教判斷，那一次不算，排除後重測。策略自己倒下不算硬體問題。
 
@@ -187,4 +174,4 @@ Nano 大約每 2 ms 讀一次擺錘和手臂的位置（推論時會稍微拉長
 
 想更深入也可以直接改程式：`policy/pendulum_env.py`（`obs_staleness_s` 的說明）、`policy/train_sac.py --help`、`policy/dagger_distill.py --help`、[sim2real 理論](theory.md)。
 
-能改和不能改的範圍見[上面](#scope)。
+能改和不能改的範圍見[專題規則](rules.md#scope)。

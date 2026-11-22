@@ -229,12 +229,23 @@ static uint32_t engaged_ms = 0;
 static int8_t latency_override_ms = -1;
 static uint8_t latency_override_jitter_ms = 0;
 
-static int32_t motor_step_buf[SAMPLE_BUFFER_SIZE];
+// 省 SRAM 的存法（42 筆 × 12 bytes 會吃掉主迴圈和 ISR 需要的堆疊）：
+// - 手臂步數存 int16：硬極限 132° ≈ 2350 步，int16 夠用；相減用 int16 繞回，差值永遠正確。
+// - 時間戳存 micros() >> 2（4 µs 為單位，micros() 本身的解析度就是 4 µs，不損失精度）的
+//   低 16 位元。只拿來算「兩筆之間差多久」，可表示 262 ms 以內的差；
+//   緩衝區最多涵蓋約 42 × 3 ms ≈ 130 ms，而且每次 engage 都會清空重來。
+static int16_t motor_step_buf[SAMPLE_BUFFER_SIZE];
 static float pen_rad_buf[SAMPLE_BUFFER_SIZE];
-static uint32_t time_us_buf[SAMPLE_BUFFER_SIZE];
+static uint16_t time_q_buf[SAMPLE_BUFFER_SIZE];
 static uint8_t buf_head = 0;
 static bool buf_filled = false;
-static uint32_t last_sample_us = 0;
+static uint32_t last_sample_us = 0;     // 最新一筆的完整 micros()
+
+/** 第 newer 筆比第 older 筆晚多少微秒。 */
+static inline uint32_t sample_span_us(uint8_t newer, uint8_t older)
+{
+    return (uint32_t)(uint16_t)(time_q_buf[newer] - time_q_buf[older]) << 2;
+}
 
 static void update_sample_buffer();
 
@@ -380,9 +391,9 @@ static void update_sample_buffer()
     if ((uint32_t)(now_us - last_sample_us) < SAMPLE_PERIOD_US) return;
     last_sample_us = now_us;
 
-    motor_step_buf[buf_head] = stepper->getCurrentPosition();
+    motor_step_buf[buf_head] = (int16_t)stepper->getCurrentPosition();
     pen_rad_buf[buf_head] = read_pendulum_rad();
-    time_us_buf[buf_head] = now_us;
+    time_q_buf[buf_head] = (uint16_t)(now_us >> 2);
     buf_head = (buf_head + 1) % SAMPLE_BUFFER_SIZE;
     if (buf_head == 0) buf_filled = true;
 }
@@ -423,13 +434,12 @@ static uint8_t delay_samples_for(uint32_t target_us, uint8_t n_samples)
 {
     if (target_us == 0 || n_samples < 2) return 0;
     uint8_t newest = (uint8_t)((buf_head + SAMPLE_BUFFER_SIZE - 1) % SAMPLE_BUFFER_SIZE);
-    uint32_t t0 = time_us_buf[newest];
     uint8_t limit = n_samples - 1 < MAX_DELAY_SAMPLES ? n_samples - 1 : MAX_DELAY_SAMPLES;
     uint32_t prev_gap = 0;
     for (uint8_t d = 1; d <= limit; d++)
     {
         uint8_t k = (uint8_t)((buf_head + SAMPLE_BUFFER_SIZE - 1 - d) % SAMPLE_BUFFER_SIZE);
-        uint32_t gap = t0 - time_us_buf[k];
+        uint32_t gap = sample_span_us(newest, k);
         if (gap >= target_us)
             return (gap - target_us) <= (target_us - prev_gap) ? d : d - 1;
         prev_gap = gap;
@@ -455,7 +465,10 @@ static void read_measured_state(float* motor_pos, float* phi,
     }
 
     uint8_t newest = (uint8_t)((buf_head + SAMPLE_BUFFER_SIZE - 1 - d) % SAMPLE_BUFFER_SIZE);
-    used_sample_us = time_us_buf[newest];
+    {
+        uint8_t latest = (uint8_t)((buf_head + SAMPLE_BUFFER_SIZE - 1) % SAMPLE_BUFFER_SIZE);
+        used_sample_us = last_sample_us - sample_span_us(latest, newest);
+    }
     *motor_pos = (float)motor_step_buf[newest] * RAD_PER_STEP;
     *phi = pen_rad_buf[newest];
 
@@ -466,15 +479,16 @@ static void read_measured_state(float* motor_pos, float* phi,
         return;
     }
     uint8_t oldest = (uint8_t)((buf_head + SAMPLE_BUFFER_SIZE - VEL_WINDOW - d) % SAMPLE_BUFFER_SIZE);
-    float dt_s = (float)((uint32_t)(time_us_buf[newest] - time_us_buf[oldest])) * 1e-6f;
-    tele_vel_span_us = (uint16_t)((uint32_t)(time_us_buf[newest] - time_us_buf[oldest]));
+    uint32_t span_us = sample_span_us(newest, oldest);
+    float dt_s = (float)span_us * 1e-6f;
+    tele_vel_span_us = (uint16_t)span_us;
     if (dt_s <= 0.0f)
     {
         *motor_vel = 0.0f;
         *pen_vel = 0.0f;
         return;
     }
-    int32_t motor_step_delta = motor_step_buf[newest] - motor_step_buf[oldest];
+    int32_t motor_step_delta = (int16_t)(motor_step_buf[newest] - motor_step_buf[oldest]);
     *motor_vel = ((float)motor_step_delta * RAD_PER_STEP) / dt_s;
     *pen_vel = (pen_rad_buf[newest] - pen_rad_buf[oldest]) / dt_s;
 }

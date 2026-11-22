@@ -1,6 +1,6 @@
 # 專題規則
 
-這一頁是期末專題的規定：繳交什麼、demo 怎麼進行、器材的使用規定。評分項目與 demo 日期會另外公告。
+這一頁是整個期末專題都適用的規定：兩條硬規定、可以改什麼、教師的格式、器材使用。要做什麼、交哪些檔案、demo 怎麼進行，見[專題任務：延遲](advanced.md)。
 
 !!! info "截止時間"
 
@@ -30,39 +30,26 @@
 
 | 可以自由決定 | 不能改 |
 | --- | --- |
-| reward 的權重與公式 | 課程版 `firmware/RLControl/RLControl.ino` |
+| reward 的權重與公式 | 課程版 `firmware/RLControl/RLControl.ino`：demo 時助教燒的是課程版，只換上你們的權重檔 |
 | RL 演算法與函式庫（不一定要 SAC 或 SB3） | 韌體接口：網路結構 24 → H → H → 1、觀測（最近 4 幀）、50 Hz、速度上限 3.5 rad/s、加速度上限 150 rad/s²、動作平滑 4 拍，見 [Step 4「`RLControl.ino` 固定了什麼」](steps/step4-deploy.md#fixed) |
-| 訓練步數、SEED、微調回合數與段數 | 硬體：Vref、微步、接線、編碼器、配重照交付狀態，不加感測器或機構輔助 |
+| 模擬環境與 domain randomization（包括延遲），訓練步數、SEED | 硬體：Vref、微步、接線、編碼器、配重照交付狀態，不加感測器或機構輔助 |
+| 實機微調：回合數、段數、次數都不限；`LowLevelServer`、`finetune_async.py` 和各個訓練腳本都可以改 | |
 | 蒸餾方法、隱藏層大小 H（要守住約 50 Hz 與 30720 bytes） | |
 | 直接用 RL 訓練小網路、不蒸餾（這時教師就是它本身） | |
+| 延遲階梯和甩上競速用不同的策略 | |
+
+和延遲有關、工具裡就能改的設定，見[專題任務的「可以調的地方」](advanced.md#knobs)。
 
 **不允許**：Nano 上的網路用 RL 教師以外的東西當標籤，例如 LQR、PID、手動示範。
 
-## 繳交 { #submit }
+## 教師的格式 { #teacher }
 
-繳交方式另外公告。demo 用的就是你們繳交的檔案，**demo 當天不能換檔**。
-
-| 繳交內容 | 說明 |
-| --- | --- |
-| Nano 用的權重檔 | `firmware/RLControl/policy_weights_student.h` |
-| 教師與訓練紀錄 | 照課程流程的話，交 `policy/runs/` 裡 Step 1 的每個階段（`<名稱>_stage1`～`stage3`）和 Step 2 的每一段（`ft1`、`ft2`…）整個資料夾，包含 `best_model.zip`、`config.json`、`reward_used.py` 和訓練過程的紀錄。`replay_buffer.pkl`、`checkpoints/`、`checkpoint_ep*.zip` 檔案很大，不用交 |
-| 程式碼 | 在 `rip-course` 資料夾執行 `git diff > changes.diff`，交 `changes.diff`，加上你們新增的檔案 |
-
-**教師的格式**：RL 演算法和函式庫不限，但交出來的教師必須能在課程 repo 的 Python 環境（`policy/`，有 PyTorch、numpy、Stable-Baselines3）裡直接執行：
+RL 演算法和函式庫不限，但交出來的教師必須能在課程 repo 的 Python 環境（`policy/`，有 PyTorch、numpy、Stable-Baselines3）裡直接執行：
 
 - 用 Stable-Baselines3（照課程流程就是）：交 `.zip`。
 - 用其他方法：另外交一支只用上面這些套件的 `teacher_act.py`，提供 `act(obs) -> action`。`obs` 是 24 個數（觀測的格式見 [Step 1](steps/step1-train.md#obs)），`action` 在 −1 到 1 之間。
 
 助教會用同一批模擬狀態，比對 Nano 上的網路和你們的教師輸出的動作，確認 Nano 網路是從這支教師來的。
-
-## Demo { #demo }
-
-1. 用你們自己的機台。
-2. 助教用課程版 `RLControl.ino` 加上你們繳交的 `policy_weights_student.h`，燒進 Nano。
-3. 手臂轉回正中間、擺錘靜止垂下，按 RESET 開始；助教用 `11_score_onboard` 記錄。
-4. 助教會請組員說明訓練過程，例如改了哪些地方、為什麼。
-
-專題任務見[專題任務：延遲](advanced.md)。demo 用 `11_score_onboard` 的延遲階梯和甩上計時，流程見[那一頁的 Demo](advanced.md#demo)；評分方式另外公告。
 
 ## 器材使用規定 { #equipment }
 
