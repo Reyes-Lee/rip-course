@@ -1,4 +1,4 @@
-# 專題任務：延遲
+# 專題任務
 
 <div class="rip-meta" markdown>
   <span class="rip-chip rip-chip--amber">:material-timer-sand: 專題任務</span>
