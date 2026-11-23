@@ -42,7 +42,7 @@
         | --- | --- |
         | Arduino IDE | 到 [arduino.cc](https://www.arduino.cc/en/software) 下載 Windows 版安裝 |
         | Git | 安裝 [Git for Windows](https://git-scm.com/download/win)，選項都用預設 |
-        | USB 驅動（CH340） | Nano 插上後，打開「裝置管理員 → 連接埠」。看不到 `USB-SERIAL CH340 (COMx)` 時，安裝 WCH 的 CH341SER 驅動（助教會附連結） |
+        | USB 驅動（CH340） | Nano 插上後，打開「裝置管理員 → 連接埠」。看不到 `USB-SERIAL CH340 (COMx)` 時，安裝 WCH 的 CH341SER 驅動（助教會附連結）。如果看到的是 `Unknown USB Device (Device Descriptor Request Failed)`、錯誤碼 43，那是線、USB 孔或板子的問題，裝驅動沒用：先換線、換 USB 孔（筆電有 USB-C 孔可以試試） |
         | uv | 打開 PowerShell，執行下面這行 |
 
         ```powershell
@@ -125,6 +125,15 @@ git stash pop
 
 最後一行如果出現 `CONFLICT`，代表助教也改了同一個檔案，把整段訊息截圖給助教，不要自己刪檔案。
 
+!!! warning "訊息裡的檔案是 `firmware/RLControl/policy_weights_student.h` 時"
+
+    舊版的 repo 裡有這個檔案，新版已經拿掉了（它是你自己匯出的權重，不該放在 repo 裡）。在舊版做過 Step 4 匯出的人，更新時會看到上面的訊息。這時不要用 `git stash`，改成：
+
+    1. 把 `firmware/RLControl/policy_weights_student.h` 複製一份到 repo 以外的地方（例如桌面）。
+    2. 在 repo 資料夾執行 `git checkout -- firmware/RLControl/policy_weights_student.h`。
+    3. 執行 `git pull`。
+    4. 把剛才複製的檔案放回 `firmware/RLControl/`。之後它不在 repo 裡，更新不會再碰到它。
+
 ## 4. 執行 `00_setup` { #setup .rip-do }
 
 !!! tool "操作步驟"
@@ -145,7 +154,7 @@ git stash pop
     - `torch` 的版本
     - 你的 Nano 序列埠（macOS 是 `/dev/cu.usbserial-xxxx` 或 `/dev/cu.wchusbserial-xxxx`，Windows 是 `COM3`、`COM4`…）
 
-    **沒看到序列埠**：先換一條 USB-C 線（有些線只能充電，不能傳資料），Windows 再確認 CH340 驅動，然後重新執行 `00_setup`。
+    **沒看到序列埠**：工具最後會印出黃色的「還沒找到 Nano 的序列埠，00_setup 還沒完成」，這時還不算通過。先換一條 USB-C 線（有些線只能充電，不能傳資料）、換一個 USB 孔；Windows 再看裝置管理員：出現 `USB-SERIAL CH340` 才是驅動的問題，出現 `Unknown USB Device`（錯誤碼 43）是線或孔的問題。然後重新執行 `00_setup`。
 
 ## 課程 repo 的結構 { #layout .rip-learn }
 

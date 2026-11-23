@@ -1,7 +1,7 @@
 # Step 1：在模擬中訓練教師策略
 
 <div class="rip-meta" markdown>
-  <span class="rip-chip rip-chip--cyan">:material-clock-outline: 筆電 CPU 約 25–60 分鐘</span>
+  <span class="rip-chip rip-chip--cyan">:material-clock-outline: 筆電 CPU 約 0.5–2 小時</span>
   <span class="rip-chip">:material-robot-off-outline: 不需要機台</span>
   <span class="rip-chip">:material-file-outline: 產出 v1_stage3/best_model.zip</span>
 </div>
@@ -134,7 +134,7 @@ SEED 是亂數種子，決定網路初始權重與探索過程；同一套配方
     1. 執行 `tools/06_train_teacher`。
     2. `run 名稱 [v1]:` 輸入 `v2`。**不要沿用 v1**，否則工具會把它當成接續舊的那一支。
     3. `SEED [0]:` 輸入 `1`。
-    4. 跑完（約 25–60 分鐘）後看新的檢查點數字，和前一支比較。
+    4. 跑完（0.5–2 小時，看電腦）後看新的檢查點數字，和前一支比較。
     5. 還是不理想，再用 `v3`、SEED `2`，以此類推。連續好幾支都很低，問題通常不在 SEED：回去對照 [Step 0 檢查點](step0-sysid.md#checkpoint)，確認模型對上機台；改過 reward 的話，也要檢查你的修改。
     6. Step 2 選教師時，選你判斷最好的那一支（例如 `v2_stage3`）。
 

@@ -29,6 +29,12 @@ DONE_MARK = ".done"
 # Windows 10 以上的終端機要先呼叫一次才會吃 ANSI 色碼。
 if IS_WIN:
     os.system("")
+    # 輸出導向檔案時，繁中 Windows 的 Python 預設用 cp950，印到 ✔ 這類符號會當掉。
+    for _stream in (sys.stdout, sys.stderr):
+        try:
+            _stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
 
 _C = {"pink": "95", "yellow": "93", "green": "92", "red": "91", "cyan": "96", "bold": "1", "dim": "2"}
 
@@ -134,6 +140,11 @@ def choose(title: str, items: list, labels: list[str] | None = None, default: in
         warn(f"請輸入 1 到 {len(items)} 的數字")
 
 
+# finish() 等過 Enter 之後，失敗時用這個結束碼離開。Windows 的 .bat 看到它就不會再 pause 一次；
+# 其他非 0 的結束碼（uv 本身失敗、沒接住的例外）.bat 會 pause，讓視窗留著可以截圖。
+WAITED_FAIL = 3
+
+
 def finish(code: int = 0) -> None:
     """執行開的視窗結束時會直接關掉，所以最後停一下讓人看結果。"""
     print()
@@ -141,7 +152,19 @@ def finish(code: int = 0) -> None:
         input(color("按 Enter 關閉視窗", "dim"))
     except EOFError:
         pass
-    sys.exit(code)
+    sys.exit(0 if code == 0 else WAITED_FAIL)
+
+
+def _crash(kind, value, tb) -> None:
+    """沒接住的例外：印出完整錯誤，再停下來等 Enter，視窗才不會一閃就關。"""
+    import traceback
+    traceback.print_exception(kind, value, tb)
+    if not issubclass(kind, KeyboardInterrupt):
+        print(color("工具發生錯誤。把整個畫面截圖給助教。", "red"))
+    finish(1)
+
+
+sys.excepthook = _crash
 
 
 # ---------------------------------------------------------------- 設定檔
