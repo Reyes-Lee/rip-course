@@ -10,7 +10,7 @@
 
 專題任務有兩項：**延遲階梯**和**甩上競速**，第 3 週 demo，之後繳交分析報告。
 
-這一頁是專題要做的事：任務、繳交、demo，以及練習和訓練用的工具。整個專題共通的規定（兩條硬規定、可以改什麼、教師的格式、器材使用）在[專題規則](rules.md)。
+這一頁是專題要做的事：任務、繳交、demo，以及練習和訓練用的工具。整個專題共通的規定（兩條硬規定與要交的證明、其他可以改的、器材使用）在[專題規則](rules.md)。
 
 !!! warning "這一頁的規定是草稿"
 
@@ -44,7 +44,7 @@
 
 ## 任務二：甩上競速 { #swingup }
 
-另外繳交一支甩上策略，可以和延遲階梯同一支。規定和延遲階梯的策略相同：課程版 `RLControl.ino`、同樣的學生網路、標籤來自 RL 教師。助教燒進 Nano 後執行 `11_score_onboard`，選「甩上計時」。
+另外繳交一支甩上策略，可以和延遲階梯同一支，一樣要守住[兩條硬規定](rules.md#hard-rules)。助教燒進 Nano 後執行 `11_score_onboard`，選「甩上計時」。
 
 | | 規則 |
 | --- | --- |
@@ -80,7 +80,7 @@ swingup/
 | `teacher.zip` | `09_distill` 用來蒸餾的那支教師，例如 `policy/runs/ft2/last.zip`，改名成 `teacher.zip`。不是用 Stable-Baselines3 的話，改交 `teacher_act.py`（格式見[專題規則](rules.md#teacher)），並附上訓練這支教師的程式 |
 | `config.json` | 上面那支教師所在的資料夾裡的 `config.json` |
 
-甩上策略和延遲階梯同一支的話，`swingup/` 只放一個寫著「同 ladder」的文字檔。
+`policy_weights_student.h` 是 Nano 上跑的網路（[規定一](rules.md#hard-rules)）；`teacher.zip` 和 `config.json` 用來確認這支網路來自你們的 RL 教師（[規定二](rules.md#hard-rules)）。甩上策略和延遲階梯同一支的話，`swingup/` 只放一個寫著「同 ladder」的文字檔。
 
 ## Demo（第 3 週） { #demo }
 
