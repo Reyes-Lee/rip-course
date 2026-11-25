@@ -3,7 +3,7 @@
 1 一般評分：評分秒數會在畫面上問，直接按 Enter 是作者的 60 秒。評分前先丟掉開始的 5 秒（甩上）。
 2 延遲階梯（專題任務）：同一支策略，從 +0 ms 起一階一階加延遲，每一階重新甩上，
   連續平衡滿 20 秒算通過，成績是最後通過的那一階（policy/latency_ladder.py）。
-3 甩上計時（專題任務）：不加延遲甩 3 次，每次 20 秒內要站穩（連續平衡滿 10 秒）才算數，
+3 甩上到平衡計時（專題任務）：不加延遲甩 3 次，每次 20 秒內要站穩（連續平衡滿 10 秒）才算數，
   甩上時間 = engage 到站穩那一段開始的秒數，成績是中位數（latency_ladder.py --swingup）。
 """
 from __future__ import annotations
@@ -15,11 +15,12 @@ from _common import RECORDINGS, ask_number, banner, choose, finish, get_port, in
 DURATION_S = 60
 
 
-LADDER_START = (0, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70)
+LADDER_START = (0, 10, 15, 20, 25, 30, 35, 37, 40, 42, 45, 47, 50, 55)   # 和 latency_ladder.DEFAULT_LEVELS 同一組
 
 
 def ladder() -> int:
-    info("延遲階梯：+0、+10、+15、+20 … +70 ms，由低往高測。每一階都要你把手臂轉回正中間再按 Enter。")
+    info("延遲階梯：+0、+10、+15 … +35 每 5 ms 一階，+35 到 +50 是細階（+37、+40、+42、+45、+47、+50），"
+         "最後一階是 +55。由低往高測，每一階都要你把手臂轉回正中間再按 Enter。")
     info("每一階 engage 後 40 秒內連續平衡滿 20 秒就通過，馬上進下一階；沒過可以重試 1 次，還是沒過就停。")
     info("延遲直接用序列埠設定，不看 latency_profile.h，所以不用重新上傳。")
     start = choose("從哪一階開始？（demo 從 +0；練習可以從比較高的開始，但結果不算正式成績）",
@@ -32,7 +33,7 @@ def ladder() -> int:
 
 
 def swingup() -> int:
-    info("甩上計時：不加延遲，甩 3 次。每一次 20 秒內要站穩（連續平衡滿 10 秒）才算數。")
+    info("甩上到平衡計時：不加延遲，甩 3 次。每一次 20 秒內要站穩（連續平衡滿 10 秒）才算數。")
     info("甩上時間 = engage 到站穩那一段開始的秒數；成績是 3 次的中位數（有 2 次沒站穩就沒有成績）。")
     info("要先上傳你們的甩上策略（RLControl ＋ 甩上用的 policy_weights_student.h）。")
     port = get_port()
@@ -45,7 +46,7 @@ def swingup() -> int:
 def main() -> int:
     banner("11 獨立執行評分", "firmware/RLControl", needs_rig=True)
     mode = choose("要做哪一種評分？", [1, 2, 3],
-                  ["一般評分（60 秒）", "延遲階梯（專題任務）", "甩上計時（專題任務）"], default=0)
+                  ["一般評分（60 秒）", "延遲階梯（專題任務）", "甩上到平衡計時（專題任務）"], default=0)
     if mode in (2, 3):
         RECORDINGS.mkdir(parents=True, exist_ok=True)
         return ladder() if mode == 2 else swingup()

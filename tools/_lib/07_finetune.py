@@ -99,11 +99,12 @@ def main() -> int:
     heading("這一段的設定（直接按 Enter 用 [ ] 裡的預設值）")
     episodes = ask_number("回合數", n_default, 1)
     length = ask_number("每回合秒數", EPISODE_LENGTH_S, 2.0, 60.0)
-    lr, grad_steps, eval_every = LEARNING_RATE, GRADIENT_STEPS, EVAL_EVERY
+    # 回合數比評估間隔少時，最後一回合就當評估回合，不然整段沒有 best_model.zip、會被當成沒跑完。
+    lr, grad_steps, eval_every = LEARNING_RATE, GRADIENT_STEPS, min(EVAL_EVERY, episodes)
     if ask_yes("要改進階設定（學習率、每次更新的梯度步數、評估間隔）嗎？", default=False):
         lr = ask_number("學習率", LEARNING_RATE, 1e-6, 1e-2)
         grad_steps = ask_number("每次更新的梯度步數", GRADIENT_STEPS, 1, 32)
-        eval_every = ask_number("每幾回合做一次評估回合", EVAL_EVERY, 1, episodes)
+        eval_every = ask_number("每幾回合做一次評估回合", eval_every, 1, episodes)
 
     try:
         cfg = json.loads((start.parent / "config.json").read_text(encoding="utf-8"))

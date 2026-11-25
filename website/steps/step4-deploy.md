@@ -23,7 +23,7 @@
 
     1. 執行 `tools/10_export_weights`。清單預設是最新的學生，直接按 Enter。工具核對[下面的 sketch 常數](#constants)，全部 OK 才匯出到 `firmware/RLControl/policy_weights_student.h`。
     2. 用 Arduino IDE 開 `firmware/RLControl/RLControl.ino`，按「上傳」。sketch 載入的是第 1 步匯出的 `policy_weights_student.h`；repo 不附任何權重，還沒匯出就上傳，編譯會停在 `No policy weights yet` 的錯誤。
-    3. 看 IDE 下方的編譯訊息：「草稿碼使用了 N 位元組」的 N 必須 ≤ 30720（Nano 的上限）。超過會上傳失敗：照預設的 H=16 不會超過；你改大了 H 的話，要改小再重新蒸餾。
+    3. 看 IDE 下方的編譯訊息：「草稿碼使用了 N 位元組」的 N 必須 ≤ 30720（Nano 的上限）。照課程流程（H=16）約 27700，不會超過。
     4. 上傳完 Nano 會自動重開。前 1 秒 LED 恆亮，這時擺錘要**靜止垂下**（這個姿勢會被當成編碼器零點），之後它會自己甩上、平衡。如果馬達完全不動，打開序列埠監控（500000）看有沒有 `[DIR] not calibrated`：這塊 Nano 沒做過[方向標定](../prepare/hardware.md#direction)，改燒 `LowLevelServer` 跑 `04_check_direction`，再重新上傳 `RLControl`。
 
 ??? cmd "第 1 步背後執行的指令"
@@ -48,7 +48,7 @@
 
 | 固定的東西 | 課程的值 | 為什麼 |
 | --- | --- | --- |
-| 網路結構 | 24 → H → H → 1，隱藏層 ReLU、輸出 tanh，float32 | sketch 的前向計算照這個結構寫。H 由 `.h` 決定 |
+| 網路結構 | 24 → 16 → 16 → 1，隱藏層 ReLU、輸出 tanh，float32 | sketch 的前向計算照這個結構寫。隱藏層大小 H 不是 16，`10_export_weights` 不會匯出，編譯也會停在 `policy hidden size H must be 16` 的錯誤 |
 | 觀測 | 最近 4 幀，每幀 `[手臂角, sin θ, cos θ, 手臂角速度, 擺錘角速度, 上一個動作]`；速度用 8 ms 視窗的差分估計 | 跟 `LowLevelServer` 同一套算法，微調時策略看到的就是這些數字 |
 | 控制頻率 | 50 Hz | 訓練、微調、部署三處必須一樣 |
 | 動作 | 速度指令，上限 3.5 rad/s；加速度上限 150 rad/s²；對最近 4 個動作取平均 | 150 rad/s² 是 `03_check_motor` 驗過不會失步的範圍 |
@@ -56,7 +56,7 @@
 | 接線、微步、方向標定、開機抓零點 | 見[硬體與上電測試](../prepare/hardware.md) | 硬體設定 |
 | 額外延遲 | `latency_profile.h` 預設不加 | [專題任務](../advanced.md)用；一般流程保持預設 |
 
-能變的是 `.h` 裡的權重和隱藏層大小 H，也就是 Step 1–3 怎麼訓練、怎麼蒸餾，包括 reward 和蒸餾方法。H 越大推論越慢：H=16 約 12 ms，超過 20 ms 的控制週期，頻率就會往下掉。所以換 H 之後要看 `11_score_onboard` 第一行的頻率是不是約 50 Hz，以及 Arduino IDE 編譯訊息裡的大小是不是 ≤ 30720 bytes。
+能變的只有 `.h` 裡的權重，也就是 Step 1–3 怎麼訓練、怎麼蒸餾，包括 reward 和蒸餾方法。隱藏層大小固定 16 的原因見 [Step 3「為什麼是 16 個神經元？」](step3-distill.md#why-16)。
 
 ### 工具核對的 sketch 常數 { #constants .rip-learn }
 
@@ -75,7 +75,7 @@
 !!! tool "操作步驟"
 
     1. Nano 燒的是 `RLControl`（[第 1 節](#flash)），Arduino IDE 的序列埠監控已關掉。這時策略可能已經在甩，不用先停它。
-    2. 執行 `tools/11_score_onboard`。`要做哪一種評分？` 直接按 Enter 選「一般評分」（「延遲階梯」和「甩上計時」是[專題任務](../advanced.md)用的）。`評分秒數 [60]:` 直接按 Enter 是作者的 60 秒，也可以輸入其他秒數（5–600；作者的參考值是用 300 秒量的）。工具打開 serial 時 Nano 會重開，接著工具讓馬達斷電，印出「馬達已斷電」。
+    2. 執行 `tools/11_score_onboard`。`要做哪一種評分？` 直接按 Enter 選「一般評分」（「延遲階梯」和「甩上到平衡計時」是[專題任務](../advanced.md)用的）。`評分秒數 [60]:` 直接按 Enter 是作者的 60 秒，也可以輸入其他秒數（5–600；作者的參考值是用 300 秒量的）。工具打開 serial 時 Nano 會重開，接著工具讓馬達斷電，印出「馬達已斷電」。
     3. 用手把手臂轉回正中間，等擺錘**完全靜止垂下**，按 Enter。Nano 在這一刻抓零點並開始甩。
     4. 之後在「評分秒數 + 5 秒」內不要碰機台（預設約 65 秒）。前 5 秒不算進平衡指標，但工具會從按下 Enter 的那一刻開始記錄，另外算出甩上時間。結束時印出結果，紀錄檔存在 `policy/recordings/onboard_<時間>.npz`。照下面的順序看。
 

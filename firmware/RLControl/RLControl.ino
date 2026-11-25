@@ -198,6 +198,12 @@ const uint8_t FRAME_DIM = 6;
 #error "policy_weights.h obs dim != 24 — flash weights from a K=4 velocity-mode policy"
 #endif
 #endif
+// 隱藏層大小 H 固定 16。policy_forward 的 h1、h2 放在堆疊上，H 每加 1 多用 8 bytes。
+// H=16 時最深的堆疊（主迴圈 + FastAccelStepper 的 Timer1 ISR + 巢狀 ISR）約 480 bytes，
+// 剩餘 SRAM 505 bytes；H >= 19 會溢位。編譯器不會警告，症狀是讀值錯、策略亂動。
+#if POLICY_HIDDEN_DIM != 16
+#error "policy hidden size H must be 16 (Nano SRAM stack) - distill again with 09_distill (H=16)"
+#endif
 
 // Motor position safety limits in policy frame.
 //   SAFE_LIMIT (±100°) — matches MOTOR_SAFE_LIMIT_RAD in pendulum_env.py.

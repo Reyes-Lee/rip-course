@@ -15,9 +15,9 @@ latency_profile.h），每一階都重新甩上：
 Usage:
     python latency_ladder.py --port /dev/cu.usbserial-110 --out-dir recordings/ladder_x
     python latency_ladder.py --port ... --start-ms 20     # 練習：從 +20 開始
-    python latency_ladder.py --port ... --swingup 3       # 甩上計時：+0 甩 3 次
+    python latency_ladder.py --port ... --swingup 3       # 甩上到平衡計時：+0 甩 3 次
 
-甩上計時（--swingup N）：不加延遲，甩 N 次。每一次從 engage 起 --window-s 秒內，
+甩上到平衡計時（--swingup N）：不加延遲，甩 N 次。每一次從 engage 起 --window-s 秒內，
 要有一段連續平衡滿 --hold-s 秒才算數；甩上時間 = engage 到「那一段連續平衡開始」的秒數
 （中途接住又掉下來不算，要等到真正站穩的那一段）。成績 = N 次的中位數，
 沒算數的那一次當成無限大（所以 3 次裡有 2 次沒站穩就沒有成績）。
@@ -36,7 +36,11 @@ import serial
 
 import balance_metrics
 
-DEFAULT_LEVELS = [0, 10] + list(range(15, 71, 5))   # ms，加在原本約 16 ms 的延遲上面
+# ms，加在原本約 16 ms 的延遲上面。+35 到 +50 是細階（2、3 ms 交替，平均 2.5 ms）：
+# 實測 +35 → +40 之間是懸崖（2026-11-24，R4 過 +36、倒 +37），細階讓推進一點的組也拿得到分。
+# 都是整數 ms，RLControl 的 'L' 指令不用改。最高階 +55（130 分，2026-11-25 決定），
+# RLControl 的上限是 70，涵蓋得到。
+DEFAULT_LEVELS = [0, 10, 15, 20, 25, 30, 35, 37, 40, 42, 45, 47, 50, 55]
 
 
 def wait_boot(ser: serial.Serial) -> None:
@@ -166,7 +170,7 @@ def swingup(ser: serial.Serial, args: argparse.Namespace) -> int:
                    attempts=[], median_s=None)
     for k in range(1, args.swingup + 1):
         try:
-            input(f"\n[甩上計時 第 {k}/{args.swingup} 次] 手臂轉回正中間、擺錘靜止垂下後按 Enter（之後不要碰）")
+            input(f"\n[甩上到平衡計時 第 {k}/{args.swingup} 次] 手臂轉回正中間、擺錘靜止垂下後按 Enter（之後不要碰）")
         except EOFError:
             pass
         r = run_attempt(ser, args.window_s, args.hold_s)
@@ -203,7 +207,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--retries", type=int, default=1, help="每一階沒過可以重試幾次")
     p.add_argument("--out-dir", type=Path, required=True)
     p.add_argument("--swingup", type=int, default=0, metavar="N",
-                   help="甩上計時：不加延遲甩 N 次（預設每次 20 秒內要連續平衡滿 10 秒）")
+                   help="甩上到平衡計時：不加延遲甩 N 次（預設每次 20 秒內要連續平衡滿 10 秒）")
     args = p.parse_args(argv if argv is not None else sys.argv[1:])
     if args.swingup:
         if args.window_s == p.get_default("window_s"):
@@ -211,7 +215,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.hold_s == p.get_default("hold_s"):
             args.hold_s = 10.0
         args.out_dir.mkdir(parents=True, exist_ok=True)
-        print(f"甩上計時：不加延遲，甩 {args.swingup} 次；每次 {args.window_s:g} 秒內要連續平衡滿 "
+        print(f"甩上到平衡計時：不加延遲，甩 {args.swingup} 次；每次 {args.window_s:g} 秒內要連續平衡滿 "
               f"{args.hold_s:g} 秒才算數，成績是中位數。")
         print(f"打開 {args.port}（Nano 會重開）")
         ser = serial.Serial(args.port, args.baud, timeout=0.5)

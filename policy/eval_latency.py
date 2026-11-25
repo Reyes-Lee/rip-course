@@ -98,7 +98,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--episode-s", type=float, default=None,
                    help="episode length (default 30 s; 40 s with --ladder)")
     p.add_argument("--ladder", action="store_true",
-                   help="延遲階梯：+0、+10、+15 … +70 ms（和 latency_ladder.py 同一組階），"
+                   help="延遲階梯：+0、+10、+15 … +35、+37、+40、+42、+45、+47、+50、+55 ms"
+                        "（和 latency_ladder.py 同一組階），"
                         "每回合 40 秒，最長連續平衡 >= --hold-s 算這一回合通過")
     p.add_argument("--hold-s", type=float, default=20.0)
     p.add_argument("--pass-frac", type=float, default=0.8,

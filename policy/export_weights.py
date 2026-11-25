@@ -40,9 +40,15 @@ def _format_array_1d(name: str, arr: np.ndarray) -> str:
     return f"const float {name}[{n}] PROGMEM = {{\n    {vals}\n}};"
 
 
-def export(student_path: Path, header_path: Path, *, source_name: str | None = None) -> dict:
+def export(student_path: Path, header_path: Path, *, source_name: str | None = None,
+           require_hidden: int | None = None) -> dict:
     ckpt = torch.load(str(student_path), map_location="cpu", weights_only=True)
     hidden = int(ckpt["hidden"])
+    if require_hidden is not None and hidden != require_hidden:
+        # 在寫檔之前擋下來，不覆蓋原本的 .h。
+        raise SystemExit(
+            f"student hidden size H = {hidden}, but RLControl requires H = {require_hidden} "
+            f"(Nano SRAM). Distill again with hidden {require_hidden}; {header_path} not written.")
     obs_dim = int(ckpt["obs_dim"])
     act_dim = int(ckpt["act_dim"])
     val_mse = float(ckpt.get("val_mse", float("nan")))
@@ -109,8 +115,12 @@ def main(argv: list[str] | None = None) -> int:
                    help="output path for the generated .h (e.g. policy_weights.h)")
     p.add_argument("--source-name", default=None,
                    help="comment string identifying the source run (e.g. distill_h32_aug)")
+    p.add_argument("--require-hidden", type=int, default=None,
+                   help="stop without writing if the student's hidden size differs "
+                        "(10_export_weights passes 16, the size RLControl accepts)")
     args = p.parse_args(argv if argv is not None else sys.argv[1:])
-    export(args.student, args.header, source_name=args.source_name)
+    export(args.student, args.header, source_name=args.source_name,
+           require_hidden=args.require_hidden)
     return 0
 
 

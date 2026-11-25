@@ -12,6 +12,8 @@ from run_config import find_run_config  # noqa: E402
 
 SKETCH = REPO / "firmware" / "RLControl" / "RLControl.ino"
 HEADER = REPO / "firmware" / "RLControl" / "policy_weights_student.h"
+# 隱藏層大小固定 16：RLControl 有同樣的 #error（H 大了 Nano 的堆疊會溢位）
+HIDDEN = 16
 # sketch 常數 → config.json 的欄位（MICROSTEPS 對驅動板接線，課程固定 32）
 CHECKS = [
     ("CONTROL_FREQUENCY_HZ", "control_freq_hz"),
@@ -52,9 +54,10 @@ def main() -> int:
     source = label(st).replace("/student.pt", "")
     code, _ = run_policy_script(["export_weights.py", "--student", rel(st),
                                  "--header", "../firmware/RLControl/policy_weights_student.h",
-                                 "--source-name", source])
+                                 "--source-name", source,
+                                 "--require-hidden", str(HIDDEN)])
     if code != 0:
-        fail("匯出失敗。")
+        fail(f"匯出失敗。如果上面說 H 不是 {HIDDEN}：Nano 只接受 H = {HIDDEN}，請用 09_distill 重新蒸餾。")
         return code
     ok(f"已匯出 {HEADER.relative_to(REPO).as_posix()}（來源：{source}）")
     info("下一步：用 Arduino IDE 開 firmware/RLControl/RLControl.ino，按「上傳」。")
