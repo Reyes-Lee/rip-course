@@ -1,6 +1,8 @@
 @echo off
 rem Double-click to run 07_finetune (Windows). Logic lives in tools\_lib\07_finetune.py.
 chcp 65001 >nul
+rem Python prints UTF-8 even when the output goes to a file (otherwise cp950 crashes on symbols).
+set PYTHONUTF8=1
 cd /d "%~dp0\..\.."
 rem uv installs to %USERPROFILE%\.local\bin; add it in case this window has not picked up the new PATH yet.
 set "PATH=%USERPROFILE%\.local\bin;%PATH%"
@@ -11,3 +13,7 @@ if errorlevel 1 (
   exit /b 1
 )
 uv run --project policy python tools\_lib\07_finetune.py %*
+rem Exit code 3 = the tool already waited for Enter. Any other error (uv failed, crash) keeps the window open.
+set RC=%ERRORLEVEL%
+if not %RC%==0 if not %RC%==3 pause
+exit /b %RC%

@@ -23,7 +23,7 @@
 | `07_finetune` 說「方向快速檢查：擺錘方向跟上次標定相反」 | AS5600 的方向變了，通常是編碼器或磁鐵被動過。執行 `04_check_direction` 重新標定，再跑一次 `02_check_encoder`；之前幾段微調是在正確方向下做的，可以保留。重新標定後還是有問題就找助教 |
 | 工具因 `run_config.check_config` 中止 | 策略與韌體設定不一致。確認 Nano 燒的是工具開頭提醒的那份韌體，重燒後再跑一次；仍然中止就找助教 |
 | sysid 自由擺擬合失敗 | 擺得不夠大，或抽出墊塊時有震動。執行 `05_sysid`，選單輸入 `1` 重新量測 |
-| 工具說找不到序列埠 | 關掉 Arduino IDE 的序列埠監控；換一條能傳資料的 USB-C 線；Windows 確認 CH340 驅動（[安裝環境](prepare/install.md)） |
+| 工具說找不到序列埠 | 關掉 Arduino IDE 的序列埠監控；換一條能傳資料的 USB-C 線、換一個 USB 孔；Windows 確認 CH340 驅動（[安裝環境](prepare/install.md)）。裝置管理員出現 `Unknown USB Device (Device Descriptor Request Failed)`、錯誤碼 43 是線、USB 孔或板子的問題，裝驅動沒用 |
 
 ## 注意事項 { #notes }
 

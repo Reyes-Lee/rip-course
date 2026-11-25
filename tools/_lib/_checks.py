@@ -34,22 +34,23 @@ def symmetry(policy: Path) -> str:
     return out
 
 
-def sensitivity(policy: Path, *, transport: str | None = None, params: str | None = None) -> tuple[float | None, float | None]:
+def sensitivity(policy: Path, *, transport: str | None = None, params: str | None = None,
+                tag: str = "") -> tuple[float | None, float | None]:
     extra = []
     if transport:
         extra += ["--transport", transport]
     if params:
         extra += ["--params-path", params]
-    heading("敏感度關卡 1/2：開著韌體量測模型（20 回合）")
+    heading(f"敏感度關卡{tag} 1/2：開著韌體量測模型（20 回合）")
     _, out_on = run_policy_script(["analyze_sim.py", rel(policy), "--episodes", "20", *extra], capture=True)
-    heading("敏感度關卡 2/2：關掉韌體量測模型（20 回合）")
+    heading(f"敏感度關卡{tag} 2/2：關掉韌體量測模型（20 回合）")
     _, out_off = run_policy_script(["analyze_sim.py", rel(policy), "--episodes", "20",
                                     "--no-firmware-obs-model", *extra], capture=True)
     return balanced(out_on), balanced(out_off)
 
 
-def print_sensitivity(on: float | None, off: float | None) -> None:
-    heading("敏感度關卡結果")
+def print_sensitivity(on: float | None, off: float | None, title: str = "敏感度關卡結果") -> None:
+    heading(title)
     f = lambda x: "—" if x is None else f"{x:.3f}"  # noqa: E731
     info(f"  開著韌體量測模型：balanced fraction {f(on)}")
     info(f"  關掉韌體量測模型：balanced fraction {f(off)}")

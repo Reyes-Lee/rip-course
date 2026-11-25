@@ -489,6 +489,7 @@ def fit_data(in_dir: Path, out_json: Path) -> dict:
 
     print(_dim(f"  {len(free_files)} free-swing recording(s)"))
     fits: list[dict] = []
+    fit_files: list[Path] = []   # 課程版：記下每個成功擬合來自哪個檔，比對圖才能畫中位數那一次
     for path in free_files:
         rec = dict(np.load(path))
         pen_centered = rec["pen"] - hanging_zero
@@ -498,6 +499,7 @@ def fit_data(in_dir: Path, out_json: Path) -> dict:
             print(_red(f"    {path.name}: fit failed ({e})"))
             continue
         fits.append(fit)
+        fit_files.append(path)
         print(_dim(
             f"    {path.name}: T={fit['period_s']*1000:.0f} ms  "
             f"T₀={fit['small_amp_period_s']*1000:.0f} ms  "
@@ -580,7 +582,10 @@ def fit_data(in_dir: Path, out_json: Path) -> dict:
     print(_green(f"\n  Wrote {out_json}"))
 
     # Generate validation plots
-    plot_free_swing_compare(in_dir, derived, out_dir=in_dir, params_path=out_json)
+    # 課程版：畫寫進 json 的那一次（週期最接近中位數），不是固定畫第 1 次。
+    # 第 1 次錄製如果一開始擺錘還在被抬上墊塊，比對圖會對不上，但 json 本來就沒採用它。
+    plot_run = fit_files[int(fit.get("median_run_index", 0))] if fit_files else None
+    plot_free_swing_compare(in_dir, derived, out_dir=in_dir, params_path=out_json, run_path=plot_run)
     if (in_dir / "motor_sweep.npz").exists():
         plot_motor_sweep(in_dir / "motor_sweep.npz", out_dir=in_dir)
 
@@ -592,8 +597,12 @@ def fit_data(in_dir: Path, out_json: Path) -> dict:
 # ---------------------------------------------------------------------------
 
 def plot_free_swing_compare(in_dir: Path, derived: dict, *, out_dir: Path,
-                            params_path: Path | None = None) -> None:
-    """Replay the longest free-swing in sim and compare envelopes.
+                            params_path: Path | None = None,
+                            run_path: Path | None = None) -> None:
+    """Replay one free-swing in sim and compare envelopes.
+
+    Course version: `run_path` is the recording whose fit went into the json
+    (period closest to the median). Without it, the first recording is used.
 
     Time-aligned to the actual release moment, not the recording start —
     the operator typically holds the pendulum on the box for some
@@ -609,7 +618,9 @@ def plot_free_swing_compare(in_dir: Path, derived: dict, *, out_dir: Path,
     free_files = sorted(in_dir.glob("free_run_*.npz"))
     if not free_files:
         return
-    rec = dict(np.load(free_files[0]))
+    if run_path is None:
+        run_path = free_files[0]
+    rec = dict(np.load(run_path))
     meta = load_metadata(in_dir)
     hanging_zero = float(meta.get("hanging_zero_rad", 0.0))
 
@@ -705,7 +716,7 @@ def plot_free_swing_compare(in_dir: Path, derived: dict, *, out_dir: Path,
     axes[0].grid(alpha=0.3)
     if fr and fs:
         axes[0].set_title(
-            f"real T={fr[0]*1000:.0f} ms  τ={fr[1]:.3f}/s  vs  "
+            f"{run_path.stem}: real T={fr[0]*1000:.0f} ms  τ={fr[1]:.3f}/s  vs  "
             f"sim T={fs[0]*1000:.0f} ms  τ={fs[1]:.3f}/s  "
             f"(Δ {(fs[0]/fr[0]-1)*100:+.1f}%, {(fs[1]/fr[1]-1)*100:+.1f}%)"
         )

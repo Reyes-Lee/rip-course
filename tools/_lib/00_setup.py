@@ -52,7 +52,10 @@ def main() -> int:
         warn("現在找不到 Nano。之後接上再重新執行 00_setup 也可以；其他工具也會自己找。")
         if all_ports:
             info("  目前看得到的序列埠：" + "、".join(p.device for p in all_ports))
-        info("  沒看到就換一條 USB-C 線（有些只能充電，不能傳資料）；Windows 再確認 CH340 驅動。")
+        info("  沒看到就換一條 USB-C 線（有些只能充電，不能傳資料），或換一個 USB 孔（筆電有 USB-C 孔可以試試）。")
+        if IS_WIN:
+            info("  Windows 裝置管理員出現「Unknown USB Device (Device Descriptor Request Failed)」、錯誤碼 43：")
+            info("  這是線、USB 孔或板子的問題，不是驅動，先換線、換孔。看到 USB-SERIAL CH340 卻沒有 COM 埠才是驅動問題。")
     else:
         p = choose("偵測到的 Nano：", nano, [f"{p.device}  {p.description}" for p in nano], default=0)
         settings["port"] = p.device
@@ -60,6 +63,10 @@ def main() -> int:
         ok(f"已記住序列埠 {p.device}，之後的工具會自動使用。")
 
     print()
+    if not nano:
+        warn("Python 與套件已經設定好，但還沒找到 Nano 的序列埠，00_setup 還沒完成。")
+        warn("接上 Nano 後再執行一次 00_setup。")
+        return 0
     ok("環境設定完成。")
     return 0
 

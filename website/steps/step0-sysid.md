@@ -68,6 +68,7 @@
 <figcaption><code>freeswing_compare.png</code> 正常的樣子</figcaption>
 </figure>
 
+- **畫的是哪一次**：三次自由擺裡週期最接近中位數的那一次，也就是寫進 `sysid_params.json` 的那一次，標題開頭會寫 `free_run_N`。
 - **上圖**：藍色（實測）和橘色（模擬）都是衰減的正弦波，y 軸大約在 ±1 rad 內。一開始的相位可能差一點（放手時手的干擾），不影響。
 - **下圖**：兩條峰值線是往下的斜線，彼此靠近。
 - **標題的 Δ**：第一個是週期差，應在約 ±5% 內；第二個是衰減差，±20% 內都算正常。
@@ -94,7 +95,7 @@
 
     ```bash
     cd policy
-    uv run python sysid_wizard.py fit --in-dir sysid_runs/<時間> --out-json sysid_params.json
+    uv run python sysid_wizard.py --out-json sysid_params.json fit --in-dir sysid_runs/<時間> --out-json sysid_params.json
     ```
 
 !!! warning "機構改過就要重新量測"

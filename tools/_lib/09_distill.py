@@ -102,6 +102,9 @@ def main() -> int:
         return code or 1
     m = re.findall(r"best gate ([0-9.]+)", out) or re.findall(r"round 0 \(BC student\): gate ([0-9.]+)", out)
     dagger_gate = float(m[-1]) if m else None
+    # dagger_distill.py 只在某一輪的 gate 超過目前最好的才換學生（印 "new best"）。
+    # 一次都沒換，存下來的就是第 0 輪只用行為克隆（BC）的學生。
+    kept_bc = rounds > 0 and "new best" not in out
 
     heading("3/4 學生：敏感度關卡")
     s_on, s_off = sensitivity(student, transport=TRANSPORT)
@@ -114,8 +117,17 @@ def main() -> int:
     f = lambda x: "—" if x is None else f"{x:.3f}"  # noqa: E731
     info(f"  DAgger gate（學生）：{f(dagger_gate)}")
     info(f"  教師自己的模擬分數：{f(t_gate)}")
-    info(color("  參考：學生接近教師就好（我們建議相差 0.05 以內）。模擬會低估微調過的策略，不要跟絕對數字比。", "dim"))
+    info(color("  參考：學生接近教師就好，由你判斷。模擬會低估微調過的策略，不要跟絕對數字比。", "dim"))
+    info(color("  兩個分數都是在 Nano 獨立執行的時序（device）下算的；兩個都是 0 或接近 0，不算「接近」，見下面的提醒。", "dim"))
     print_sensitivity(s_on, s_off)
+    if kept_bc:
+        print()
+        warn("DAgger 每一輪的分數都沒有超過第 0 輪，所以存下來的學生就是第 0 輪只用行為克隆（BC）的那支。")
+        warn("作者實測 BC 學生在閉迴路只有約 0.12：燒進 Nano 很可能一直繞圈、接不住。")
+        if t_gate is not None and t_gate < 0.05:
+            warn(f"教師自己在這個時序下的模擬分數也只有 {t_gate:.3f}：DAgger 沒有能模仿的好動作，換 SEED 通常不會變好。")
+        info("  可以先照網站 Step 3 的選做步驟，用 08_test_policy 接線測這支學生，再決定換哪一段微調的教師，")
+        info("  或回到 Step 2 再加一段微調。分析方式見網站 Step 3「看檢查點」。")
     ok(f"學生：runs/{label(student)}")
     info("下一步：執行 10_export_weights 匯出權重。不滿意就再執行 09_distill，SEED 輸入 1。")
     return 0
