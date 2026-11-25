@@ -19,7 +19,7 @@
 
 ## 1. 貼上配重硬幣 { #coin .rip-do }
 
-擺錘大頭（圓盤）那一端要貼一枚新台幣 10 元硬幣當配重。
+擺錘大頭（圓盤）那一端要貼一枚新台幣 10 元硬幣當配重（硬幣自備）。
 
 <figure class="rip-figure">
 <svg viewBox="0 0 540 340" role="img" aria-label="擺錘正面圖：硬幣貼在擺錘末端的大圓盤上，與圓盤同心，中心距鉸鏈軸心 64 mm，四周各留 3 mm">
@@ -87,8 +87,8 @@
     | --- | --- | --- | --- |
     | 1 | `TestHeartbeat` | Arduino IDE 選單「工具 → 序列埠監控」，右上角鮑率選 115200；看完關掉這個視窗 | LED 雙閃、持續印心跳計數 |
     | 2 | `EncoderCheck` | 執行 `02_check_encoder` | 全部 PASS（見[編碼器測試](#encoder)） |
-    | 3 | `TestMotor` | 看、聽 | 手臂 ±90° 來回，平順的嗡嗡聲，沒有嘶嘶或磨擦聲 |
-    | 4 | `LowLevelServer` | 執行 `03_check_motor`（見[失步測試](#motor)） | 每級跑完手臂末端還對齊膠帶記號，聲音平順 |
+    | 3 | `TestMotor` | 先接 12 V（見下面的供電），然後看、聽 | 手臂 ±90° 來回，平順的嗡嗡聲，沒有嘶嘶或磨擦聲 |
+    | 4 | `LowLevelServer` | 12 V 接著，執行 `03_check_motor`（見[失步測試](#motor)） | 每級跑完手臂末端還對齊膠帶記號，聲音平順 |
     | 5 | `TestSerial` | 執行 `01_check_serial` | 來回約 2.5 ms |
 
 !!! warning "供電：Nano 只用 USB，12 V 只接 TMC2209"
@@ -188,7 +188,7 @@ FAIL 時照下表處理：
 
 - **存在哪裡**：Nano 的 EEPROM。Arduino IDE 重新上傳 `LowLevelServer` 或 `RLControl` **不會**清掉它，不用每次重做。`RLControl` 開機時讀同一個值。
 - **工具會幫你擋**：`05_sysid`、`07_finetune`、`08_test_policy` 開始前會確認 Nano 已經標定，沒有就停止並提示你先跑 `04_check_direction`。`07_finetune` 每一段開始前還會讓手臂抖動約 4 秒，確認方向沒有變；`RLControl` 沒標定就不會啟動馬達。
-- **方向被修正過的話**：在錯的方向下做的實機微調（`runs/ftN`）要丟掉，從教師重新微調。sysid 與模擬訓練不受影響。
+- **方向被修正過的話**：在錯的方向下做的實機微調（`runs/ftN`）不要再接續，照 [Step 2 的「從教師重新開始」](../steps/step2-finetune.md#restart)開一條新的微調。sysid 與模擬訓練不受影響。
 
 !!! warning "AS5600 的 DIR 腳不要自己接線"
 

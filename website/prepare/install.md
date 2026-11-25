@@ -93,7 +93,7 @@
     在 [GitHub 頁面](https://github.com/Reyes-Lee/rip-course)按綠色的「Code → Download ZIP」，解壓到家目錄（macOS）或 `C:\`（Windows），資料夾改名成 `rip-course`。
 
     - macOS 解壓後要在終端機多跑一行，工具才能執行：`chmod +x ~/rip-course/tools/macOS/*.command`
-    - 缺點：之後助教更新時，要重新下載 ZIP，並把舊資料夾裡的 `policy/runs/`、`policy/sysid_params.json` 搬到新資料夾。用 git 就不用。
+    - 缺點：之後助教更新時，要重新下載 ZIP，並把舊資料夾裡你自己產生或改過的檔案搬到新資料夾：`policy/runs/`、`policy/sysid_params.json`、`policy/recordings/`、`firmware/RLControl/policy_weights_student.h`，以及改過的話 `firmware/LowLevelServer/finetune_latency.h`、`firmware/RLControl/latency_profile.h`、`policy/reward.py`。用 git 就不用。
 
 ### 之後：助教更新檔案時 { #update .rip-do }
 
@@ -163,7 +163,7 @@ rip-course/
 ├── firmware/        用 Arduino IDE 開啟、上傳
 │   ├── TestHeartbeat/  TestMotor/  TestSerial/   作者的上電測試
 │   ├── EncoderCheck/      磁場強度與對心測試（課程新增）
-│   ├── LowLevelServer/    接線模式：失步測試、sysid、微調、測試都用它
+│   ├── LowLevelServer/    接線模式（策略在筆電上算，經 USB 送指令）：失步測試、sysid、微調、測試都用它
 │   └── RLControl/         獨立執行的策略
 ├── policy/          Python：模擬、訓練、sysid、蒸餾（來自作者）
 ├── model/

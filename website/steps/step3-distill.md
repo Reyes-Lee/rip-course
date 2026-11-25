@@ -23,7 +23,7 @@
     1. 執行 `tools/09_distill`。
     2. 清單的預設是最後一段微調（例如 `ft3`），直接按 Enter。如果 [Step 2 的回歸測試](step2-finetune.md#regression)改用了前一段，就輸入那一段的編號。
     3. `SEED [0]:` 直接按 Enter。
-    4. 接著問教師用那一段的 `best_model.zip` 還是 `last.zip`（差別見 [Step 2](step2-finetune.md#best-model)），以及要不要改進階設定。直接按 Enter 是作者的預設值（`best_model.zip`、不改）。
+    4. 接著問教師用那一段的 `best_model.zip` 還是 `last.zip`（差別見 [Step 2](step2-finetune.md#best-model)）、要不要改進階設定，以及 `要改 DAgger 的延遲條件嗎？（專題任務用；不改就直接按 Enter）`。直接按 Enter 是作者的預設值（`best_model.zip`、不改、不改）。延遲條件見[專題任務的可以調的地方](../advanced.md#knobs)。
     5. 約 3 分鐘後，工具印出結果表（見[檢查點](#checkpoint)）。學生存在 `runs/ftN/distill_h16_dagger_dev/student.pt`。
 
 ??? cmd "背後執行的指令"
@@ -50,6 +50,7 @@
     | SEED | 0 | 1 → `_s1` |
     | 行為克隆 epoch 數（進階） | 800 | 400 → `_e400` |
     | DAgger 輪數 × 每輪步數（進階） | 5 × 40000 | 3 × 40000 → `_r3x40000`（只加在 DAgger 的資料夾） |
+    | DAgger 的延遲條件（專題任務） | 練習 2–10 ms、評分 15.6 ms | 練習 0–71 → `_lat0-71`；評分 15.6、71 → `_g15.6-71`（只加在 DAgger 的資料夾） |
 
     - 教師模型：蒸餾時當「老師」的那組權重，學生學的是它在每個狀態輸出的動作。資料集裡的真實狀態一律來自那一段的 `replay_buffer.pkl`，跟選哪個教師模型無關。
     - SEED：決定網路初始權重和資料打亂的順序。同樣設定換 SEED，結果會有差異。
@@ -64,10 +65,10 @@
 
     | 項目 | 參考門檻 |
     | --- | --- |
-    | DAgger gate | 學生的 gate 接近教師自己的 gate（工具並排印出兩個數字）。作者沒有給數字，由你判斷 |
+    | DAgger gate | gate 是在模擬裡、照 Nano 獨立執行的時序跑出來的平衡分數（DAgger 每一輪用它挑學生）。學生的 gate 接近教師自己的 gate（工具並排印出兩個數字）。作者沒有給數字，由你判斷 |
     | 敏感度關卡 | 同 Step 1：關掉韌體量測模型後的 balanced fraction ≥ 0.7 |
 
-DAgger gate 要跟教師比、不跟絕對門檻比，是因為模擬會系統性低估實機微調過的策略：作者的冠軍在模擬 gate 只有 0.655，實機是 0.996。
+DAgger gate 要跟教師比、不跟絕對門檻比，是因為模擬會系統性低估實機微調過的策略：作者的冠軍在模擬 gate 只有 0.655，實機是 0.996（另一次 300 秒的獨立執行評分是 1.000）。
 
 !!! warning "學生和教師都是 0（或接近 0）不算「接近」"
 
@@ -89,7 +90,7 @@ DAgger gate 要跟教師比、不跟絕對門檻比，是因為模擬會系統�
     1. Nano 燒 `LowLevelServer`，等擺錘靜止垂下。
     2. 執行 `tools/08_test_policy`。
     3. 清單輸入 `ftN/distill_h16_dagger_dev/student.pt` 那一個的編號。
-    4. `測試秒數 [30]:` 直接按 Enter，或輸入想測的秒數。學生是針對獨立執行最佳化的，接線分數略低於教師是正常的。
+    4. `測試秒數 [30]:` 直接按 Enter，或輸入想測的秒數。學生是針對獨立執行最佳化的，接線分數略低於教師是正常的。這個分數可以留著，和 [Step 4 的獨立執行分數](step4-deploy.md#gap)比較。
 
 ## 它在做什麼 { #what .rip-learn }
 

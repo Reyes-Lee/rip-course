@@ -6,6 +6,10 @@ site_url: https://reyes-lee.github.io/rip-course/
 repo_name: rip-course
 repo_url: https://github.com/Reyes-Lee/rip-course
 docs_dir: website
+# overrides/ 是主題覆寫（custom_dir），requirements.txt 給部署用，都不要當成網站的檔案複製出去
+exclude_docs: |
+  overrides/
+  requirements.txt
 copyright: >-
   課程整理自 <a href="https://github.com/ferrolho/rotary-inverted-pendulum">ferrolho/rotary-inverted-pendulum</a>（MIT License）
 

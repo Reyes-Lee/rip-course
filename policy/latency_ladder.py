@@ -41,10 +41,20 @@ import serial
 import balance_metrics
 
 # ms，加在原本約 16 ms 的延遲上面。+35 到 +50 是細階（2、3 ms 交替，平均 2.5 ms）：
-# 實測 +35 → +40 之間是懸崖（2026-11-24，R4 過 +36、倒 +37），細階讓推進一點的組也拿得到分。
-# 都是整數 ms，RLControl 的 'L' 指令不用改。最高階 +55（130 分，2026-11-25 決定），
-# RLControl 的上限是 70，涵蓋得到。
+# 實測 +35 → +40 之間是懸崖（2026-11-24，R4 過 +36、倒 +37），細階讓推進一點的組也分得出差別。
+# 都是整數 ms，RLControl 的 'L' 指令不用改。最高階 +55；RLControl 的上限是 70，涵蓋得到。
 DEFAULT_LEVELS = [0, 10, 15, 20, 25, 30, 35, 37, 40, 42, 45, 47, 50, 55]
+MAX_INJECT_MS = 70   # RLControl 'L' 指令的上限（extra + jitter）
+
+
+def rel_time_s(us: np.ndarray) -> np.ndarray:
+    """遙測的 micros 時間戳 → 從第一筆起算的秒數。韌體印的是 signed long，開機約 35.8 分鐘後
+    會繞回（2**32 µs），所以用相鄰差值取模再累加。"""
+    us = np.asarray(us, dtype=np.float64)
+    if len(us) == 0:
+        return us
+    d = np.diff(us) % 2**32
+    return np.concatenate([[0.0], np.cumsum(d)]) * 1e-6
 
 
 def wait_boot(ser: serial.Serial) -> None:
@@ -109,7 +119,7 @@ def run_attempt(ser: serial.Serial, window_s: float, hold_s: float) -> dict:
                 result.update(reason="Nano 沒有開始甩")
                 break
             continue
-        t = (row[0] - rows[i0][0]) * 1e-6
+        t = ((row[0] - rows[i0][0]) % 2**32) * 1e-6
         if not running:
             result.update(reason="撞到限位，馬達斷電")
             break
@@ -117,7 +127,7 @@ def run_attempt(ser: serial.Serial, window_s: float, hold_s: float) -> dict:
             last_eval = len(rows)
             seg = np.asarray(rows[i0:])
             m = balance_metrics.score(phi=seg[:, 2] / 1000, motor_pos=seg[:, 1] / 1000,
-                                      action=seg[:, 3] / 1000, t_s=(seg[:, 0] - seg[0, 0]) * 1e-6)
+                                      action=seg[:, 3] / 1000, t_s=rel_time_s(seg[:, 0]))
             if m.longest_streak_s >= hold_s:
                 result.update(passed=True, reason="通過")
                 break
@@ -126,7 +136,8 @@ def run_attempt(ser: serial.Serial, window_s: float, hold_s: float) -> dict:
                 if not b:
                     break
                 cur += 1
-            if cur * m.dt_s + (window_s - t) < hold_s:
+            # 留一個樣本的容許誤差，避免剛好卡在邊界的那一次被提早判掉
+            if cur * m.dt_s + (window_s - t) < hold_s - m.dt_s:
                 result.update(reason=f"剩下的時間湊不滿 {hold_s:g} 秒")
                 break
         if t >= window_s:
@@ -141,8 +152,14 @@ def run_attempt(ser: serial.Serial, window_s: float, hold_s: float) -> dict:
         result.update(passed=False, streak_s=0.0, swingup_s=None, latency_ms=None, rows=np.zeros((0, 9)))
         return result
     seg = np.asarray(rows[i0:])
-    m = balance_metrics.score(phi=seg[:, 2] / 1000, motor_pos=seg[:, 1] / 1000,
-                              action=seg[:, 3] / 1000, t_s=(seg[:, 0] - seg[0, 0]) * 1e-6)
+    t_s = rel_time_s(seg[:, 0])
+    win = t_s <= window_s + 1e-6          # 只看時間窗以內的資料
+    m = balance_metrics.score(phi=seg[win, 2] / 1000, motor_pos=seg[win, 1] / 1000,
+                              action=seg[win, 3] / 1000, t_s=t_s[win])
+    # 迴圈約每 0.5 秒才判一次；如果平衡已經滿 hold_s，但在下一次判斷之前撞到限位或斷訊，
+    # 這裡補判，算通過。
+    if not result["passed"] and m.longest_streak_s >= hold_s:
+        result.update(passed=True, reason="通過")
     result.update(streak_s=float(m.longest_streak_s), swingup_s=m.first_catch_s,
                   latency_ms=float(np.mean(seg[:, 7])) / 1000, rows=seg)
     return result
@@ -152,7 +169,7 @@ def settle_s(rows: np.ndarray, hold_s: float) -> float | None:
     """engage 到第一段「連續平衡 >= hold_s」開始的秒數；沒有這一段就是 None。"""
     if len(rows) < 10:
         return None
-    t_s = (rows[:, 0] - rows[0, 0]) * 1e-6
+    t_s = rel_time_s(rows[:, 0])
     m = balance_metrics.score(phi=rows[:, 2] / 1000, motor_pos=rows[:, 1] / 1000,
                               action=rows[:, 3] / 1000, t_s=t_s)
     start = None
@@ -162,9 +179,15 @@ def settle_s(rows: np.ndarray, hold_s: float) -> float | None:
             continue
         if start is None:
             start = i
-        if t_s[i] - t_s[start] + m.dt_s >= hold_s:
+        # 和 balance_metrics 的 longest_streak_s 一樣用「樣本數 × dt」，兩邊判定才會一致
+        if (i - start + 1) * m.dt_s >= hold_s:
             return float(t_s[start])
     return None
+
+
+def save_summary(out_dir: Path, summary: dict) -> None:
+    (out_dir / "summary.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False) + "\n",
+                                          encoding="utf-8")
 
 
 def swingup(ser: serial.Serial, args: argparse.Namespace) -> int:
@@ -185,11 +208,10 @@ def swingup(ser: serial.Serial, args: argparse.Namespace) -> int:
         print(f"  {'甩上 %.2f s' % s if s is not None else '不算數（' + r['reason'] + '）'}"
               f"，最長連續平衡 {r['streak_s']:.1f} s")
         summary["attempts"].append(dict(attempt=k, settle_s=s, **r))
+        med = float(np.median(times))
+        summary["median_s"] = med if np.isfinite(med) and len(times) == args.swingup else None
+        save_summary(args.out_dir, summary)   # 每一次都存，中途 Ctrl+C 也留得下紀錄
     ser.close()
-    med = float(np.median(times))
-    summary["median_s"] = med if np.isfinite(med) else None
-    (args.out_dir / "summary.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False) + "\n",
-                                               encoding="utf-8")
     print("\n結果")
     for a in summary["attempts"]:
         print(f"  第 {a['attempt']} 次：{'不算數' if a['settle_s'] is None else '%.2f s' % a['settle_s']}")
@@ -222,18 +244,21 @@ def main(argv: list[str] | None = None) -> int:
                         + " 裡選，不一定連續，會由低到高測")
     p.add_argument("--n-levels", type=int, default=5, help="要選剛好幾階（專題規則：5）")
     p.add_argument("--jitter-ms", type=int, default=0, help="每一階都另外加的每拍抖動（ms）")
-    p.add_argument("--window-s", type=float, default=30.0, help="每次嘗試從 engage 起最多幾秒")
+    p.add_argument("--window-s", type=float, default=None,
+                   help="每次嘗試從 engage 起最多幾秒；連續平衡要在這段時間內數完（預設：階梯 30、甩上 20）")
     p.add_argument("--hold-s", type=float, default=10.0, help="連續平衡幾秒算通過")
     p.add_argument("--retries", type=int, default=1, help="每一階沒過可以重試幾次")
     p.add_argument("--out-dir", type=Path, required=True)
     p.add_argument("--swingup", type=int, default=0, metavar="N",
                    help="甩上到平衡計時：不加延遲甩 N 次（預設每次 20 秒內要連續平衡滿 10 秒）")
     args = p.parse_args(argv if argv is not None else sys.argv[1:])
+    if args.window_s is None:
+        args.window_s = 20.0 if args.swingup else 30.0
+    if args.hold_s <= 0 or args.window_s < args.hold_s:
+        raise SystemExit("--hold-s 要大於 0，而且 --window-s 不能比 --hold-s 短")
+    if args.retries < 0 or args.swingup < 0 or args.n_levels < 1:
+        raise SystemExit("--retries、--swingup 不能是負數，--n-levels 至少 1")
     if args.swingup:
-        if args.window_s == p.get_default("window_s"):
-            args.window_s = 20.0
-        if args.hold_s == p.get_default("hold_s"):
-            args.hold_s = 10.0
         args.out_dir.mkdir(parents=True, exist_ok=True)
         print(f"甩上到平衡計時：不加延遲，甩 {args.swingup} 次；每次 {args.window_s:g} 秒內要連續平衡滿 "
               f"{args.hold_s:g} 秒才算數，成績是中位數。")
@@ -243,6 +268,9 @@ def main(argv: list[str] | None = None) -> int:
         return swingup(ser, args)
 
     levels = check_levels(args.levels, args.n_levels)
+    if args.jitter_ms < 0 or levels[-1] + args.jitter_ms > MAX_INJECT_MS:
+        raise SystemExit(f"--jitter-ms 要在 0 以上，而且最高階 +{levels[-1]} 加上抖動不能超過 {MAX_INJECT_MS} ms"
+                         "（RLControl 的上限）")
     args.out_dir.mkdir(parents=True, exist_ok=True)
     print(f"延遲階梯：{'、'.join(f'+{x}' for x in levels)} ms"
           + (f"（每拍另加抖動 0–{args.jitter_ms} ms）" if args.jitter_ms else ""))
@@ -270,16 +298,16 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  {'通過' if r['passed'] else '沒過'}（{r['reason']}）：最長連續平衡 {r['streak_s']:.1f} s，"
                   f"甩上 {sw}，實測 sample→command {lat}")
             summary["attempts"].append(dict(extra_ms=ms, attempt=k, **r))
+            save_summary(args.out_dir, summary)   # 每一次都存，中途 Ctrl+C 也留得下紀錄
             if r["passed"]:
                 passed = True
                 break
         if not passed:
             break
         summary["best_ms"] = ms
+        save_summary(args.out_dir, summary)
 
     ser.close()
-    (args.out_dir / "summary.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False) + "\n",
-                                               encoding="utf-8")
     print("\n結果")
     for a in summary["attempts"]:
         print(f"  +{a['extra_ms']:>2} ms 第 {a['attempt']} 次：{'通過' if a['passed'] else '沒過'}　"

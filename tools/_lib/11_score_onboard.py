@@ -10,12 +10,14 @@ from __future__ import annotations
 
 import time
 
-from _common import RECORDINGS, ask, ask_number, banner, choose, finish, get_port, info, rel, run_policy_script, warn
+from _common import RECORDINGS, ask_number, banner, choose, finish, get_port, info, rel, run_policy_script, warn
 
 DURATION_S = 60
 
 
-LADDER_LEVELS = (0, 10, 15, 20, 25, 30, 35, 37, 40, 42, 45, 47, 50, 55)   # 和 latency_ladder.DEFAULT_LEVELS 同一組
+# 和 policy/latency_ladder.py 的 DEFAULT_LEVELS 同一組（那邊會再檢查一次）。tools 的 Python 環境
+# 沒有 serial／numpy，所以這裡另外寫一份；改階的時候兩邊要一起改。
+LADDER_LEVELS = (0, 10, 15, 20, 25, 30, 35, 37, 40, 42, 45, 47, 50, 55)
 
 
 def ask_levels(n: int = 5) -> list[int]:
@@ -23,9 +25,14 @@ def ask_levels(n: int = 5) -> list[int]:
     allowed = "、".join(f"+{x}" for x in LADDER_LEVELS)
     info(f"可以選的階：{allowed}")
     while True:
-        ans = ask(f"要測哪 {n} 階？用空白分開，例如 0 20 35 40 45")
         try:
-            xs = [int(t.lstrip("+")) for t in ans.replace(",", " ").replace("、", " ").split()]
+            ans = input(f"要測哪 {n} 階？用空白分開，例如 0 20 35 40 45: ").strip()
+        except EOFError:
+            raise SystemExit("沒有輸入，停止")
+        for sep in (",", "，", "、", ";", "；"):
+            ans = ans.replace(sep, " ")
+        try:
+            xs = [int(t.lstrip("+＋")) for t in ans.split()]
         except ValueError:
             warn("請輸入數字，例如 0 20 35 40 45")
             continue
@@ -43,10 +50,10 @@ def ask_levels(n: int = 5) -> list[int]:
 
 
 def ladder() -> int:
-    info("延遲階梯：+0、+10、+15 … +35 每 5 ms 一階，+35 到 +50 是細階（+37、+40、+42、+45、+47、+50），"
-         "最後一階是 +55。你們要選剛好 5 階，不一定連續，由低到高測，每一階都要你把手臂轉回正中間再按 Enter。")
-    info("每一階 engage 後 30 秒內連續平衡滿 10 秒就通過，馬上進下一階；沒過可以重試 1 次，還是沒過就停。")
-    info("某一階重試後還是沒過就停，後面選的階不測。成績是最後通過的那一階；選的第一階就沒過，就沒有成績。")
+    info("延遲階梯共 14 階：+0、+10、+15、+20、+25、+30、+35、+37、+40、+42、+45、+47、+50、+55（沒有 +5）。"
+         "你們要選剛好 5 階，不一定連續，由低到高測，每一階都要你把手臂轉回正中間再按 Enter。")
+    info("每一階 engage 後 30 秒內要數完 10 秒連續平衡（最晚約第 20 秒要接住）就通過，馬上進下一階。")
+    info("沒過可以重試 1 次，還是沒過就停，後面選的階不測。成績是最後通過的那一階；選的第一階就沒過，就沒有成績。")
     info("延遲直接用序列埠設定，不看 latency_profile.h，所以不用重新上傳。")
     levels = ask_levels()
     port = get_port()
@@ -57,7 +64,7 @@ def ladder() -> int:
 
 
 def swingup() -> int:
-    info("甩上到平衡計時：不加延遲，甩 3 次。每一次 20 秒內要站穩（連續平衡滿 10 秒）才算數。")
+    info("甩上到平衡計時：不加延遲，甩 3 次。每一次 20 秒內要數完 10 秒連續平衡（最晚約第 10 秒要接住）才算數。")
     info("甩上時間 = engage 到站穩那一段開始的秒數；成績是 3 次的中位數（有 2 次沒站穩就沒有成績）。")
     info("要先上傳你們的甩上策略（RLControl ＋ 甩上用的 policy_weights_student.h）。")
     port = get_port()

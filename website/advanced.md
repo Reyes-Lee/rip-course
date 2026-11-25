@@ -3,12 +3,12 @@
 <div class="rip-meta" markdown>
   <span class="rip-chip rip-chip--amber">:material-timer-sand: 專題任務</span>
   <span class="rip-chip">:material-chip: RLControl ＋ 延遲階梯</span>
-  <span class="rip-chip">:material-file-outline: 繳交兩份 policy_weights_student.h</span>
+  <span class="rip-chip">:material-file-outline: 每項任務一份 policy_weights_student.h（同一支可以共用）</span>
 </div>
 
 照五個步驟做，Nano 會自己甩上、平衡。但它只在**一種**延遲下練過：Nano 從讀取感測器到送出馬達指令大約 16 ms，策略在模擬裡也只見過差不多的值。真實系統的延遲會變，例如換一顆比較慢的 MCU、感測器改走通訊匯流排、或是同時要做別的事。
 
-專題任務有兩項，第 3 週 demo，demo 隔週之前繳交分析報告：
+專題任務有兩項，第 3 週 demo，之後繳交分析報告（期限見[專題規則](rules.md)）：
 
 - **任務一　延遲階梯：在延遲下平衡**。自己選 5 階延遲，由低到高測，量策略在多長的延遲下還能甩上並連續平衡 10 秒。
 - **任務二　甩上到平衡計時**。不加延遲，量從擺錘垂下到甩上去、在直立處站穩花了幾秒。
@@ -35,20 +35,20 @@
 
 量策略**在延遲下還能不能平衡**：從階梯裡自己選 5 階，由低到高測，每一階都要甩上並且連續平衡滿 10 秒，看策略能撐到哪一階。
 
-助教把課程版 `firmware/RLControl/RLControl.ino` 加上繳交的延遲階梯策略燒進 Nano，執行 `11_score_onboard`，選「延遲階梯」。
+demo 時助教用 `11_score_onboard` 的「延遲階梯」量，流程見 [Demo](#demo)。
 
 | | 規則 |
 | --- | --- |
-| 階 | +0、+10、+15 … +35 每 5 ms 一階；+35 到 +50 分得比較細：+37、+40、+42、+45、+47、+50；最後一階是 +55。延遲加在原本約 16 ms 的上面 |
-| 每一階 | 重新甩上。從 engage（按 Enter 後 Nano 開始控制馬達）起，**30 秒內連續平衡滿 10 秒**就通過，進下一階 |
+| 階 | 共 14 階：+0、+10、+15、+20、+25、+30、+35、+37、+40、+42、+45、+47、+50、+55（沒有 +5；+35 以後分得比較細）。延遲加在原本約 16 ms 的上面 |
+| 每一階 | 重新甩上。從 engage（按 Enter 後 Nano 開始控制馬達）起，**30 秒內連續平衡滿 10 秒**就通過，進下一階。這 10 秒要在 30 秒內數完，所以最晚約第 20 秒就要接住 |
 | 平衡 | 擺錘離直立 15° 以內（\|θ\| ≤ 15°），而且擺錘角速度 \|θ̇\| ≤ 4 rad/s |
 | 選階 | 從上面的階裡**選剛好 5 階**，不一定要連續，例如 +0、+20、+35、+40、+45。demo 時告訴助教 |
 | 順序 | 選的 5 階由低到高測，某一階重試後還是沒過就停，後面的不測 |
 | 重試 | 每一階沒過可以重試 1 次，還是沒過就停 |
 | 策略 | 全程同一支，中間不能換權重 |
-| 成績 | **最後通過的那一階**。選的第一階就沒過，就沒有成績（0 分） |
+| 成績 | **最後通過的那一階**。選的第一階就沒過，就沒有成績 |
 
-**5 階怎麼選**：第一階選太高，可能一階都過不了；5 階都選低的，最高也只到第 5 階，例如選 +0 到 +25 最多 80 分。中間可以跳過有把握的階，把階數留給接近極限的地方，例如 +0、+20、+35、+40、+45。先用 11 在自己的機台上[練習](#practice)再決定。
+**5 階怎麼選**：第一階選太高，可能一階都過不了；5 階都選低的，最高也只到選的第 5 階，例如選 +0 到 +25，最多就是 +25。中間可以跳過有把握的階，把階數留給接近極限的地方，例如 +0、+20、+35、+40、+45。先用 11 在自己的機台上[練習](#practice)再決定。
 
 ## 任務二：甩上到平衡計時 { #swingup }
 
@@ -60,14 +60,21 @@
 | --- | --- |
 | 延遲 | 不加（+0） |
 | 次數 | 甩 3 次，每次從手臂在正中間、擺錘靜止垂下開始 |
-| 每一次 | engage 後 20 秒內要**站穩**（連續平衡滿 10 秒）才算數 |
+| 每一次 | engage 後 20 秒內要**站穩**（連續平衡滿 10 秒）才算數。這 10 秒要在 20 秒內數完，所以最晚約第 10 秒就要接住 |
 | 計時 | 從 engage 到擺錘進入平衡的秒數。算的是「之後連續平衡滿 10 秒」的那一次進入平衡；甩上去又掉下來的不算，要等到真正站穩的那一次 |
 | 成績 | 3 次的**中位數**。沒算數的那一次當成無限大，3 次裡有 2 次沒站穩就沒有成績 |
 | 排名 | 秒數越少，名次越前面。差距在 0.2 秒以內算同一名次 |
 
+## 三週怎麼安排（建議） { #plan }
+
+1. 先量起點：用[模擬的延遲階梯](#sim)和 11 的延遲階梯（[練習](#practice)），看照五個步驟做出來的學生能到哪一階。
+2. 用 06 的延遲設定（或「從現有的教師接著練、只跑第 3 階段」）和 09 的 DAgger 延遲條件重練，見[可以調的地方](#knobs)。需要時在 Step 2 用 `finetune_latency.h` 加延遲微調。
+3. 每一輪「訓練 → 微調 → 蒸餾 → 實測」約 1.5–2 小時：先在模擬裡篩，再上機確認。記下每一輪改了什麼、模擬和實機各量到多少，報告會用到。
+4. demo 前用 11 練幾種 5 階的組合，決定要選哪 5 階；也量一下甩上到平衡計時，決定兩項任務要不要用同一支策略。
+
 ## 分析報告 { #report }
 
-**demo 隔週之前繳交**，評分方式另外公告。報告寫你們實際做了什麼、為什麼這樣做、結果怎麼解釋，不用重複五個步驟。內容包含：
+期限見[專題規則](rules.md)，評分方式另外公告。報告寫你們實際做了什麼、為什麼這樣做、結果怎麼解釋，不用重複五個步驟。內容包含：
 
 | | 要寫什麼 |
 | --- | --- |
@@ -95,10 +102,10 @@ swingup/
 | 檔案 | 從哪裡拿 |
 | --- | --- |
 | `policy_weights_student.h` | `10_export_weights` 輸出的 `firmware/RLControl/policy_weights_student.h` |
-| `teacher.zip` | `09_distill` 用來蒸餾的那支教師，例如 `policy/runs/ft2/last.zip`，改名成 `teacher.zip`。不是用 Stable-Baselines3 的話，改交 `teacher_act.py`（格式見[專題規則](rules.md#teacher)），並附上訓練這支教師的程式 |
+| `teacher.zip` | `09_distill` 用來蒸餾的那支教師：09 選的那一段微調裡的 `best_model.zip`（預設；當時選了 `last.zip` 就交它），例如 `policy/runs/ft2/best_model.zip`，改名成 `teacher.zip`。不是用 Stable-Baselines3 的話，改交 `teacher_act.py`（格式見[專題規則](rules.md#teacher)），並附上訓練這支教師的程式 |
 | `config.json` | 上面那支教師所在的資料夾裡的 `config.json` |
 
-`policy_weights_student.h` 是 Nano 上跑的網路（[規定一](rules.md#hard-rules)）；`teacher.zip` 和 `config.json` 用來確認這支網路來自你們的 RL 教師（[規定二](rules.md#hard-rules)）。甩上策略和延遲階梯同一支的話，`swingup/` 只放一個寫著「同 ladder」的文字檔。
+`policy_weights_student.h` 是 Nano 上跑的網路（[規定一](rules.md#hard-rules)）；`teacher.zip` 和 `config.json` 用來確認這支網路來自你們的 RL 教師（[規定二](rules.md#hard-rules)）。甩上策略和延遲階梯同一支的話，`swingup/` 只放一個文字檔 `SAME_AS_LADDER.txt`（內容寫「同 ladder」）。
 
 ## Demo（第 3 週） { #demo }
 
@@ -136,32 +143,62 @@ Nano 大約每 2 ms 讀一次擺錘和手臂的位置（推論時會稍微拉長
 
     demo 是用 11 量的，兩者的表現可能不一樣。練習也用 11 量。
 
-如果改過 `latency_profile.h`，練習完改回 `{ {0, 0, 0} }`，不然一般評分的分數也會被拖累。延遲階梯不受這個檔案影響。
+如果改過 `latency_profile.h`，練習完改回 `{ {0, 0, 0} }`，不然一般評分的分數也會被拖累。延遲階梯和甩上到平衡計時都不受這個檔案影響（11 會用序列埠指令設定延遲）。
 
 ## 在模擬裡先測 { #sim }
 
 每一輪實機測試都要燒錄、擺好、一階一階等。先在模擬裡篩掉明顯不行的策略會快很多：
 
-!!! tool "用 `eval_latency.py` 掃延遲"
+!!! tool "用 `eval_latency.py` 在模擬裡跑延遲階梯"
+
+    打開終端機，進到 repo 的 `policy` 資料夾再執行（選你的系統）。下面以 `ft2` 蒸餾出的學生為例，路徑換成你自己的：
+
+    === ":material-apple: macOS"
+
+        ```bash
+        cd ~/rip-course/policy
+        uv run python eval_latency.py runs/ft2/distill_h16_dagger_dev/student.pt --ladder --levels 0 20 35 40 45
+        ```
+
+    === ":material-microsoft-windows: Windows"
+
+        ```powershell
+        cd C:\rip-course\policy
+        uv run python eval_latency.py runs\ft2\distill_h16_dagger_dev\student.pt --ladder --levels 0 20 35 40 45
+        ```
+
+    - `--levels` 換成你想試的 5 階，規則和實機一樣：由低到高，某一階沒過就停。模擬裡每階跑 10 回合 × 30 秒，一階要 80% 的回合連續平衡滿 10 秒才算通過。最後一行會寫「依你選的 5 階（由低到高，某一階沒過就停），最高 +X ms」。
+    - 只寫 `--ladder`、不加 `--levels`，會把 14 階都跑一次，印出每一階有幾個回合連續平衡滿 10 秒，方便決定要選哪 5 階。
+    - 教師（`.zip`，例如 `runs/ft2/best_model.zip`）和學生（`.pt`）都可以測。
+
+??? cmd "其他用法：自己選延遲和抖動、重播 latency_profile.h"
+
+    一樣在 `policy` 資料夾執行（Windows 的路徑分隔可以用 `/` 或 `\`）：
 
     ```bash
-    cd policy
-    # 模擬的延遲階梯：和實機同一組階，每階 10 回合 × 30 秒
-    uv run python eval_latency.py runs/<名稱>/distill_h16_dagger_dev/student.pt --ladder
-    # 自己選要掃的延遲和抖動
-    uv run python eval_latency.py <教師或學生> --extra-ms 0 10 20 30 40 --jitter-ms 0 10
-    # 重播一份 latency_profile.h
-    uv run python eval_latency.py <教師或學生> \
-        --profile ../firmware/RLControl/latency_profile.h --episode-s 60
+    uv run python eval_latency.py runs/ft2/distill_h16_dagger_dev/student.pt --extra-ms 0 10 20 30 40 --jitter-ms 0 10
+    uv run python eval_latency.py runs/ft2/distill_h16_dagger_dev/student.pt --profile ../firmware/RLControl/latency_profile.h --episode-s 60
     ```
-
-    教師（`.zip`）和學生（`.pt`）都可以測。`--ladder` 最後一行是「模擬裡最高通過到哪一階」（一階要 80% 的回合連續平衡滿 10 秒）。
 
 模擬的基準是在 Nano 上量到的 15.6 ms，延遲加在這上面。模擬分數高不代表實機一定行，但模擬就撐不住的，實機通常也撐不住。
 
 ## 可以調的地方 { #knobs }
 
-五個步驟的每一步都有預設值，那些值是為約 16 ms 的延遲挑的。下面列出每一步和延遲有關、工具裡就能改的設定。要改哪些、改成多少，由你們自己決定。每個工具在畫面上問「要改延遲設定嗎？」時回答 `y` 才會問這些；不改就直接按 Enter，行為和預設一樣。
+五個步驟的每一步都有預設值，那些值是為約 16 ms 的延遲挑的。下面列出每一步和延遲有關、工具裡就能改的設定。要改哪些、改成多少，由你們自己決定。不改就直接按 Enter，行為和預設一樣：
+
+- `06_train_teacher` 問 `要改延遲設定嗎？` 時回答 `y`。
+- `09_distill` 問 `要改 DAgger 的延遲條件嗎？` 時回答 `y`。
+- `07_finetune` 不問：改 `firmware/LowLevelServer/finetune_latency.h`，重新上傳 `LowLevelServer`。
+
+!!! info "模擬裡有三種延遲"
+
+    | 設定 | 模擬的是什麼 | 在哪裡改 |
+    | --- | --- | --- |
+    | 觀測延遲 | 策略看到的感測資料變舊，也就是 Nano 上的 `sample→command`。**延遲階梯的 +X 加的就是這一種** | 06、09 |
+    | 動作延遲（拍） | 指令晚幾拍才生效，主要模擬接線時指令經過 USB | 06 的第 3 階段 |
+    | 動作 lag 時間常數 τ | 指令生效時不是一下子到位，而是以時間常數 τ 慢慢跟上 | 06 的第 3 階段 |
+
+    要練延遲階梯，主要調的是觀測延遲；動作延遲和 lag 是 Step 1 原本就有的設定，見 [Step 1 的三個階段](steps/step1-train.md#stages)。
 
 !!! warning "延遲有兩種寫法：總延遲和加上去的延遲"
 
@@ -170,7 +207,7 @@ Nano 大約每 2 ms 讀一次擺錘和手臂的位置（推論時會稍微拉長
     | **總延遲** | 包含原本約 16 ms | `06_train_teacher` 的觀測延遲範圍、`09_distill` 的練習範圍和評分延遲 |
     | **加上去的延遲** | 加在原本約 16 ms 上面 | `finetune_latency.h`、延遲階梯的 +X、`eval_latency.py` 的 `--extra-ms`、`latency_profile.h` |
 
-    例如要讓策略練到實機的 +55，06 和 09 的上限要設到約 71 ms（16 + 55），`finetune_latency.h` 則是寫 55。06 預設的 2–20 ms 只涵蓋到大約 +4。
+    例如要讓策略練到實機的 +55，06 和 09 的上限要設到約 71 ms（16 + 55），`finetune_latency.h` 則是寫 55。06 預設的 2–20 ms 只涵蓋到大約 +4。`finetune_latency.h` 是加在接線測試原本的延遲上，接線和獨立執行原本的延遲不完全一樣，所以寫 55 是讓教師在微調時見過那個範圍，不等於完全重現實機的 +55。
 
     所有範圍都是**每回合在上下限之間均勻抽一個**；上下限設成一樣就是固定延遲。
 
@@ -186,9 +223,9 @@ Nano 大約每 2 ms 讀一次擺錘和手臂的位置（推論時會稍微拉長
 
 每一輪「訓練 → 微調 → 蒸餾 → 實測」大約要 1.5–2 小時，三週能跑的輪數有限。建議每一輪只改少數幾個設定，並且記下改了什麼、模擬和實機各量到多少，之後的分析報告會用到這些紀錄。
 
-!!! warning "Step 2 微調完記得 `finetune_latency.h`"
+!!! warning "Step 2 微調完記得改回 `finetune_latency.h`"
 
-    `08_test_policy` 也是走 `LowLevelServer`，所以也會帶著這個延遲。想看沒有延遲的表現，就把它改回 `0`、`0` 再上傳一次。
+    所有走 `LowLevelServer` 的工具（`03_check_motor`、`04_check_direction`、`05_sysid`、`07_finetune`、`08_test_policy`）都會帶著這個延遲。微調完要做其他測試、或想看沒有延遲的表現，就把它改回 `0`、`0` 再上傳一次。
 
 想更深入也可以直接改程式：`policy/pendulum_env.py`（`obs_staleness_s` 的說明）、`policy/train_sac.py --help`、`policy/dagger_distill.py --help`、[sim2real 理論](theory.md)。
 

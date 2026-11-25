@@ -1,7 +1,7 @@
 # Step 2：在實機上微調
 
 <div class="rip-meta" markdown>
-  <span class="rip-chip rip-chip--cyan">:material-clock-outline: 30 回合約 6–11 分鐘，段數自己決定</span>
+  <span class="rip-chip rip-chip--cyan">:material-clock-outline: 每段 30–50 回合，約 6–18 分鐘，段數自己決定</span>
   <span class="rip-chip rip-chip--amber">:material-robot-industrial: 需要機台</span>
   <span class="rip-chip">:material-chip: LowLevelServer</span>
   <span class="rip-chip">:material-file-outline: 產出 ftN/best_model.zip</span>
@@ -43,12 +43,15 @@
     6. 工具開始跑，畫面會顯示目前第幾回合。結束時印出 `已存：runs/ft1/best_model.zip`，以及 best_model 來自第幾回合。
     7. 接著做 [3. 接線測試](#test)。
 
+<span id="restart"></span>
+
 !!! tool "之後每一段（ft2、ft3…）"
 
     1. 再執行 `tools/07_finetune`。
-    2. 工具從最新一段接續，帶上那一段的 replay buffer。畫面先問從那一段的 `best_model.zip` 還是 `last.zip` 接續（差別見 [best_model 和 last 是怎麼來的](#best-model)），直接按 Enter 是作者的 `best_model.zip`。
-    3. 接著問這一段的設定和 reward 權重，直接按 Enter 是作者的預設值（30 回合、每回合 6 秒、reward 沿用上一段）。
-    4. 跑完一樣接著做 [3. 接線測試](#test)。
+    2. 畫面先問 `要從教師重新開始一條新的微調嗎？（不接續 ftN；換教師時用，不用就直接按 Enter）`。一般直接按 Enter，從最新一段接續。換了教師、或 `04_check_direction` 修正過方向時輸入 `y`，再選教師：新的一段接著編號（例如 ft4），不帶舊的 replay buffer，舊的資料夾不用刪。
+    3. 接續時，工具帶上最新一段的 replay buffer。畫面問從那一段的 `best_model.zip` 還是 `last.zip` 接續（差別見 [best_model 和 last 是怎麼來的](#best-model)），直接按 Enter 是作者的 `best_model.zip`。
+    4. 接著問這一段的設定和 reward 權重，直接按 Enter 是作者的預設值（30 回合、每回合 6 秒、reward 沿用上一段）。
+    5. 跑完一樣接著做 [3. 接線測試](#test)。
 
     控制頻率、動作模式、平滑窗口都從 checkpoint 的 `config.json` 繼承，工具不會問。每一段實際用的設定存在 `runs/ftN/07_settings.json`。
 
@@ -121,6 +124,8 @@
         --port <PORT> --duration-s 30 --log recordings/ft2.npz
     ```
 
+<span id="honest"></span>**接線測試**是策略在筆電上算動作、經 USB 送給 `LowLevelServer`；Step 4 的**獨立執行**則是策略燒在 Nano 上自己算。兩種測試印出的 balanced fraction、最長連續平衡、擺錘標準差等數字，都用編碼器量到的實際角度算，不看策略的觀測、也不看 reward，網站稱為**誠實指標**。
+
 測試秒數和指標的關係：
 
 - balanced fraction 從按下開始的那一刻算起，包含甩上的時間。
@@ -135,7 +140,7 @@
 | --- | --- |
 | ≥ 0.85 | :material-check-circle:{ style="color: var(--rip-green)" } 教師夠穩了。可以進 Step 3，也可以再加一段微調看看 |
 | 0.4–0.85 | :material-trending-up:{ style="color: var(--rip-amber)" } 還在進步。再執行一次 `07_finetune`（從最新一段接續，預設 30 回合），然後再跑 `08_test_policy` |
-| < 0.4 | :material-close-circle:{ style="color: var(--rip-red)" } 先停止微調，依序檢查硬體：燒 `LowLevelServer` 跑 `04_check_direction`（方向被修正的話，丟掉 `runs/ftN` 從教師重跑）；燒 `EncoderCheck` 跑 `02_check_encoder`；確認桌面水平、機台沒有被移動。都正常就燒 `LowLevelServer` 重跑 `05_sysid`，對照 [Step 0 檢查點](step0-sysid.md#checkpoint)。硬體和 sysid 都沒問題，就是策略本身的問題：照[依序查什麼](../theory.md#debug-order)自己調整，例如換一支教師、換 SEED 重訓，或檢查 reward 的修改 |
+| < 0.4 | :material-close-circle:{ style="color: var(--rip-red)" } 先停止微調，依序檢查硬體：燒 `LowLevelServer` 跑 `04_check_direction`（方向被修正的話，照[從教師重新開始](#restart)開一條新的微調）；燒 `EncoderCheck` 跑 `02_check_encoder`；確認桌面水平、機台沒有被移動。都正常就燒 `LowLevelServer` 重跑 `05_sysid`，對照 [Step 0 檢查點](step0-sysid.md#checkpoint)。硬體和 sysid 都沒問題，就是策略本身的問題：照[依序查什麼](../theory.md#debug-order)自己調整，例如換一支教師、換 SEED 重訓，或檢查 reward 的修改 |
 
 ## 4. 進 Step 3 前：回歸測試 { #regression .rip-do }
 

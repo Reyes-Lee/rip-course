@@ -45,7 +45,7 @@ const float RAD_PER_STEP = (2.0f * (float)PI) / (float)STEPS_PER_REVOLUTION;
 
 // Accel-mode envelope. See pendulum_env.py for the corresponding sim
 // constants. The velocity cap below corresponds to MAX_VELOCITY_RAD_S
-// = 5 rad/s: 5 × (STEPS_PER_REVOLUTION / 2π) steps/s (≈2546 at 3200) ⇒ MOTOR_MIN_STEP_US below.
+// = 5 rad/s: 5 × (STEPS_PER_REVOLUTION / 2π) steps/s (≈5093 at 6400) ⇒ MOTOR_MIN_STEP_US below.
 // NB: this boot-time speed cap applies to BOTH command paths — the accel
 // mode it was sized for AND position-mode moveTo() tracking. Position-mode
 // commanded slew is max_action_delta × control rate (3.5 rad/s at defaults),
@@ -79,10 +79,10 @@ const int32_t MOTOR_BRAKE_ACCEL_STEPS_S2 =
 // samples = 4 inter-sample gaps = 8 ms. Window halved from 10 → 5 on
 // 2026-05-20 to cut ~9 ms of observation lag — the largest tunable
 // component of the rig's policy-loop lag. Tradeoff: ~√2× noisier
-// per-sample velocity estimate. See website/src/content/docs/reference/transport-delay.md.
+// per-sample velocity estimate.
 const uint16_t SAMPLE_PERIOD_US = 2000;
 // 延遲注入關閉時維持 16；上限 ≤ 36 ms 時 24（2 ms × 19 ≥ 36 ms，加上速度窗 5）；
-// 上限 > 36 ms 時 42（2 ms × 37 ≥ 70 ms，加上速度窗 5），對應延遲階梯的 +70。
+// 上限 > 36 ms 時 42（2 ms × 37 ≥ 70 ms，加上速度窗 5），對應 FT_LATENCY_MAX_MS 的上限 70。
 #if FT_LATENCY_MAX_MS > 36
 const uint8_t  BUFFER_SIZE      = 42;
 #elif FT_LATENCY_MAX_MS > 0

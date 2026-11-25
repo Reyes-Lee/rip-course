@@ -10,12 +10,12 @@ Nano 用 USB-C 線接上電腦、燒好對應的韌體，再執行工具，就�
 | `03_check_motor` | LowLevelServer | 加速度逐級升到 150 rad/s²，檢查失步 | [上電測試](hardware.md#power-on) |
 | `04_check_direction` | LowLevelServer | 擺錘方向跟模擬一致，結果存進 Nano 的 EEPROM。助教已經在每台跑過 | [需要時（換零件、工具提示）](hardware.md#direction) |
 | `05_sysid` | LowLevelServer | 系統識別精靈 | [Step 0](../steps/step0-sysid.md) |
-| `06_train_teacher` | — | 三階段模擬訓練＋印出檢查點數字（會問每階段步數） | [Step 1](../steps/step1-train.md) |
-| `07_finetune` | LowLevelServer | 實機微調，接續上一段（會問回合數、每回合秒數、從哪個模型接續等） | [Step 2](../steps/step2-finetune.md) |
-| `08_test_policy` | LowLevelServer | 接線測試，印誠實指標（會問測試秒數） | [Step 2–3](../steps/step2-finetune.md) |
+| `06_train_teacher` | — | 三階段模擬訓練＋印出檢查點數字（會問每階段步數；延遲設定是專題任務用的） | [Step 1](../steps/step1-train.md) |
+| `07_finetune` | LowLevelServer | 實機微調，接續上一段（會問回合數、每回合秒數、從哪個模型接續等；換教師時可以從教師重新開始一條） | [Step 2](../steps/step2-finetune.md) |
+| `08_test_policy` | LowLevelServer | 接線測試（策略在筆電上算），印[誠實指標](../steps/step2-finetune.md#honest)（會問測試秒數） | [Step 2–3](../steps/step2-finetune.md) |
 | `09_distill` | — | BC＋DAgger＋敏感度關卡（會問 SEED、教師模型等） | [Step 3](../steps/step3-distill.md) |
 | `10_export_weights` | — | 核對 sketch 常數，匯出 `policy_weights_student.h` | [Step 4](../steps/step4-deploy.md) |
-| `11_score_onboard` | RLControl | 獨立執行評分（會問評分秒數） | [Step 4](../steps/step4-deploy.md) |
+| `11_score_onboard` | RLControl | 獨立執行評分。先問要做哪一種：一般評分（Step 4，會問評分秒數）、延遲階梯、甩上到平衡計時（後兩種是[專題任務](../advanced.md)用的） | [Step 4](../steps/step4-deploy.md)、[專題任務](../advanced.md#practice) |
 | `12_view_policy` | — | 在 MuJoCo 視窗播放策略 30 秒 | [Step 1–2](../steps/step1-train.md#mujoco) |
 | `13_check_sim` | — | 對稱性＋敏感度關卡，印出數字 | [Step 1–3](../steps/step1-train.md#checkpoint) |
 

@@ -1,11 +1,12 @@
 /**
  * RLControl.ino — Standalone on-device RL controller for the rotary inverted pendulum.
  *
- * Runs a distilled student MLP (24 -> H -> H -> 1, ReLU/ReLU/tanh, float32
+ * Runs a distilled student MLP (24 -> 16 -> 16 -> 1, ReLU/ReLU/tanh, float32
  * weights in PROGMEM) at a fixed CONTROL_FREQUENCY_HZ (50 Hz, the canonical
  * operating point) to swing up + balance the pendulum without any laptop
- * tether. Produced by `distill_student.sh` (behaviour cloning + DAgger at the
- * device transport) and exported by `export_weights.py`.
+ * tether. Produced by 09_distill (policy/dagger_distill.py: behaviour cloning +
+ * DAgger at the device transport) and exported by 10_export_weights
+ * (policy/export_weights.py).
  *
  * Action mode: VELOCITY. The policy's tanh output is a velocity setpoint
  * (action × MAX_VELOCITY_RAD_S). A saturating P-law converts it to an
@@ -199,8 +200,8 @@ const uint8_t FRAME_DIM = 6;
 #endif
 #endif
 // 隱藏層大小 H 固定 16。policy_forward 的 h1、h2 放在堆疊上，H 每加 1 多用 8 bytes。
-// H=16 時最深的堆疊（主迴圈 + FastAccelStepper 的 Timer1 ISR + 巢狀 ISR）約 480 bytes，
-// 剩餘 SRAM 505 bytes；H >= 19 會溢位。編譯器不會警告，症狀是讀值錯、策略亂動。
+// H=16 時最深的堆疊（主迴圈 + FastAccelStepper 的 Timer1 ISR + 巢狀 ISR）保守估計約 486 bytes，
+// 剩餘 SRAM 505 bytes；H >= 19 會溢位（486 + 24 > 505）。編譯器不會警告，症狀是讀值錯、策略亂動。
 #if POLICY_HIDDEN_DIM != 16
 #error "policy hidden size H must be 16 (Nano SRAM stack) - distill again with 09_distill (H=16)"
 #endif
@@ -236,7 +237,7 @@ static int8_t latency_override_ms = -1;
 static uint8_t latency_override_jitter_ms = 0;
 
 // 省 SRAM 的存法（42 筆 × 12 bytes 會吃掉主迴圈和 ISR 需要的堆疊）：
-// - 手臂步數存 int16：硬極限 132° ≈ 2350 步，int16 夠用；相減用 int16 繞回，差值永遠正確。
+// - 手臂步數存 int16：硬極限 107° ≈ 1900 步，int16 夠用；相減用 int16 繞回，差值永遠正確。
 // - 時間戳存 micros() >> 2（4 µs 為單位，micros() 本身的解析度就是 4 µs，不損失精度）的
 //   低 16 位元。只拿來算「兩筆之間差多久」，可表示 262 ms 以內的差；
 //   緩衝區最多涵蓋約 42 × 3 ms ≈ 130 ms，而且每次 engage 都會清空重來。
@@ -509,8 +510,8 @@ static void read_measured_state(float* motor_pos, float* phi,
 // margin, while H=32 float does not and silently sags the loop (measured at
 // 35 Hz, 2026-07-22: 28.6 ms tick -> 25 Hz actual, which turned a balancing
 // policy into a spinner). The current per-MAC cost and tick budget are
-// recorded in website/src/content/docs/train/distill.md — keep the numbers in
-// one place rather than duplicating them here. The imitation pipeline also
+// recorded on the course website (Step 3, "為什麼是 16 個神經元？") — keep the
+// numbers in one place rather than duplicating them here. The imitation pipeline also
 // works best at H=16 anyway.
 // Stepping runs from the Timer1 ISR so inference never stalls the motor —
 // but the 500 Hz measurement sampler DOES run in the main loop, so the

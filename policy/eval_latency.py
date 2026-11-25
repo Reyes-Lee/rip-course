@@ -1,7 +1,8 @@
 """Score a policy in the on-device sim with extra observation latency injected.
 
-The off-rig counterpart to flashing `RLControl.ino` with `EXTRA_DELAY_MS`
-set: the policy reads a sample that is `extra` ms older than usual, so the
+The off-rig counterpart to the latency ladder on the rig (RLControl's 'L'
+serial command, or a `latency_profile.h`): the policy reads a sample that is
+`extra` ms older than usual, so the
 sample->command age becomes the measured 15.6 ms plus `extra`. With
 `--jitter-ms J` every control tick draws its own extra delay uniformly from
 [extra, extra + J] in whole ms, like the firmware (which then reads the
@@ -14,6 +15,8 @@ longest continuous balanced stretch (|θ| ≤ 15° AND |θ̇| ≤ 4 rad/s), the
 same gate `analyze_onboard.py` uses on the rig.
 
 Usage:
+    python eval_latency.py runs/ft2/distill_h16_dagger_dev/student.pt --ladder
+    python eval_latency.py runs/ft2/distill_h16_dagger_dev/student.pt --levels 0 20 35 40 45
     python eval_latency.py runs/<run>_stage3/best_model.zip
     python eval_latency.py runs/<run>/distill_h16_dagger_dev/student.pt \\
         --extra-ms 0 10 20 30 40 --jitter-ms 0 20
@@ -89,8 +92,8 @@ def run_condition(policy: str, stages: list[tuple[float, float, float]],
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("policy", help="SAC .zip or distilled .pt")
-    p.add_argument("--extra-ms", type=float, nargs="+",
-                   default=[0, 10, 20, 30, 40])
+    p.add_argument("--extra-ms", type=float, nargs="+", default=None,
+                   help="extra latency grid in ms (default 0 10 20 30 40; not with --ladder/--levels)")
     p.add_argument("--jitter-ms", type=float, nargs="+", default=[0])
     p.add_argument("--profile", type=Path, default=None,
                    help="replay a latency_profile.h instead of the grid")
@@ -98,9 +101,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--episode-s", type=float, default=None,
                    help="episode length (default 30 s, also with --ladder)")
     p.add_argument("--ladder", action="store_true",
-                   help="延遲階梯：+0、+10、+15 … +35、+37、+40、+42、+45、+47、+50、+55 ms"
-                        "（和 latency_ladder.py 同一組階），"
+                   help="延遲階梯的 14 階（+0、+10、+15、+20、+25、+30、+35、+37、+40、+42、+45、+47、+50、+55 ms，"
+                        "和 latency_ladder.py 同一組）全部測，印出每一階的通過率；"
                         "每回合 30 秒，最長連續平衡 >= --hold-s 算這一回合通過")
+    p.add_argument("--levels", type=int, nargs="+", default=None,
+                   help="照專題規則選的 5 階（例如 0 20 35 40 45），由低到高判，"
+                        "某一階沒過就停，印出「依你選的 5 階最高到哪一階」（隱含 --ladder）")
     p.add_argument("--hold-s", type=float, default=10.0)
     p.add_argument("--pass-frac", type=float, default=0.8,
                    help="--ladder：一階要有多少比例的回合通過才算這一階通過")
@@ -109,9 +115,22 @@ def main(argv: list[str] | None = None) -> int:
     args = p.parse_args(argv if argv is not None else sys.argv[1:])
     if args.episode_s is None:
         args.episode_s = 30.0
+    if args.levels is not None:
+        args.ladder = True
     if args.ladder:
-        from latency_ladder import DEFAULT_LEVELS
-        args.extra_ms = [float(x) for x in DEFAULT_LEVELS]
+        if args.extra_ms is not None:
+            raise SystemExit("--ladder／--levels 會自己決定要測的延遲，不能再給 --extra-ms")
+        if args.profile is not None:
+            raise SystemExit("--ladder／--levels 不能和 --profile 一起用")
+        from latency_ladder import DEFAULT_LEVELS, check_levels
+        picked = check_levels(args.levels, 5) if args.levels is not None else None
+        args.extra_ms = [float(x) for x in (picked or DEFAULT_LEVELS)]
+    elif args.extra_ms is None:
+        args.extra_ms = [0.0, 10.0, 20.0, 30.0, 40.0]
+    over = [(e, j) for j in args.jitter_ms for e in args.extra_ms if e + j > MAX_EXTRA_MS]
+    if over and args.profile is None:
+        raise SystemExit(f"額外延遲 + 抖動不能超過 {MAX_EXTRA_MS} ms（RLControl 的上限）："
+                         + "、".join(f"+{e:g} 加抖動 {j:g}" for e, j in over))
 
     if args.profile is not None:
         stages = read_profile(args.profile)
@@ -135,14 +154,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  profile stages (start s, extra ms, jitter ms): {conds[0][1]}")
     print(f"  {'extra   jitter' if args.profile is None else 'condition':<16}"
           f" longest streak (s): median  min   "
-          f"episodes >= {args.episode_s - 10:.0f} s")
+          f"episodes >= {args.hold_s:g} s")
     for (name, _), s in zip(conds, results):
         s = np.asarray(s)
-        good = int(np.sum(s >= args.episode_s - 10))
-        line = f"  {name:<16} {np.median(s):26.1f} {s.min():5.1f}   {good}/{len(s)}"
-        if args.ladder:
-            line += f"   >= {args.hold_s:g} s: {int(np.sum(s >= args.hold_s))}/{len(s)}"
-        print(line)
+        good = int(np.sum(s >= args.hold_s))
+        print(f"  {name:<16} {np.median(s):26.1f} {s.min():5.1f}   {good}/{len(s)}")
     if args.ladder:
         for j in args.jitter_ms:
             best, stopped, ok = None, False, []
@@ -155,9 +171,13 @@ def main(argv: list[str] | None = None) -> int:
                         best = int(st[0][1])
                 else:
                     stopped = True
-            print(f"  模擬的延遲階梯（抖動 {j:g} ms，一階要 {args.pass_frac:.0%} 回合連續平衡 >= {args.hold_s:g} s）："
-                  f"照順序最高 {'沒有' if best is None else f'+{best} ms'}；"
-                  f"通過的階：{'、'.join(f'+{x}' for x in ok) or '沒有'}")
+            head = (f"  模擬的延遲階梯（抖動 {j:g} ms，一階要 {args.pass_frac:.0%} 回合連續平衡 >= {args.hold_s:g} s）：")
+            if args.levels is not None:
+                print(head + f"依你選的 5 階（由低到高，某一階沒過就停），最高 "
+                      f"{'沒有（第一階就沒過）' if best is None else f'+{best} ms'}")
+            else:
+                print(head + f"通過的階：{'、'.join(f'+{x}' for x in ok) or '沒有'}。"
+                      "demo 要選 5 階、由低到高測，可以用 --levels 模擬你們選的組合")
     return 0
 
 
