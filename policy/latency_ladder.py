@@ -202,8 +202,8 @@ def main(argv: list[str] | None = None) -> int:
                    help="每一階的額外延遲（ms），由低到高")
     p.add_argument("--start-ms", type=int, default=0, help="從哪一階開始（練習用；demo 從 0）")
     p.add_argument("--jitter-ms", type=int, default=0, help="每一階都另外加的每拍抖動（ms）")
-    p.add_argument("--window-s", type=float, default=40.0, help="每次嘗試從 engage 起最多幾秒")
-    p.add_argument("--hold-s", type=float, default=20.0, help="連續平衡幾秒算通過")
+    p.add_argument("--window-s", type=float, default=30.0, help="每次嘗試從 engage 起最多幾秒")
+    p.add_argument("--hold-s", type=float, default=10.0, help="連續平衡幾秒算通過")
     p.add_argument("--retries", type=int, default=1, help="每一階沒過可以重試幾次")
     p.add_argument("--out-dir", type=Path, required=True)
     p.add_argument("--swingup", type=int, default=0, metavar="N",

@@ -96,19 +96,19 @@ def main(argv: list[str] | None = None) -> int:
                    help="replay a latency_profile.h instead of the grid")
     p.add_argument("--episodes", type=int, default=10)
     p.add_argument("--episode-s", type=float, default=None,
-                   help="episode length (default 30 s; 40 s with --ladder)")
+                   help="episode length (default 30 s, also with --ladder)")
     p.add_argument("--ladder", action="store_true",
                    help="延遲階梯：+0、+10、+15 … +35、+37、+40、+42、+45、+47、+50、+55 ms"
                         "（和 latency_ladder.py 同一組階），"
-                        "每回合 40 秒，最長連續平衡 >= --hold-s 算這一回合通過")
-    p.add_argument("--hold-s", type=float, default=20.0)
+                        "每回合 30 秒，最長連續平衡 >= --hold-s 算這一回合通過")
+    p.add_argument("--hold-s", type=float, default=10.0)
     p.add_argument("--pass-frac", type=float, default=0.8,
                    help="--ladder：一階要有多少比例的回合通過才算這一階通過")
     p.add_argument("--seed", type=int, default=100)
     p.add_argument("--workers", type=int, default=4)
     args = p.parse_args(argv if argv is not None else sys.argv[1:])
     if args.episode_s is None:
-        args.episode_s = 40.0 if args.ladder else 30.0
+        args.episode_s = 30.0
     if args.ladder:
         from latency_ladder import DEFAULT_LEVELS
         args.extra_ms = [float(x) for x in DEFAULT_LEVELS]
