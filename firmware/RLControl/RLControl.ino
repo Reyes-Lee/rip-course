@@ -76,7 +76,8 @@
  *
  * 專題任務：額外延遲（latency_profile.h）。policy 讀的樣本可以比最新的再舊
  * extra_ms，另外每一拍再隨機多 0..jitter_ms（毫秒，依樣本的時間戳挑最接近
- * 的一筆；取樣間隔實際約 2-3 ms），依 engage 後的秒數分段。課程版的 latency_profile.h 不注入任何延遲。
+ * 的一筆；取樣間隔實際約 2-3 ms）。latency_profile.h 只能寫一段（見下面的 static_assert）。
+ * 課程版的 latency_profile.h 不注入任何延遲。
  * 遙測的位置來自最新樣本（不受注入影響），latency_us 則包含注入的延遲。
  */
 
@@ -231,6 +232,18 @@ const uint8_t MAX_DELAY_SAMPLES = SAMPLE_BUFFER_SIZE - VEL_WINDOW - 1;
 
 static const LatencyStage latency_stages[] = LATENCY_STAGES;
 const uint8_t N_LATENCY_STAGES = sizeof(latency_stages) / sizeof(latency_stages[0]);
+// 編譯時檢查 latency_profile.h（用 long 的副本，超過 255 的數字才不會先繞回；不產生程式碼）。
+// 只能一段：兩段以上的表會放進 SRAM，2 段剩 493 bytes、4 段剩 485，
+// 低於最深堆疊的保守估計（約 486）加上餘裕。
+struct LatencyStageCheck { long start_s, extra_ms, jitter_ms; };
+static constexpr LatencyStageCheck latency_stage_check[] = LATENCY_STAGES;
+static_assert(sizeof(latency_stage_check) == sizeof(LatencyStageCheck),
+              "latency_profile.h: LATENCY_STAGES 只能有一段，例如 { {0, 20, 10} }");
+static_assert(latency_stage_check[0].start_s == 0,
+              "latency_profile.h: start_s 要寫 0");
+static_assert(latency_stage_check[0].extra_ms >= 0 && latency_stage_check[0].jitter_ms >= 0 &&
+              latency_stage_check[0].extra_ms + latency_stage_check[0].jitter_ms <= MAX_INJECT_MS,
+              "latency_profile.h: extra_ms + jitter_ms 最多 70");
 static uint32_t engaged_ms = 0;
 // 'L' 指令設定的延遲（延遲階梯）。-1 = 用 latency_profile.h。
 static int8_t latency_override_ms = -1;

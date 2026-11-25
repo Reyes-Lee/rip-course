@@ -125,9 +125,9 @@ Nano 大約每 2 ms 讀一次擺錘和手臂的位置（推論時會稍微拉長
 | 方式 | 用在哪裡 |
 | --- | --- |
 | `11_score_onboard` 的延遲階梯 | 用序列埠指令直接設定每一階的延遲，不用重新上傳。demo 和平常練習都用這個 |
-| `firmware/RLControl/latency_profile.h` | 想測「每拍抖動」或「平衡途中延遲改變」時用，要重新上傳 |
+| `firmware/RLControl/latency_profile.h` | 不透過 11、讓上傳後的 `RLControl` 自己帶著延遲時用，要重新上傳 |
 
-`latency_profile.h` 的格式：每一段 `{start_s, extra_ms, jitter_ms}`，`start_s` 是 engage 後第幾秒開始用這一段，`extra_ms` 是每一拍固定多退的毫秒數，`jitter_ms` 是每一拍再隨機多退 0 到這麼多毫秒。`extra_ms + jitter_ms` 最多 70。開機時序列埠會印 `[boot] latency profile = <名稱>`。
+`latency_profile.h` 的格式是 `{ {0, extra_ms, jitter_ms} }`，只能寫一段：`extra_ms` 是每一拍固定多退的毫秒數，`jitter_ms` 是每一拍再隨機多退 0 到這麼多毫秒，`extra_ms + jitter_ms` 最多 70。寫錯（兩段以上、第一個數不是 0、超過 70）編譯時會直接報錯。開機時序列埠會印 `[boot] latency profile = <名稱>`。
 
 ## 在自己的機台上練習 { #practice }
 

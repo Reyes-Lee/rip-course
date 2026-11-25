@@ -7,8 +7,8 @@ sample->command age becomes the measured 15.6 ms plus `extra`. With
 `--jitter-ms J` every control tick draws its own extra delay uniformly from
 [extra, extra + J] in whole ms, like the firmware (which then reads the
 sample whose timestamp is closest to that age).
-`--profile` instead reads a `latency_profile.h` and replays its stages
-against time since engage, exactly as the firmware does.
+`--profile` instead reads the single {0, extra_ms, jitter_ms} stage of a
+`latency_profile.h` (the firmware rejects more than one).
 
 Each episode starts hanging and runs --episode-s seconds; the score is the
 longest continuous balanced stretch (|θ| ≤ 15° AND |θ̇| ≤ 4 rad/s), the
@@ -50,8 +50,13 @@ def read_profile(path: Path) -> list[tuple[float, float, float]]:
         raise SystemExit(f"{path}: no LATENCY_STAGES line")
     stages = [tuple(float(v) for v in t) for t in
               re.findall(r"\{\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\}", m.group(1))]
-    if not stages or stages[0][0] != 0:
-        raise SystemExit(f"{path}: the first stage must start at 0 s")
+    # Same checks as the static_asserts in RLControl.ino.
+    if len(stages) != 1:
+        raise SystemExit(f"{path}: LATENCY_STAGES 只能有一段，例如 {{ {{0, 20, 10}} }}")
+    if stages[0][0] != 0:
+        raise SystemExit(f"{path}: start_s 要寫 0")
+    if stages[0][1] + stages[0][2] > MAX_EXTRA_MS:
+        raise SystemExit(f"{path}: extra_ms + jitter_ms 最多 {MAX_EXTRA_MS}")
     return stages
 
 
