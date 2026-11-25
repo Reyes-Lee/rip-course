@@ -1,7 +1,7 @@
 """11_score_onboard：Nano 獨立執行，用誠實指標評分（作者的 analyze_onboard.py）。
 
 1 一般評分：評分秒數會在畫面上問，直接按 Enter 是作者的 60 秒。評分前先丟掉開始的 5 秒（甩上）。
-2 延遲階梯（專題任務）：同一支策略，從自己選的那一階起一階一階加延遲（最多 5 階），每一階重新甩上，
+2 延遲階梯（專題任務）：同一支策略，自己選 5 階（不一定連續），由低到高測，每一階重新甩上，
   30 秒內連續平衡滿 10 秒算通過，成績是最後通過的那一階（policy/latency_ladder.py）。
 3 甩上到平衡計時（專題任務）：不加延遲甩 3 次，每次 20 秒內要站穩（連續平衡滿 10 秒）才算數，
   甩上時間 = engage 到站穩那一段開始的秒數，成績是中位數（latency_ladder.py --swingup）。
@@ -10,25 +10,48 @@ from __future__ import annotations
 
 import time
 
-from _common import RECORDINGS, ask_number, banner, choose, finish, get_port, info, rel, run_policy_script
+from _common import RECORDINGS, ask, ask_number, banner, choose, finish, get_port, info, rel, run_policy_script, warn
 
 DURATION_S = 60
 
 
-LADDER_START = (0, 10, 15, 20, 25, 30, 35, 37, 40, 42, 45, 47, 50, 55)   # 和 latency_ladder.DEFAULT_LEVELS 同一組
+LADDER_LEVELS = (0, 10, 15, 20, 25, 30, 35, 37, 40, 42, 45, 47, 50, 55)   # 和 latency_ladder.DEFAULT_LEVELS 同一組
+
+
+def ask_levels(n: int = 5) -> list[int]:
+    """問要測哪 n 階：用空白或逗號分開，+ 可加可不加。"""
+    allowed = "、".join(f"+{x}" for x in LADDER_LEVELS)
+    info(f"可以選的階：{allowed}")
+    while True:
+        ans = ask(f"要測哪 {n} 階？用空白分開，例如 0 20 35 40 45")
+        try:
+            xs = [int(t.lstrip("+")) for t in ans.replace(",", " ").replace("、", " ").split()]
+        except ValueError:
+            warn("請輸入數字，例如 0 20 35 40 45")
+            continue
+        bad = [x for x in xs if x not in LADDER_LEVELS]
+        if bad:
+            warn(f"{'、'.join(f'+{x}' for x in bad)} 不是延遲階梯的階。可以選：{allowed}")
+        elif len(set(xs)) != len(xs):
+            warn("選的階有重複")
+        elif len(xs) != n:
+            warn(f"要選剛好 {n} 階，你選了 {len(xs)} 階")
+        else:
+            xs = sorted(xs)
+            info("會依序測：" + "、".join(f"+{x}" for x in xs))
+            return xs
 
 
 def ladder() -> int:
     info("延遲階梯：+0、+10、+15 … +35 每 5 ms 一階，+35 到 +50 是細階（+37、+40、+42、+45、+47、+50），"
-         "最後一階是 +55。從你選的那一階往上連續測，最多 5 階，每一階都要你把手臂轉回正中間再按 Enter。")
+         "最後一階是 +55。你們要選剛好 5 階，不一定連續，由低到高測，每一階都要你把手臂轉回正中間再按 Enter。")
     info("每一階 engage 後 30 秒內連續平衡滿 10 秒就通過，馬上進下一階；沒過可以重試 1 次，還是沒過就停。")
-    info("成績是最後通過的那一階；選的那一階就沒過，就沒有成績。起始階選太低，5 階內爬不上去；選太高，可能一階都過不了。")
+    info("某一階重試後還是沒過就停，後面選的階不測。成績是最後通過的那一階；選的第一階就沒過，就沒有成績。")
     info("延遲直接用序列埠設定，不看 latency_profile.h，所以不用重新上傳。")
-    start = choose("從哪一階開始？（demo 也是你們自己選，之後最多測 5 階）",
-                   list(LADDER_START), [f"+{x} ms" for x in LADDER_START], default=0)
+    levels = ask_levels()
     port = get_port()
     out = RECORDINGS / f"ladder_{time.strftime('%Y%m%d_%H%M%S')}"
-    code, _ = run_policy_script(["latency_ladder.py", "--port", port, "--start-ms", str(start),
+    code, _ = run_policy_script(["latency_ladder.py", "--port", port, "--levels", *[str(x) for x in levels],
                                  "--out-dir", rel(out)])
     return code
 

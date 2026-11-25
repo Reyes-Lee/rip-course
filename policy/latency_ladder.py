@@ -1,6 +1,7 @@
 """延遲階梯（專題任務的評分與練習）：同一支策略，從低到高一階一階加延遲。
 
-起始階自己選（--start-ms），從那一階往上連續測，最多測 --max-levels 階（預設 5）。
+要測哪幾階自己選（--levels）：從 DEFAULT_LEVELS 裡選剛好 --n-levels 階（專題規則 5 階），
+不一定要連續，由低到高測。
 
 上傳一次 RLControl，這支程式用序列埠指令 'L<ms>' 設定每一階的延遲（取代
 latency_profile.h），每一階都重新甩上：
@@ -9,15 +10,15 @@ latency_profile.h），每一階都重新甩上：
   2. 等使用者把手臂轉回正中間、擺錘靜止垂下，按 Enter → 'E'（Nano 抓零點並開始甩）；
   3. 從 engage 起 --window-s 秒內，只要「連續平衡」滿 --hold-s 秒就算通過，馬上停下來進下一階；
      撞到限位、或剩下的時間已經不可能湊滿 --hold-s，就算這一次沒過；
-  4. 沒過可以重試 --retries 次，還是沒過就停；測滿 --max-levels 階也停。
-     成績 = 最後通過的那一階；起始那一階就沒過，就沒有成績。
+  4. 沒過可以重試 --retries 次，還是沒過就停，後面選的階不測。
+     成績 = 最後通過的那一階；選的第一階就沒過，就沒有成績。
 
 平衡的定義和 analyze_onboard／analyze_sim 相同（balance_metrics：|θ| ≤ 15° 且 |θ̇| ≤ 4 rad/s）。
 每一次嘗試的遙測存成 npz，整體結果存成 summary.json。
 
 Usage:
-    python latency_ladder.py --port /dev/cu.usbserial-110 --out-dir recordings/ladder_x
-    python latency_ladder.py --port ... --start-ms 20     # 練習：從 +20 開始
+    python latency_ladder.py --port /dev/cu.usbserial-110 --out-dir recordings/ladder_x \
+        --levels 0 20 35 40 45                            # 選 5 階，不一定連續
     python latency_ladder.py --port ... --swingup 3       # 甩上到平衡計時：+0 甩 3 次
 
 甩上到平衡計時（--swingup N）：不加延遲，甩 N 次。每一次從 engage 起 --window-s 秒內，
@@ -197,14 +198,29 @@ def swingup(ser: serial.Serial, args: argparse.Namespace) -> int:
     return 0
 
 
+def check_levels(levels: list[int] | None, n: int) -> list[int]:
+    """選的階：剛好 n 個、不重複、都在 DEFAULT_LEVELS 裡。回傳由低到高排好的。"""
+    allowed = "、".join(f"+{x}" for x in DEFAULT_LEVELS)
+    if not levels:
+        raise SystemExit(f"請用 --levels 選 {n} 階（從 {allowed} 裡選，不一定連續）")
+    bad = [x for x in levels if x not in DEFAULT_LEVELS]
+    if bad:
+        raise SystemExit(f"{'、'.join(f'+{x}' for x in bad)} 不是延遲階梯的階。可以選：{allowed}")
+    if len(set(levels)) != len(levels):
+        raise SystemExit("選的階有重複")
+    if len(levels) != n:
+        raise SystemExit(f"要選剛好 {n} 階，你選了 {len(levels)} 階")
+    return sorted(levels)
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="延遲階梯：同一支策略，從低到高一階一階加延遲")
     p.add_argument("--port", required=True)
     p.add_argument("--baud", type=int, default=500000)
-    p.add_argument("--levels", type=int, nargs="+", default=DEFAULT_LEVELS,
-                   help="每一階的額外延遲（ms），由低到高")
-    p.add_argument("--start-ms", type=int, default=0, help="從哪一階開始（自己選，demo 也一樣）")
-    p.add_argument("--max-levels", type=int, default=5, help="最多測幾階（專題規則：5）")
+    p.add_argument("--levels", type=int, nargs="+", default=None,
+                   help="要測的階（額外延遲 ms），從 " + "、".join(f"+{x}" for x in DEFAULT_LEVELS)
+                        + " 裡選，不一定連續，會由低到高測")
+    p.add_argument("--n-levels", type=int, default=5, help="要選剛好幾階（專題規則：5）")
     p.add_argument("--jitter-ms", type=int, default=0, help="每一階都另外加的每拍抖動（ms）")
     p.add_argument("--window-s", type=float, default=30.0, help="每次嘗試從 engage 起最多幾秒")
     p.add_argument("--hold-s", type=float, default=10.0, help="連續平衡幾秒算通過")
@@ -226,19 +242,17 @@ def main(argv: list[str] | None = None) -> int:
         wait_boot(ser)
         return swingup(ser, args)
 
-    levels = [x for x in sorted(set(args.levels)) if x >= args.start_ms][:args.max_levels]
-    if not levels:
-        raise SystemExit("沒有要測的階")
+    levels = check_levels(args.levels, args.n_levels)
     args.out_dir.mkdir(parents=True, exist_ok=True)
     print(f"延遲階梯：{'、'.join(f'+{x}' for x in levels)} ms"
           + (f"（每拍另加抖動 0–{args.jitter_ms} ms）" if args.jitter_ms else ""))
     print(f"每一階：engage 後 {args.window_s:g} 秒內連續平衡滿 {args.hold_s:g} 秒算通過；"
-          f"沒過可以重試 {args.retries} 次。最多測 {len(levels)} 階，第一階（+{levels[0]}）沒過就沒有成績。")
+          f"沒過可以重試 {args.retries} 次，還是沒過就停。第一階（+{levels[0]}）沒過就沒有成績。")
     print(f"打開 {args.port}（Nano 會重開）")
     ser = serial.Serial(args.port, args.baud, timeout=0.5)
     wait_boot(ser)
 
-    summary = dict(levels=levels, start_ms=levels[0], max_levels=args.max_levels, jitter_ms=args.jitter_ms, window_s=args.window_s, hold_s=args.hold_s,
+    summary = dict(levels=levels, jitter_ms=args.jitter_ms, window_s=args.window_s, hold_s=args.hold_s,
                    retries=args.retries, attempts=[], best_ms=None)
     for ms in levels:
         set_latency(ser, ms, args.jitter_ms)
@@ -271,8 +285,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  +{a['extra_ms']:>2} ms 第 {a['attempt']} 次：{'通過' if a['passed'] else '沒過'}　"
               f"最長連續平衡 {a['streak_s']:.1f} s")
     best = summary["best_ms"]
-    print(f"\n通過的最高階：{'沒有（起始階沒過，沒有成績）' if best is None else f'+{best} ms'}"
-          f"（從 +{levels[0]} 開始，測了 {len({a['extra_ms'] for a in summary['attempts']})} 階，最多 {len(levels)} 階）")
+    print(f"\n通過的最高階：{'沒有（選的第一階沒過，沒有成績）' if best is None else f'+{best} ms'}"
+          f"（選的階：{'、'.join(f'+{x}' for x in levels)}；測了 {len({a['extra_ms'] for a in summary['attempts']})} 階）")
     print(f"紀錄：{args.out_dir}")
     return 0
 
