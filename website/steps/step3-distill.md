@@ -6,13 +6,13 @@
   <span class="rip-chip">:material-file-outline: 產出 distill_h16_dagger_dev/student.pt</span>
 </div>
 
-256×256 的教師網路太大，放不進 Nano。這一步用「模仿學習」把它縮小成只有 16 個隱藏神經元的學生網路。
+Step 2 微調完的 256×256 網路太大，放不進 Nano。這一步用「模仿學習」把它縮小成只有 16 個隱藏神經元的小網路。以下把原本的大網路叫「蒸餾前的模型」，縮小出來的小網路叫「蒸餾後的模型」。文獻和檔名裡分別叫 teacher（教師）和 student（學生），例如 `--teacher`、`student.pt`，指的就是這兩個。
 
 !!! todo "這一步要做的事"
 
     1. [蒸餾](#run)：執行 `09_distill`。
-    2. [看檢查點](#checkpoint)：學生和教師的分數接近嗎？需要時換 SEED 重做。
-    3. （選做）[燒進 Nano 前先接線測學生](#tethered)。
+    2. [看檢查點](#checkpoint)：蒸餾後和蒸餾前的模型分數接近嗎？需要時換 SEED 重做。
+    3. （選做）[燒進 Nano 前先接線測蒸餾後的模型](#tethered)。
 
     標題前標「說明」的段落是原理說明，讀懂就好，不用操作。
 
@@ -23,8 +23,8 @@
     1. 執行 `tools/09_distill`。
     2. 清單的預設是最後一段微調（例如 `ft3`），直接按 Enter。如果 [Step 2 的回歸測試](step2-finetune.md#regression)改用了前一段，就輸入那一段的編號。
     3. `SEED [0]:` 直接按 Enter。
-    4. 接著問教師用那一段的 `best_model.zip` 還是 `last.zip`（差別見 [Step 2](step2-finetune.md#best-model)）、要不要改進階設定，以及 `要改 DAgger 的延遲條件嗎？（專題任務用；不改就直接按 Enter）`。直接按 Enter 是作者的預設值（`best_model.zip`、不改、不改）。延遲條件見[專題任務的可以調的地方](../advanced.md#knobs)。
-    5. 約 3 分鐘後，工具印出結果表（見[檢查點](#checkpoint)）。學生存在 `runs/ftN/distill_h16_dagger_dev/student.pt`。
+    4. 接著問蒸餾前的模型用那一段的 `best_model.zip` 還是 `last.zip`（差別見 [Step 2](step2-finetune.md#best-model)）、要不要改進階設定，以及 `要改 DAgger 的延遲條件嗎？（專題任務用；不改就直接按 Enter）`。直接按 Enter 是作者的預設值（`best_model.zip`、不改、不改）。延遲條件見[專題任務的可以調的地方](../advanced.md#knobs)。
+    5. 約 3 分鐘後，工具印出結果表（見[檢查點](#checkpoint)）。蒸餾後的模型存在 `runs/ftN/distill_h16_dagger_dev/student.pt`。
 
 ??? cmd "背後執行的指令"
 
@@ -46,16 +46,16 @@
 
     | 設定 | 預設 | 後綴例子 |
     | --- | --- | --- |
-    | 教師模型 | `best_model.zip` | `last.zip` → `_last` |
+    | 蒸餾前的模型 | `best_model.zip` | `last.zip` → `_last` |
     | SEED | 0 | 1 → `_s1` |
     | 行為克隆 epoch 數（進階） | 800 | 400 → `_e400` |
     | DAgger 輪數 × 每輪步數（進階） | 5 × 40000 | 3 × 40000 → `_r3x40000`（只加在 DAgger 的資料夾） |
     | DAgger 的延遲條件（專題任務） | 練習 2–10 ms、評分 15.6 ms | 練習 0–71 → `_lat0-71`；評分 15.6、71 → `_g15.6-71`（只加在 DAgger 的資料夾） |
 
-    - 教師模型：蒸餾時當「老師」的那組權重，學生學的是它在每個狀態輸出的動作。資料集裡的真實狀態一律來自那一段的 `replay_buffer.pkl`，跟選哪個教師模型無關。
+    - 蒸餾前的模型：蒸餾時被模仿的那組權重，蒸餾後的模型學的是它在每個狀態輸出的動作。資料集裡的真實狀態一律來自那一段的 `replay_buffer.pkl`，跟蒸餾前的模型選哪個檔無關。
     - SEED：決定網路初始權重和資料打亂的順序。同樣設定換 SEED，結果會有差異。
-    - 行為克隆 epoch 數：學生把整個資料集看過幾遍。
-    - DAgger 輪數：每一輪讓學生自己在模擬裡跑，把它走到的狀態交給教師標上動作、加進資料集再訓練。每輪結束都會用模擬分數（gate）檢查，只保留分數最好的那一輪；0 輪就是只用行為克隆的結果。每輪步數是每輪讓學生跑幾步來收集新狀態。
+    - 行為克隆 epoch 數：蒸餾後的模型把整個資料集看過幾遍。
+    - DAgger 輪數：每一輪讓蒸餾後的模型自己在模擬裡跑，把它走到的狀態交給蒸餾前的模型標上動作、加進資料集再訓練。每輪結束都會用模擬分數（gate）檢查，只保留分數最好的那一輪；0 輪就是只用行為克隆的結果。每輪步數是每輪讓蒸餾後的模型跑幾步來收集新狀態。
 
 ## 2. 看檢查點 { #checkpoint .rip-do }
 
@@ -65,53 +65,53 @@
 
     | 項目 | 參考門檻 |
     | --- | --- |
-    | DAgger gate | gate 是在模擬裡、照 Nano 獨立執行的時序跑出來的平衡分數（DAgger 每一輪用它挑學生）。學生的 gate 接近教師自己的 gate（工具並排印出兩個數字）。作者沒有給數字，由你判斷 |
+    | DAgger gate | gate 是在模擬裡、照 Nano 獨立執行的時序跑出來的平衡分數（DAgger 每一輪用它挑要留下的模型）。蒸餾後的 gate 接近蒸餾前模型自己的模擬分數（工具並排印出兩個數字）。作者沒有給數字，由你判斷 |
     | 敏感度關卡 | 同 Step 1：關掉韌體量測模型後的 balanced fraction ≥ 0.7 |
 
-DAgger gate 要跟教師比、不跟絕對門檻比，是因為模擬會系統性低估實機微調過的策略：作者的冠軍在模擬 gate 只有 0.655，實機是 0.996（另一次 300 秒的獨立執行評分是 1.000）。
+DAgger gate 要跟蒸餾前的模型比、不跟絕對門檻比，是因為模擬會系統性低估實機微調過的策略：作者的冠軍在模擬 gate 只有 0.655，實機是 0.996（另一次 300 秒的獨立執行評分是 1.000）。
 
-!!! warning "學生和教師都是 0（或接近 0）不算「接近」"
+!!! warning "蒸餾前、後都是 0（或接近 0）不算「接近」"
 
-    兩個分數都是在 Nano 獨立執行的時序下算的。DAgger 只在某一輪的分數超過第 0 輪時才換學生；每一輪都是 0，就一直沒換，存下來的是第 0 輪只用行為克隆的學生。作者實測這種學生在閉迴路只有約 0.12，燒進 Nano 多半一直繞圈。這時 `09_distill` 結束會印出黃色提醒。
+    兩個分數都是在 Nano 獨立執行的時序下算的。DAgger 只在某一輪的分數超過第 0 輪時才換掉存下來的模型；每一輪都是 0，就一直沒換，存下來的是第 0 輪只用行為克隆的模型。作者實測這種模型在閉迴路只有約 0.12，燒進 Nano 多半一直繞圈。這時 `09_distill` 結束會印出黃色提醒。
 
-    常見的原因是教師本身在這個時序的模擬裡撐不住（教師自己的分數也接近 0），換 SEED 通常不會變好。可以先照[第 3 節](#tethered)用 `08_test_policy` 接線測這支學生，再決定換另一段微調的教師，或回 Step 2 再加一段。
+    常見的原因是蒸餾前的模型本身在這個時序的模擬裡撐不住（它自己的分數也接近 0），換 SEED 通常不會變好。可以先照[第 3 節](#tethered)用 `08_test_policy` 接線測這支蒸餾後的模型，再決定換另一段微調當蒸餾前的模型，或回 Step 2 再加一段。
 
 !!! tool "判斷要重做時"
 
     1. 再執行 `tools/09_distill`。
     2. 選同一段微調。
     3. `SEED [0]:` 輸入 `1`。
-    4. 換了幾個 SEED 都明顯低於教師，可以在 `09_distill` 的進階設定增加行為克隆 epoch 數或 DAgger 輪數，或回 Step 2 改用另一段微調當教師。
+    4. 換了幾個 SEED 都明顯低於蒸餾前的模型，可以在 `09_distill` 的進階設定增加行為克隆 epoch 數或 DAgger 輪數，或回 Step 2 改用另一段微調當蒸餾前的模型。
 
-## 3. （選做）燒進 Nano 前先接線測學生 { #tethered .rip-do }
+## 3. （選做）燒進 Nano 前先接線測蒸餾後的模型 { #tethered .rip-do }
 
-!!! tool "接線測試學生"
+!!! tool "接線測試蒸餾後的模型"
 
     1. Nano 燒 `LowLevelServer`，等擺錘靜止垂下。
     2. 執行 `tools/08_test_policy`。
     3. 清單輸入 `ftN/distill_h16_dagger_dev/student.pt` 那一個的編號。
-    4. `測試秒數 [30]:` 直接按 Enter，或輸入想測的秒數。學生是針對獨立執行最佳化的，接線分數略低於教師是正常的。這個分數可以留著，和 [Step 4 的獨立執行分數](step4-deploy.md#gap)比較。
+    4. `測試秒數 [30]:` 直接按 Enter，或輸入想測的秒數。蒸餾後的模型是針對獨立執行最佳化的，接線分數略低於蒸餾前的模型是正常的。這個分數可以留著，和 [Step 4 的獨立執行分數](step4-deploy.md#gap)比較。
 
 ## 它在做什麼 { #what .rip-learn }
 
 <div class="rip-flow" markdown>
-  <div class="rip-flow__node rip-flow__node--rig" markdown="span">教師 256×256<small>Step 2 微調完的 best_model.zip</small></div>
+  <div class="rip-flow__node rip-flow__node--rig" markdown="span">蒸餾前的模型 256×256<small>Step 2 微調完的 best_model.zip</small></div>
   <div class="rip-flow__edge" markdown="span">對 replay buffer 的每個狀態標動作<span>BC</span></div>
-  <div class="rip-flow__node" markdown="span">學生 H=16（第 0 輪）<small>只模仿過教師看過的狀態</small></div>
-  <div class="rip-flow__edge rip-flow__edge--loop" markdown="span">學生自己控制 → 收集走到的狀態 → 請教師標動作 → 重新訓練，重複數輪<span>DAgger</span></div>
-  <div class="rip-flow__node rip-flow__node--rig" markdown="span">DAgger 學生<small>student.pt</small></div>
+  <div class="rip-flow__node" markdown="span">蒸餾後的模型 H=16（第 0 輪）<small>只模仿過蒸餾前模型看過的狀態</small></div>
+  <div class="rip-flow__edge rip-flow__edge--loop" markdown="span">蒸餾後的模型自己控制 → 收集走到的狀態 → 請蒸餾前的模型標動作 → 重新訓練，重複數輪<span>DAgger</span></div>
+  <div class="rip-flow__node rip-flow__node--rig" markdown="span">蒸餾後的模型（DAgger 之後）<small>student.pt</small></div>
 </div>
 
-1. **行為克隆（BC）**：用教師對 replay buffer 裡每個狀態的動作當標籤，做監督式學習。
-2. **DAgger**：讓學生自己控制擺錘，收集學生會走到的狀態，再請教師標上動作、重新訓練。rollout 在「Nano 獨立執行」的傳輸條件下進行（`--transport device`）。
+1. **行為克隆（BC）**：用蒸餾前的模型對 replay buffer 裡每個狀態輸出的動作當標籤，做監督式學習。
+2. **DAgger**：讓蒸餾後的模型自己控制擺錘，收集它會走到的狀態，再請蒸餾前的模型標上動作、重新訓練。rollout 在「Nano 獨立執行」的傳輸條件下進行（`--transport device`）。
 
 ??? question "為什麼只做 BC 不夠？"
 
-    倒單擺在直立附近是不穩定的，學生只要有一點點誤差，就會走到教師沒示範過的狀態（covariate shift）。作者實測 BC 學生的閉迴路分數只有 0.12。
+    倒單擺在直立附近是不穩定的，蒸餾後的模型只要有一點點誤差，就會走到蒸餾前的模型沒示範過的狀態（covariate shift）。作者實測只做 BC 的模型，閉迴路分數只有 0.12。
 
 ??? question "為什麼不直接用 RL 訓練小網路？"
 
-    作者試過兩次：小網路在模擬和接線微調時都表現很好，但一換成獨立執行就只剩約 0.24。RL 容易學出依賴特定時序、反應很激進的控制器，傳輸條件一變就失效；蒸餾出來的學生有輕微的欠擬合，效果反而像把增益調低，換來強健性。
+    作者試過兩次：小網路在模擬和接線微調時都表現很好，但一換成獨立執行就只剩約 0.24。RL 容易學出依賴特定時序、反應很激進的控制器，傳輸條件一變就失效；蒸餾後的模型有輕微的欠擬合，效果反而像把增益調低，換來強健性。
 
 <span id="why-16"></span>
 

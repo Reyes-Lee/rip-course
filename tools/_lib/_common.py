@@ -295,7 +295,7 @@ def _mtime(p: Path) -> float:
 
 
 def teachers() -> list[Path]:
-    """Step 1 完成的教師（*_stage3/best_model.zip），舊到新。"""
+    """Step 1 完成的模型（*_stage3/best_model.zip），舊到新。"""
     found = [d / "best_model.zip" for d in RUNS.glob("*_stage3") if is_done(d) and (d / "best_model.zip").exists()]
     return sorted(found, key=_mtime)
 
@@ -310,7 +310,7 @@ def finetune_runs() -> list[Path]:
 
 
 def students() -> list[Path]:
-    """Step 3 蒸餾出的學生（student.pt），舊到新。"""
+    """Step 3 蒸餾後的模型（student.pt），舊到新。"""
     return sorted(RUNS.glob("*/distill_h*_dagger_*/student.pt"), key=_mtime)
 
 

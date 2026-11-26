@@ -9,9 +9,9 @@ hide:
 
 <ul class="rip-steps">
   <li><a class="rip-step" href="step0-sysid/"><span class="rip-step__n">STEP 0 · 實機 15 分鐘</span><span class="rip-step__t">系統識別</span><span class="rip-step__d">量擺錘鉸鏈的摩擦，讓模擬對上你的機台。</span><span class="rip-step__out">sysid_params.json</span></a></li>
-  <li><a class="rip-step" href="step1-train/"><span class="rip-step__n">STEP 1 · CPU 0.5–2 小時</span><span class="rip-step__t">模擬訓練教師</span><span class="rip-step__d">三階段 domain randomization，訓練 256×256 的 SAC 策略。</span><span class="rip-step__out">v1_stage3/best_model.zip</span></a></li>
+  <li><a class="rip-step" href="step1-train/"><span class="rip-step__n">STEP 1 · CPU 0.5–2 小時</span><span class="rip-step__t">模擬訓練</span><span class="rip-step__d">三階段 domain randomization，訓練 256×256 的 SAC 策略。</span><span class="rip-step__out">v1_stage3/best_model.zip</span></a></li>
   <li><a class="rip-step" href="step2-finetune/"><span class="rip-step__n">STEP 2 · 實機 · 段數自訂</span><span class="rip-step__t">實機微調</span><span class="rip-step__d">用真實回合繼續訓練，學會模擬沒涵蓋的動態。</span><span class="rip-step__out">ftN/best_model.zip</span></a></li>
-  <li><a class="rip-step" href="step3-distill/"><span class="rip-step__n">STEP 3 · CPU 3 分鐘</span><span class="rip-step__t">蒸餾學生</span><span class="rip-step__d">行為克隆＋DAgger，縮小成 16 個神經元的小網路。</span><span class="rip-step__out">distill_h16_dagger_dev/student.pt</span></a></li>
+  <li><a class="rip-step" href="step3-distill/"><span class="rip-step__n">STEP 3 · CPU 3 分鐘</span><span class="rip-step__t">蒸餾成小網路</span><span class="rip-step__d">行為克隆＋DAgger，縮小成 16 個神經元的小網路。</span><span class="rip-step__out">distill_h16_dagger_dev/student.pt</span></a></li>
   <li><a class="rip-step" href="step4-deploy/"><span class="rip-step__n">STEP 4 · 實機 5 分鐘</span><span class="rip-step__t">燒錄與評分</span><span class="rip-step__d">燒進 Nano，由 Nano 自己甩上、平衡。</span><span class="rip-step__out">policy_weights_student.h</span></a></li>
 </ul>
 
@@ -22,11 +22,11 @@ hide:
   <div class="rip-flow__edge" markdown="span"><code>05_sysid</code><span>Step 0</span></div>
   <div class="rip-flow__node" markdown="span"><code>sysid_params.json</code><small>擺錘鉸鏈的摩擦</small></div>
   <div class="rip-flow__edge" markdown="span"><code>06_train_teacher</code><span>Step 1</span></div>
-  <div class="rip-flow__node" markdown="span"><code>v1_stage3/best_model.zip</code><small>256×256 教師（模擬）</small></div>
+  <div class="rip-flow__node" markdown="span"><code>v1_stage3/best_model.zip</code><small>256×256 模型（模擬）</small></div>
   <div class="rip-flow__edge rip-flow__edge--loop" markdown="span"><code>07_finetune</code> × N 段，每段後 <code>08_test_policy</code><span>Step 2</span></div>
-  <div class="rip-flow__node" markdown="span"><code>ftN/best_model.zip</code><small>微調後的教師 ＋ replay buffer</small></div>
+  <div class="rip-flow__node" markdown="span"><code>ftN/best_model.zip</code><small>微調後的模型 ＋ replay buffer</small></div>
   <div class="rip-flow__edge" markdown="span"><code>09_distill</code><span>Step 3</span></div>
-  <div class="rip-flow__node" markdown="span"><code>distill_h16_dagger_dev/student.pt</code><small>16 個神經元的學生</small></div>
+  <div class="rip-flow__node" markdown="span"><code>distill_h16_dagger_dev/student.pt</code><small>蒸餾後的模型（16 個神經元）</small></div>
   <div class="rip-flow__edge" markdown="span"><code>10_export_weights</code> → Arduino IDE 上傳<span>Step 4</span></div>
   <div class="rip-flow__node rip-flow__node--rig" markdown="span">:material-chip: Nano 獨立執行<small><code>11_score_onboard</code> 評分</small></div>
 </div>

@@ -1,7 +1,7 @@
 """07_finetune：實機非同步微調（作者的 finetune_async.py），每執行一次跑一段。
 
-第一次（ft1）：從你選的教師開始。之後（ft2、ft3…）：從最新一段接續，帶上它的 replay buffer。
-專題任務換了教師時，可以選「從教師重新開始一條新的微調」（編號照樣往下排，不帶舊的 replay buffer）。
+第一次（ft1）：從你選的 Step 1 模型開始。之後（ft2、ft3…）：從最新一段接續，帶上它的 replay buffer。
+專題任務換了 Step 1 的模型時，可以選「從 Step 1 的模型重新開始一條新的微調」（編號照樣往下排，不帶舊的 replay buffer）。
 回合數、每回合秒數、接續用哪個模型等設定都會在畫面上問，直接按 Enter 是作者的預設值。
 reward 權重預設沿用起點模型 config.json 裡的值（也就是 Step 1 訓練時用的），也可以在這裡改。
 每一段實際用的設定存在 runs/ftN/07_settings.json，包括 firmware/LowLevelServer/finetune_latency.h 的延遲範圍。
@@ -76,16 +76,16 @@ def main() -> int:
         run_dir.rename(keep)
         warn(f"上次的 {run_dir.name} 沒有跑完，已改名為 {keep.name} 保留，這一段重跑。")
 
-    # 已經有微調段時，預設接續最新一段；專題任務換了教師時，可以從教師重新開始一條（不帶舊的 replay buffer）。
+    # 已經有微調段時，預設接續最新一段；專題任務換了 Step 1 的模型時，可以從它重新開始一條（不帶舊的 replay buffer）。
     restart = bool(done) and ask_yes(
-        f"要從教師重新開始一條新的微調嗎？（不接續 {done[-1].name}；換教師時用，不用就直接按 Enter）",
+        f"要從 Step 1 的模型重新開始一條新的微調嗎？（不接續 {done[-1].name}；換了 Step 1 的模型時用，不用就直接按 Enter）",
         default=False)
     if not done or restart:
         ts = teachers()
         if not ts:
-            fail("找不到完成的教師。請先做 Step 1：執行 06_train_teacher。")
+            fail("找不到 Step 1 完成的模型。請先做 Step 1：執行 06_train_teacher。")
             return 1
-        start = choose("選要微調的教師（Step 1 檢查點你判斷最好的那一支）：", ts, [label(t) for t in ts])
+        start = choose("選要微調的模型（Step 1 檢查點你判斷最好的那一支）：", ts, [label(t) for t in ts])
         buffer = None
         n_default = FIRST_EPISODES
     else:

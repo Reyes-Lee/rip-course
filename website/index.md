@@ -38,7 +38,7 @@ hide:
 <div class="rip-stats">
   <div class="rip-stat"><b>1.000</b><span>作者冠軍：300 秒內 balanced fraction</span></div>
   <div class="rip-stat"><b>1.90°</b><span>平衡時擺錘角度標準差</span></div>
-  <div class="rip-stat"><b>16</b><span>燒進 Nano 的學生網路神經元數</span></div>
+  <div class="rip-stat"><b>16</b><span>燒進 Nano 的蒸餾後模型神經元數</span></div>
   <div class="rip-stat"><b>50 Hz</b><span>訓練、微調、部署共用的控制頻率</span></div>
 </div>
 
@@ -48,9 +48,9 @@ hide:
 
 <ul class="rip-steps">
   <li><a class="rip-step" href="steps/step0-sysid/"><span class="rip-step__n">STEP 0 · 實機 15 分鐘</span><span class="rip-step__t">系統識別</span><span class="rip-step__d">量擺錘鉸鏈的摩擦，讓模擬對上你的機台。</span><span class="rip-step__out">sysid_params.json</span></a></li>
-  <li><a class="rip-step" href="steps/step1-train/"><span class="rip-step__n">STEP 1 · CPU 0.5–2 小時</span><span class="rip-step__t">模擬訓練教師</span><span class="rip-step__d">三階段 domain randomization，訓練 256×256 的 SAC 策略。</span><span class="rip-step__out">v1_stage3/best_model.zip</span></a></li>
+  <li><a class="rip-step" href="steps/step1-train/"><span class="rip-step__n">STEP 1 · CPU 0.5–2 小時</span><span class="rip-step__t">模擬訓練</span><span class="rip-step__d">三階段 domain randomization，訓練 256×256 的 SAC 策略。</span><span class="rip-step__out">v1_stage3/best_model.zip</span></a></li>
   <li><a class="rip-step" href="steps/step2-finetune/"><span class="rip-step__n">STEP 2 · 實機 · 段數自訂</span><span class="rip-step__t">實機微調</span><span class="rip-step__d">用真實回合繼續訓練，學會模擬沒涵蓋的動態。</span><span class="rip-step__out">ftN/best_model.zip</span></a></li>
-  <li><a class="rip-step" href="steps/step3-distill/"><span class="rip-step__n">STEP 3 · CPU 3 分鐘</span><span class="rip-step__t">蒸餾學生</span><span class="rip-step__d">行為克隆＋DAgger，縮小成 16 個神經元的小網路。</span><span class="rip-step__out">distill_h16_dagger_dev/student.pt</span></a></li>
+  <li><a class="rip-step" href="steps/step3-distill/"><span class="rip-step__n">STEP 3 · CPU 3 分鐘</span><span class="rip-step__t">蒸餾成小網路</span><span class="rip-step__d">行為克隆＋DAgger，縮小成 16 個神經元的小網路。</span><span class="rip-step__out">distill_h16_dagger_dev/student.pt</span></a></li>
   <li><a class="rip-step" href="steps/step4-deploy/"><span class="rip-step__n">STEP 4 · 實機 5 分鐘</span><span class="rip-step__t">燒錄與評分</span><span class="rip-step__d">燒進 Nano，由 Nano 自己甩上、平衡。</span><span class="rip-step__out">policy_weights_student.h</span></a></li>
 </ul>
 
@@ -90,7 +90,7 @@ hide:
 
     - **一次只處理一個問題。** 同時換兩樣東西，出問題時就不知道是哪一樣造成的。
     - **訓練、微調、部署的設定必須一致。** 控制頻率、動作尺度、堆疊幀數、平滑窗口三處要一樣；工具會檢查，不一致就中止，不要繞過它。
-    - **用實機的誠實指標判斷好壞。** 模擬分數分不出策略的好壞：作者的冠軍學生在模擬只有 0.655，實機是 0.996（另一次 300 秒的獨立執行評分是 1.000）。
+    - **用實機的誠實指標判斷好壞。** 模擬分數分不出策略的好壞：作者最好的蒸餾後模型在模擬只有 0.655，實機是 0.996（另一次 300 秒的獨立執行評分是 1.000）。
 
 ## 來源
 

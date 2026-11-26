@@ -38,7 +38,7 @@
     1. 確認 Nano 燒的是 `LowLevelServer`，Arduino IDE 的序列埠監控已關掉。
     2. 用手把手臂轉到正中間，對齊底座上的膠帶記號（[失步測試](../prepare/hardware.md#motor)貼過就沿用，沒有就貼一段）。擺錘靜止垂下，機台旁邊不要有東西擋到手臂，手臂後方的接線要留餘裕、不要靠近手臂轉動的範圍。
     3. 執行 `tools/07_finetune`。
-    4. 畫面列出 `runs/` 裡所有教師（`*_stage3/best_model.zip`），輸入 [Step 1 檢查點](step1-train.md#checkpoint)通過的那一支的編號；只有一支就直接按 Enter。
+    4. 畫面列出 `runs/` 裡所有 Step 1 完成的模型（`*_stage3/best_model.zip`），輸入 [Step 1 檢查點](step1-train.md#checkpoint)通過的那一支的編號；只有一支就直接按 Enter。
     5. 畫面問這一段的設定（回合數、每回合秒數、要不要改進階設定），接著印出沿用的 reward 權重並問要不要改。每個設定的意思見 [07 會問的設定](#options)；直接按 Enter 是作者的預設值（50 回合、每回合 6 秒）。
     6. 工具開始跑，畫面會顯示目前第幾回合。結束時印出 `已存：runs/ft1/best_model.zip`，以及 best_model 來自第幾回合。
     7. 接著做 [3. 接線測試](#test)。
@@ -48,7 +48,7 @@
 !!! tool "之後每一段（ft2、ft3…）"
 
     1. 再執行 `tools/07_finetune`。
-    2. 畫面先問 `要從教師重新開始一條新的微調嗎？（不接續 ftN；換教師時用，不用就直接按 Enter）`。一般直接按 Enter，從最新一段接續。換了教師、或 `04_check_direction` 修正過方向時輸入 `y`，再選教師：新的一段接著編號（例如 ft4），不帶舊的 replay buffer，舊的資料夾不用刪。
+    2. 畫面先問 `要從 Step 1 的模型重新開始一條新的微調嗎？（不接續 ftN；換了 Step 1 的模型時用，不用就直接按 Enter）`。一般直接按 Enter，從最新一段接續。換了 Step 1 的模型、或 `04_check_direction` 修正過方向時輸入 `y`，再選要從哪一支 Step 1 的模型開始：新的一段接著編號（例如 ft4），不帶舊的 replay buffer，舊的資料夾不用刪。
     3. 接續時，工具帶上最新一段的 replay buffer。畫面問從那一段的 `best_model.zip` 還是 `last.zip` 接續（差別見 [best_model 和 last 是怎麼來的](#best-model)），直接按 Enter 是作者的 `best_model.zip`。
     4. 接著問這一段的設定和 reward 權重，直接按 Enter 是作者的預設值（30 回合、每回合 6 秒、reward 沿用上一段）。
     5. 跑完一樣接著做 [3. 接線測試](#test)。
@@ -104,7 +104,7 @@
 
     改 reward 權重時，工具會再加上 `--reward-alive-offset`、`--reward-motor-pos-weight` 等 6 個選項和 `--ignore-config-mismatch`。`finetune_async.py` 還有其他選項（例如 `--reset-settle-s`、`--deterministic`），工具沒有問，要用就自己在 `policy/` 執行指令，`uv run python finetune_async.py --help` 會列出全部。
 
-## 3. 接線測試教師 { #test .rip-do }
+## 3. 接線測試 { #test .rip-do }
 
 !!! tool "每跑完一段微調就測一次"
 
@@ -138,9 +138,9 @@
 
 | balanced fraction | 下一步 |
 | --- | --- |
-| ≥ 0.85 | :material-check-circle:{ style="color: var(--rip-green)" } 教師夠穩了。可以進 Step 3，也可以再加一段微調看看 |
+| ≥ 0.85 | :material-check-circle:{ style="color: var(--rip-green)" } 模型夠穩了。可以進 Step 3，也可以再加一段微調看看 |
 | 0.4–0.85 | :material-trending-up:{ style="color: var(--rip-amber)" } 還在進步。再執行一次 `07_finetune`（從最新一段接續，預設 30 回合），然後再跑 `08_test_policy` |
-| < 0.4 | :material-close-circle:{ style="color: var(--rip-red)" } 先停止微調，依序檢查硬體：燒 `LowLevelServer` 跑 `04_check_direction`（方向被修正的話，照[從教師重新開始](#restart)開一條新的微調）；燒 `EncoderCheck` 跑 `02_check_encoder`；確認桌面水平、機台沒有被移動。都正常就燒 `LowLevelServer` 重跑 `05_sysid`，對照 [Step 0 檢查點](step0-sysid.md#checkpoint)。硬體和 sysid 都沒問題，就是策略本身的問題：照[依序查什麼](../theory.md#debug-order)自己調整，例如換一支教師、換 SEED 重訓，或檢查 reward 的修改 |
+| < 0.4 | :material-close-circle:{ style="color: var(--rip-red)" } 先停止微調，依序檢查硬體：燒 `LowLevelServer` 跑 `04_check_direction`（方向被修正的話，照[從 Step 1 的模型重新開始](#restart)開一條新的微調）；燒 `EncoderCheck` 跑 `02_check_encoder`；確認桌面水平、機台沒有被移動。都正常就燒 `LowLevelServer` 重跑 `05_sysid`，對照 [Step 0 檢查點](step0-sysid.md#checkpoint)。硬體和 sysid 都沒問題，就是策略本身的問題：照[依序查什麼](../theory.md#debug-order)自己調整，例如換一支 Step 1 的模型、換 SEED 重訓，或檢查 reward 的修改 |
 
 ## 4. 進 Step 3 前：回歸測試 { #regression .rip-do }
 
@@ -148,12 +148,12 @@
 
     1. 執行 `tools/13_check_sim`。
     2. 清單選最後一段微調（例如 `ft3/best_model.zip`）。
-    3. 和教師在 [Step 1 檢查點](step1-train.md#checkpoint)的分數比較：關掉韌體量測模型後的 balanced fraction 明顯變低，代表最後幾段微調讓策略變脆弱。
+    3. 和 Step 1 的模型在 [Step 1 檢查點](step1-train.md#checkpoint)的分數比較：關掉韌體量測模型後的 balanced fraction 明顯變低，代表最後幾段微調讓策略變脆弱。
     4. 變低的話，可以對前一段（例如 `ft2`）再跑一次比較，選你判斷最好的那一段進 Step 3。
 
     實機的接線測試才是主要依據；回歸測試是用來抓「微調讓策略在模擬裡明顯變差」的情況。
 
-    微調是在接線的時序下做的，所以微調過的教師，`13_check_sim` 會用兩種時序各測一次：預設的 Nano 獨立執行時序，和接線時序（跟微調時一樣）。微調過的教師在 Nano 獨立執行時序下的分數可能很低、甚至全部是 0；接線時序的分數比較能反映它在模擬裡還撐不撐得住。兩個都只是參考，以實機 `08_test_policy` 為準。
+    微調是在接線的時序下做的，所以微調過的模型，`13_check_sim` 會用兩種時序各測一次：預設的 Nano 獨立執行時序，和接線時序（跟微調時一樣）。微調過的模型在 Nano 獨立執行時序下的分數可能很低、甚至全部是 0；接線時序的分數比較能反映它在模擬裡還撐不撐得住。兩個都只是參考，以實機 `08_test_policy` 為準。
 
 ## 07 會問的設定 { #options .rip-learn }
 

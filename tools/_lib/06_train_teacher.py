@@ -130,7 +130,7 @@ def print_header(params: str, name: str, seed: str, steps: int, w: dict, lat: di
 
 
 def main() -> int:
-    banner("06 模擬訓練教師（約 25–60 分鐘，看電腦速度；不需要機台）")
+    banner("06 模擬訓練（約 25–60 分鐘，看電腦速度；不需要機台）")
     params = need_sysid()
     info("筆電接上電源、不要闔上蓋子，睡眠會讓訓練中斷。")
     info("訓練中畫面會一直捲動英文統計表，那張表不用看；每 30 秒會印一行中文進度與預估剩餘時間。")
@@ -155,12 +155,12 @@ def main() -> int:
         if ask_yes(f"已完成第 {last} 階段，從第 {last + 1} 階段接續？", default=True):
             start = last + 1
 
-    # 專題任務：從一支已經練好的教師接著練第 3 階段（例如換一組延遲設定），不用三個階段從頭來。
+    # 專題任務：從一支已經練好的模型接著練第 3 階段（例如換一組延遲設定），不用三個階段從頭來。
     base = None
     ts = [t for t in teachers() if t.parent.name != f"{name}_stage3"]
-    if start == 1 and ts and ask_yes("要從現有的教師接著練、只跑第 3 階段嗎？（專題任務用；不用就直接按 Enter）",
+    if start == 1 and ts and ask_yes("要從現有的模型接著練、只跑第 3 階段嗎？（專題任務用；不用就直接按 Enter）",
                                      default=False):
-        base = choose("從哪一支教師接著練：", ts, [label(t) for t in ts])
+        base = choose("從哪一支模型接著練：", ts, [label(t) for t in ts])
         start = 3
 
     steps = ask_number("每階段步數", STEPS_PER_STAGE, 1000)

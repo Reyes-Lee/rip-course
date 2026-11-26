@@ -29,7 +29,7 @@ def log_path(pol):
 
 def main() -> int:
     banner("08 接線測試策略", "firmware/LowLevelServer", needs_rig=True)
-    # 清單順序：教師 → 微調段（每段的 best、checkpoint、last）→ 學生；預設是最新一段的 best_model。
+    # 清單順序：Step 1 的模型 → 微調段（每段的 best、checkpoint、last）→ 蒸餾後的模型；預設是最新一段的 best_model。
     fts = finetune_runs()
     items = teachers() + [m for d in fts for m in finetune_models(d)] + students()
     if not items:

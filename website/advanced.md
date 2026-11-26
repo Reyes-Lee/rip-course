@@ -67,8 +67,8 @@ demo 時助教用 `11_score_onboard` 的「延遲階梯」量，流程見 [Demo]
 
 ## 三週怎麼安排（建議） { #plan }
 
-1. 先量起點：用[模擬的延遲階梯](#sim)和 11 的延遲階梯（[練習](#practice)），看照五個步驟做出來的學生能到哪一階。
-2. 用 06 的延遲設定（或「從現有的教師接著練、只跑第 3 階段」）和 09 的 DAgger 延遲條件重練，見[可以調的地方](#knobs)。需要時在 Step 2 用 `finetune_latency.h` 加延遲微調。
+1. 先量起點：用[模擬的延遲階梯](#sim)和 11 的延遲階梯（[練習](#practice)），看照五個步驟做出來、蒸餾後的模型能到哪一階。
+2. 用 06 的延遲設定（或「從現有的模型接著練、只跑第 3 階段」）和 09 的 DAgger 延遲條件重練，見[可以調的地方](#knobs)。需要時在 Step 2 用 `finetune_latency.h` 加延遲微調。
 3. 每一輪「訓練 → 微調 → 蒸餾 → 實測」約 1.5–2 小時：先在模擬裡篩，再上機確認。記下每一輪改了什麼、模擬和實機各量到多少，報告會用到。
 4. demo 前用 11 練幾種 5 階的組合，決定要選哪 5 階；也量一下甩上到平衡計時，決定兩項任務要不要用同一支策略。
 
@@ -91,7 +91,7 @@ demo 前繳交，繳交方式另外公告。demo 時用的就是繳交的檔案�
 ```text
 ladder/
   policy_weights_student.h   # 延遲階梯的策略（Nano 上的網路）
-  teacher.zip                # 蒸餾出這支網路的 RL 教師
+  teacher.zip                # 蒸餾前的模型（你們用 RL 訓練的）
   config.json                # 和 teacher.zip 同一個 runs/ 資料夾裡的那份
 swingup/
   policy_weights_student.h   # 甩上到平衡計時的策略
@@ -102,10 +102,10 @@ swingup/
 | 檔案 | 從哪裡拿 |
 | --- | --- |
 | `policy_weights_student.h` | `10_export_weights` 輸出的 `firmware/RLControl/policy_weights_student.h` |
-| `teacher.zip` | `09_distill` 用來蒸餾的那支教師：09 選的那一段微調裡的 `best_model.zip`（預設；當時選了 `last.zip` 就交它），例如 `policy/runs/ft2/best_model.zip`，改名成 `teacher.zip`。不是用 Stable-Baselines3 的話，改交 `teacher_act.py`（格式見[專題規則](rules.md#teacher)），並附上訓練這支教師的程式 |
-| `config.json` | 上面那支教師所在的資料夾裡的 `config.json` |
+| `teacher.zip` | 蒸餾前的模型，也就是 `09_distill` 用來蒸餾的那個檔：09 選的那一段微調裡的 `best_model.zip`（預設；當時選了 `last.zip` 就交它），例如 `policy/runs/ft2/best_model.zip`，改名成 `teacher.zip`。不是用 Stable-Baselines3 的話，改交 `teacher_act.py`（格式見[專題規則](rules.md#teacher)），並附上訓練這個模型的程式 |
+| `config.json` | 上面那個蒸餾前的模型所在的資料夾裡的 `config.json` |
 
-`policy_weights_student.h` 是 Nano 上跑的網路（[規定一](rules.md#hard-rules)）；`teacher.zip` 和 `config.json` 用來確認這支網路來自你們的 RL 教師（[規定二](rules.md#hard-rules)）。甩上策略和延遲階梯同一支的話，`swingup/` 只放一個文字檔 `SAME_AS_LADDER.txt`（內容寫「同 ladder」）。
+`policy_weights_student.h` 是要燒進 Nano 的權重（[規定一](rules.md#hard-rules)）；`teacher.zip` 和 `config.json` 用來確認它是用 RL 訓練出來的（[規定二](rules.md#hard-rules)）。甩上策略和延遲階梯同一支的話，`swingup/` 只放一個文字檔 `SAME_AS_LADDER.txt`（內容寫「同 ladder」）。
 
 ## Demo（第 3 週） { #demo }
 
@@ -151,7 +151,7 @@ Nano 大約每 2 ms 讀一次擺錘和手臂的位置（推論時會稍微拉長
 
 !!! tool "用 `eval_latency.py` 在模擬裡跑延遲階梯"
 
-    打開終端機，進到 repo 的 `policy` 資料夾再執行（選你的系統）。下面以 `ft2` 蒸餾出的學生為例，路徑換成你自己的：
+    打開終端機，進到 repo 的 `policy` 資料夾再執行（選你的系統）。下面以 `ft2` 蒸餾後的模型為例，路徑換成你自己的：
 
     === ":material-apple: macOS"
 
@@ -169,7 +169,7 @@ Nano 大約每 2 ms 讀一次擺錘和手臂的位置（推論時會稍微拉長
 
     - `--levels` 換成你想試的 5 階，規則和實機一樣：由低到高，某一階沒過就停。模擬裡每階跑 10 回合 × 30 秒，一階要 80% 的回合連續平衡滿 10 秒才算通過。最後一行會寫「依你選的 5 階（由低到高，某一階沒過就停），最高 +X ms」。
     - 只寫 `--ladder`、不加 `--levels`，會把 14 階都跑一次，印出每一階有幾個回合連續平衡滿 10 秒，方便決定要選哪 5 階。
-    - 教師（`.zip`，例如 `runs/ft2/best_model.zip`）和學生（`.pt`）都可以測。
+    - 蒸餾前的模型（`.zip`，例如 `runs/ft2/best_model.zip`）和蒸餾後的模型（`.pt`）都可以測。
 
 ??? cmd "其他用法：自己選延遲和抖動、重播 latency_profile.h"
 
@@ -207,17 +207,17 @@ Nano 大約每 2 ms 讀一次擺錘和手臂的位置（推論時會稍微拉長
     | **總延遲** | 包含原本約 16 ms | `06_train_teacher` 的觀測延遲範圍、`09_distill` 的練習範圍和評分延遲 |
     | **加上去的延遲** | 加在原本約 16 ms 上面 | `finetune_latency.h`、延遲階梯的 +X、`eval_latency.py` 的 `--extra-ms`、`latency_profile.h` |
 
-    例如要讓策略練到實機的 +55，06 和 09 的上限要設到約 71 ms（16 + 55），`finetune_latency.h` 則是寫 55。06 預設的 2–20 ms 只涵蓋到大約 +4。`finetune_latency.h` 是加在接線測試原本的延遲上，接線和獨立執行原本的延遲不完全一樣，所以寫 55 是讓教師在微調時見過那個範圍，不等於完全重現實機的 +55。
+    例如要讓策略練到實機的 +55，06 和 09 的上限要設到約 71 ms（16 + 55），`finetune_latency.h` 則是寫 55。06 預設的 2–20 ms 只涵蓋到大約 +4。`finetune_latency.h` 是加在接線測試原本的延遲上，接線和獨立執行原本的延遲不完全一樣，所以寫 55 是讓蒸餾前的模型在微調時見過那個範圍，不等於完全重現實機的 +55。
 
     所有範圍都是**每回合在上下限之間均勻抽一個**；上下限設成一樣就是固定延遲。
 
 | 步驟 | 工具 | 可以改的設定 | 預設 |
 | --- | --- | --- | --- |
-| Step 1 模擬訓練教師 | `06_train_teacher` | 觀測延遲的範圍（總延遲，最多 100 ms）；第 3 階段的動作延遲（幾拍）和動作 lag 時間常數範圍 | 2–20 ms；1 拍；0–15 ms |
-| Step 1 | `06_train_teacher` | 「從現有的教師接著練、只跑第 3 階段」：換一組設定時不用三個階段從頭練 | 不用 |
+| Step 1 模擬訓練 | `06_train_teacher` | 觀測延遲的範圍（總延遲，最多 100 ms）；第 3 階段的動作延遲（幾拍）和動作 lag 時間常數範圍 | 2–20 ms；1 拍；0–15 ms |
+| Step 1 | `06_train_teacher` | 「從現有的模型接著練、只跑第 3 階段」：換一組設定時不用三個階段從頭練 | 不用 |
 | Step 2 實機微調 | `firmware/LowLevelServer/finetune_latency.h` ＋ `07_finetune` | 每回合在 `FT_LATENCY_MIN_MS`–`FT_LATENCY_MAX_MS` 之間抽一個延遲，加在原本的延遲上面。改完要重新上傳 `LowLevelServer`；07 會印出這個設定並存進 `07_settings.json`。上限最多 70 ms，涵蓋延遲階梯的最高階 +55 | 0–0 ms（不加） |
-| Step 2 | `07_finetune` | 「從教師重新開始一條新的微調」：換了教師時用，不接續舊的 replay buffer | 不用 |
-| Step 3 蒸餾 | `09_distill` | DAgger 練習時的觀測延遲範圍（總延遲，最多 100 ms）；選學生時用哪些延遲評分（總延遲）（可以給好幾個，取平均） | 2–10 ms；15.6 ms |
+| Step 2 | `07_finetune` | 「從 Step 1 的模型重新開始一條新的微調」：換了 Step 1 的模型時用，不接續舊的 replay buffer | 不用 |
+| Step 3 蒸餾 | `09_distill` | DAgger 練習時的觀測延遲範圍（總延遲，最多 100 ms）；選蒸餾後的模型時用哪些延遲評分（總延遲）（可以給好幾個，取平均） | 2–10 ms；15.6 ms |
 | 模擬裡測 | `eval_latency.py` | 見[上一節](#sim) | — |
 | 實機上測 | `11_score_onboard` 的延遲階梯 | 見[練習](#practice) | — |
 

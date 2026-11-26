@@ -18,7 +18,7 @@
 | 馬達嘶嘶聲、磨擦聲 | 失步。在工具視窗按 ++ctrl+c++ 停止，燒 `LowLevelServer` 跑 `03_check_motor`，把結果拿給助教。Vref 與韌體加速度由助教調，不要自己轉可變電阻或改 sketch |
 | 手臂速度或範圍是預期的一半或兩倍 | 微步接線不對（應為 MS1 接 5V、MS2 接 GND）。拔掉 12 V 後找助教 |
 | 編碼器角度亂跳 | 燒 `EncoderCheck`，執行 `02_check_encoder`，照[編碼器測試](prepare/hardware.md#encoder)的 FAIL 處理表調磁鐵 |
-| 策略好像「反著推」、完全穩不住，或擺錘只擺到幾十度就甩不上去 | 擺錘角度方向可能跟模擬相反。燒 `LowLevelServer`，執行 `04_check_direction`（見[方向標定](prepare/hardware.md#direction)）。它修正了方向的話，之前的 `runs/ftN` 不要再接續，照 [Step 2 的「從教師重新開始」](steps/step2-finetune.md#restart)開一條新的微調；方向本來就對的話，照[依序查什麼](theory.md#debug-order)往下查。標定判讀不出來就找助教 |
+| 策略好像「反著推」、完全穩不住，或擺錘只擺到幾十度就甩不上去 | 擺錘角度方向可能跟模擬相反。燒 `LowLevelServer`，執行 `04_check_direction`（見[方向標定](prepare/hardware.md#direction)）。它修正了方向的話，之前的 `runs/ftN` 不要再接續，照 [Step 2 的「從 Step 1 的模型重新開始」](steps/step2-finetune.md#restart)開一條新的微調；方向本來就對的話，照[依序查什麼](theory.md#debug-order)往下查。標定判讀不出來就找助教 |
 | 工具說「還沒做方向標定」或「LowLevelServer 是舊版」 | 照[方向標定](prepare/hardware.md#direction)做一次 `04_check_direction`；說是舊版就先重新上傳 `firmware/LowLevelServer`。做過還是一樣就找助教 |
 | `07_finetune` 說「方向快速檢查：擺錘方向跟上次標定相反」 | AS5600 的方向變了，通常是編碼器或磁鐵被動過。執行 `04_check_direction` 重新標定，再跑一次 `02_check_encoder`；之前幾段微調是在正確方向下做的，可以保留。重新標定後還是有問題就找助教 |
 | 工具因 `run_config.check_config` 中止 | 策略與韌體設定不一致。確認 Nano 燒的是工具開頭提醒的那份韌體，重燒後再跑一次；仍然中止就找助教 |
@@ -38,4 +38,4 @@
 
 !!! info "比較兩支策略時以實機指標為準"
 
-    模擬分數只當參考。作者的冠軍學生在模擬只有 0.655，實機是 0.996（另一次 300 秒的獨立執行評分是 1.000）。
+    模擬分數只當參考。作者最好的蒸餾後模型在模擬只有 0.655，實機是 0.996（另一次 300 秒的獨立執行評分是 1.000）。

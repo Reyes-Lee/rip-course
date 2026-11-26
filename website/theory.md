@@ -12,7 +12,7 @@
 
 ## 照著做還是失敗時，依序查什麼 { #debug-order }
 
-照流程做的成功機率很高，但不是保證。作者在配方定案後，用預設設定從頭重跑整套流程一次（重新訓練教師、重新實機微調、蒸餾、燒錄），燒進 Nano 的學生得到 balanced 0.980、最長連續平衡 265 秒；冠軍是 1.000、299 秒。差異來自每次實機微調收到的資料不同。
+照流程做的成功機率很高，但不是保證。作者在配方定案後，用預設設定從頭重跑整套流程一次（重新訓練蒸餾前的模型、重新實機微調、蒸餾、燒錄），燒進 Nano 的蒸餾後模型得到 balanced 0.980、最長連續平衡 265 秒；冠軍是 1.000、299 秒。差異來自每次實機微調收到的資料不同。
 
 失敗時照 sim2real 的邏輯，**從最便宜、最常見的原因往後查**。第 1 層是硬體，處理不了就找助教；第 2–5 層是訓練流程，由你自己分析、調整：
 
@@ -21,7 +21,7 @@
 <li><b>模型沒對上機台</b>（Step 0）：桌面不平、慣量誤差超過 10%（多半是硬幣位置）、自由擺包絡線不重疊。照 <a href="../steps/step0-sysid/#checkpoint-fail">Step 0「檢查點沒過時」</a>處理，重新量測後 Step 1–4 重做。</li>
 <li><b>策略本身不穩健</b>（Step 1）：敏感度關卡沒過。照 <a href="../steps/step1-train/#reseed">Step 1「換一個 SEED 重訓」</a>。</li>
 <li><b>模型沒有的動態</b>（Step 2）：接線測試有進步但還不穩。再執行 <code>07_finetune</code> 加段，每一段用 <a href="../steps/step2-finetune/#test">Step 2 的接線測試</a>確認有沒有變好。</li>
-<li><b>蒸餾或部署</b>（Step 3–4）：教師接線很穩、燒進 Nano 後不穩。照 <a href="../steps/step3-distill/#tethered">Step 3 的選做步驟</a>用 <code>08_test_policy</code> 接線測學生，再看 <code>11_score_onboard</code> 第一行的頻率是否約 50 Hz。</li>
+<li><b>蒸餾或部署</b>（Step 3–4）：蒸餾前的模型接線很穩，蒸餾後的模型燒進 Nano 後不穩。照 <a href="../steps/step3-distill/#tethered">Step 3 的選做步驟</a>用 <code>08_test_policy</code> 接線測蒸餾後的模型，再看 <code>11_score_onboard</code> 第一行的頻率是否約 50 Hz。</li>
 </ol>
 
 !!! warning "這五層都排除了，再考慮改 reward 或 DR 範圍"

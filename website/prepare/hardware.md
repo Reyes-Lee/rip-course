@@ -188,7 +188,7 @@ FAIL 時照下表處理：
 
 - **存在哪裡**：Nano 的 EEPROM。Arduino IDE 重新上傳 `LowLevelServer` 或 `RLControl` **不會**清掉它，不用每次重做。`RLControl` 開機時讀同一個值。
 - **工具會幫你擋**：`05_sysid`、`07_finetune`、`08_test_policy` 開始前會確認 Nano 已經標定，沒有就停止並提示你先跑 `04_check_direction`。`07_finetune` 每一段開始前還會讓手臂抖動約 4 秒，確認方向沒有變；`RLControl` 沒標定就不會啟動馬達。
-- **方向被修正過的話**：在錯的方向下做的實機微調（`runs/ftN`）不要再接續，照 [Step 2 的「從教師重新開始」](../steps/step2-finetune.md#restart)開一條新的微調。sysid 與模擬訓練不受影響。
+- **方向被修正過的話**：在錯的方向下做的實機微調（`runs/ftN`）不要再接續，照 [Step 2 的「從 Step 1 的模型重新開始」](../steps/step2-finetune.md#restart)開一條新的微調。sysid 與模擬訓練不受影響。
 
 !!! warning "AS5600 的 DIR 腳不要自己接線"
 

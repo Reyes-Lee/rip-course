@@ -7,7 +7,7 @@
   <span class="rip-chip">:material-file-outline: 產出 policy_weights_student.h</span>
 </div>
 
-把學生權重匯出成 C 標頭檔（存在 PROGMEM），燒進 `RLControl.ino`，由 Nano 自己算動作、甩上、平衡。
+把蒸餾後模型的權重匯出成 C 標頭檔（存在 PROGMEM），燒進 `RLControl.ino`，由 Nano 自己算動作、甩上、平衡。
 
 !!! todo "這一步要做的事"
 
@@ -21,7 +21,7 @@
 
 !!! tool "操作步驟"
 
-    1. 執行 `tools/10_export_weights`。清單預設是最新的學生，直接按 Enter。工具核對[下面的 sketch 常數](#constants)，全部 OK 才匯出到 `firmware/RLControl/policy_weights_student.h`。
+    1. 執行 `tools/10_export_weights`。清單預設是最新的蒸餾後模型，直接按 Enter。工具核對[下面的 sketch 常數](#constants)，全部 OK 才匯出到 `firmware/RLControl/policy_weights_student.h`。
     2. 用 Arduino IDE 開 `firmware/RLControl/RLControl.ino`，按「上傳」。sketch 載入的是第 1 步匯出的 `policy_weights_student.h`；repo 不附任何權重，還沒匯出就上傳，編譯會停在 `No policy weights yet` 的錯誤。
     3. 看 IDE 下方的編譯訊息：「草稿碼使用了 N 位元組」的 N 必須 ≤ 30720（Nano 的上限）。照課程流程（H=16）約 27700，不會超過。
     4. 上傳完 Nano 會自動重開。前 1 秒 LED 恆亮，這時擺錘要**靜止垂下**（這個姿勢會被當成編碼器零點），之後它會自己甩上、平衡。如果馬達完全不動，打開序列埠監控（500000）看有沒有 `[DIR] not calibrated`：這塊 Nano 沒做過[方向標定](../prepare/hardware.md#direction)，改燒 `LowLevelServer` 跑 `04_check_direction`，再重新上傳 `RLControl`。
@@ -108,11 +108,11 @@
 | 最長連續平衡 | 299.6 s | 265 s |
 | 擺錘標準差 | 1.90° | — |
 
-「獨立重跑」是作者在配方定案後，用預設設定從頭重跑整套流程一次的結果（重新訓練教師、重新實機微調、蒸餾、燒錄）。照流程做，結果應該在這附近。
+「獨立重跑」是作者在配方定案後，用預設設定從頭重跑整套流程一次的結果（重新在模擬訓練、重新實機微調、蒸餾、燒錄）。照流程做，結果應該在這附近。
 
 ## 3. （需要時）獨立執行比接線測試差時 { #gap .rip-do }
 
-同一個學生在 Nano 上獨立執行，分數通常會比接線測試低一些（和 Step 3 的接線測試比；沒做的話，和 Step 2 教師的接線測試比）。網路是同一個，差別在於由誰計算、指令多久之後才生效：
+同一個蒸餾後的模型在 Nano 上獨立執行，分數通常會比接線測試低一些（和 Step 3 的接線測試比；沒做的話，和蒸餾前的模型在 Step 2 的接線測試比）。網路是同一個，差別在於由誰計算、指令多久之後才生效：
 
 | | 接線（`08_test_policy`） | 獨立執行（`RLControl`） |
 | --- | --- | --- |
@@ -120,11 +120,11 @@
 | 誰算神經網路 | 電腦 | Nano（約 12 ms） |
 | 指令延遲 | 經過 USB，約晚一個控制週期 | 沒有 USB 往返，sample→command 約 16 ms |
 
-DAgger 用 `--transport device` 就是為了讓學生適應獨立執行的時序。頻率約 50 Hz、延遲在範圍內，但 balanced fraction 明顯低於參考值（例如手臂大幅來回、一直倒下又接回）時，照這個順序試：
+DAgger 用 `--transport device` 就是為了讓蒸餾後的模型適應獨立執行的時序。頻率約 50 Hz、延遲在範圍內，但 balanced fraction 明顯低於參考值（例如手臂大幅來回、一直倒下又接回）時，照這個順序試：
 
 !!! tool "依序嘗試"
 
     1. 再跑一次 `11_score_onboard`，確認不是單次運氣不好。
-    2. 回到 [Step 3](step3-distill.md#checkpoint) 用 `SEED 1` 重新蒸餾，再匯出、燒錄、評分。`09_distill` 印出的 DAgger gate 如果和第 0 輪一樣、而教師自己的 gate 不接近 0，代表 DAgger 沒有改善，換 SEED 最值得一試；教師的 gate 也接近 0 時，換 SEED 通常沒用，見 [Step 3 的提醒](step3-distill.md#checkpoint)。
-    3. 回 [Step 2](step2-finetune.md#finetune) 再加一段微調，用 `08_test_policy` 確認教師有變好，再重新蒸餾。
-    4. 都試過仍然遠低於參考值，回頭檢查前面每一步的選擇（教師、微調段數、蒸餾設定），照[依序查什麼](../theory.md#debug-order)往前找原因。
+    2. 回到 [Step 3](step3-distill.md#checkpoint) 用 `SEED 1` 重新蒸餾，再匯出、燒錄、評分。`09_distill` 印出的 DAgger gate 如果和第 0 輪一樣、而蒸餾前模型自己的模擬分數不接近 0，代表 DAgger 沒有改善，換 SEED 最值得一試；蒸餾前模型的分數也接近 0 時，換 SEED 通常沒用，見 [Step 3 的提醒](step3-distill.md#checkpoint)。
+    3. 回 [Step 2](step2-finetune.md#finetune) 再加一段微調，用 `08_test_policy` 確認蒸餾前的模型有變好，再重新蒸餾。
+    4. 都試過仍然遠低於參考值，回頭檢查前面每一步的選擇（蒸餾前的模型、微調段數、蒸餾設定），照[依序查什麼](../theory.md#debug-order)往前找原因。

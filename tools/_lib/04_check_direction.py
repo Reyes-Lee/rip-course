@@ -80,7 +80,7 @@ def main() -> int:
     info(f"紀錄：policy/{rel(out_dir)}（direction.png 是手臂加速度 vs 擺錘加速度，點應該排成往右下的斜線）")
     info("重新上傳 LowLevelServer 或 RLControl 不會清掉這個設定。換 Nano、重新安裝 AS5600 或磁鐵之後要重做。")
     if len(results) > 1:
-        warn("方向剛被修正：之前在錯的方向下做的實機微調（runs/ftN）要丟掉，從教師重新微調。"
+        warn("方向剛被修正：之前在錯的方向下做的實機微調（runs/ftN）要丟掉，從 Step 1 的模型重新微調。"
              "sysid 與模擬訓練不受影響。")
     return 0
 

@@ -1,4 +1,4 @@
-# Step 1：在模擬中訓練教師策略
+# Step 1：在模擬中訓練模型
 
 <div class="rip-meta" markdown>
   <span class="rip-chip rip-chip--cyan">:material-clock-outline: 筆電 CPU 約 0.5–2 小時</span>
@@ -6,18 +6,18 @@
   <span class="rip-chip">:material-file-outline: 產出 v1_stage3/best_model.zip</span>
 </div>
 
-執行 `06_train_teacher` 會依序跑完三個訓練階段，產出一支 256×256 的 SAC 教師策略。
+執行 `06_train_teacher` 會依序跑完三個訓練階段，產出一支 256×256 的 SAC 策略。這支模型之後會在 Step 3 蒸餾成小網路（工具名稱裡的 teacher 指的就是它）。
 
 !!! todo "這一步要做的事"
 
-    1. [訓練教師策略](#run)：執行 `06_train_teacher`，等三個階段跑完。要改 reward 的話，訓練前先看[選做：修改 reward](#edit-reward)。
+    1. [訓練模型](#run)：執行 `06_train_teacher`，等三個階段跑完。要改 reward 的話，訓練前先看[選做：修改 reward](#edit-reward)。
     2. [看檢查點](#checkpoint)：對照工具印出的數字，決定直接進 Step 2 還是重訓。
     3. （選做）[在 MuJoCo 視窗看訓練成果](#mujoco)。
     4. （需要時）[換一個 SEED 重訓](#reseed)。
 
     標題前標「說明」的段落是原理說明，讀懂就好，不用操作。
 
-## 1. 訓練教師策略 { #run .rip-do }
+## 1. 訓練模型 { #run .rip-do }
 
 !!! tool "第一次訓練"
 
@@ -26,7 +26,7 @@
     3. 執行 `tools/06_train_teacher`。
     4. 畫面問 `run 名稱 [v1]:`，第一次直接按 Enter。
     5. 畫面問 `SEED [0]:`，直接按 Enter。
-    6. 畫面問 `每階段步數 [100000]:`、`要改 reward 權重嗎？ [y/N]:` 和 `要改延遲設定嗎？（專題任務用；不改就直接按 Enter） [y/N]:`，都直接按 Enter 是作者的設定（見[三個階段](#stages)、[修改 reward](#edit-reward)、[專題任務的可以調的地方](../advanced.md#knobs)）。`runs/` 裡已經有教師時，前面還會先問 `要從現有的教師接著練、只跑第 3 階段嗎？`，這是專題任務用的，一般流程直接按 Enter。
+    6. 畫面問 `每階段步數 [100000]:`、`要改 reward 權重嗎？ [y/N]:` 和 `要改延遲設定嗎？（專題任務用；不改就直接按 Enter） [y/N]:`，都直接按 Enter 是作者的設定（見[三個階段](#stages)、[修改 reward](#edit-reward)、[專題任務的可以調的地方](../advanced.md#knobs)）。`runs/` 裡已經有練好的模型時，前面還會先問 `要從現有的模型接著練、只跑第 3 階段嗎？`，這是專題任務用的，一般流程直接按 Enter。
     7. 工具印出設定 header（用眼睛確認，見[檢查點](#checkpoint)），然後開始訓練。畫面會一直捲動英文統計表，那張表不用看；每 30 秒會印一行中文進度，例如 `[Stage 1/3] ████████░░ 45,600 / 100,000 步（46%）｜……預估還要約 43 分鐘`。總時間取決於電腦速度，作者的電腦約 25 分鐘，Apple M1 約 50 分鐘，比較慢的筆電可能要 1.5–2 小時。印出 `Stage 3 完成` 和檢查點結果，才算跑完。
     8. 訓練結束後，工具接著跑檢查點並印出數字（見[檢查點](#checkpoint)）。請對照參考門檻，自行判斷下一步。
 
@@ -136,13 +136,13 @@ SEED 是亂數種子，決定網路初始權重與探索過程；同一套配方
     3. `SEED [0]:` 輸入 `1`。
     4. 跑完（0.5–2 小時，看電腦）後看新的檢查點數字，和前一支比較。
     5. 還是不理想，再用 `v3`、SEED `2`，以此類推。連續好幾支都很低，問題通常不在 SEED：回去對照 [Step 0 檢查點](step0-sysid.md#checkpoint)，確認模型對上機台；改過 reward 的話，也要檢查你的修改。
-    6. Step 2 選教師時，選你判斷最好的那一支（例如 `v2_stage3`）。
+    6. Step 2 選模型時，選你判斷最好的那一支（例如 `v2_stage3`）。
 
 !!! warning "訓練和實機微調不要同時跑"
 
-    `06_train_teacher` 會吃滿 CPU，`07_finetune` 要在同一台筆電上維持 50 Hz 控制。兩個同時跑會拖慢控制迴路，微調資料就不可靠。要多訓練幾支，趁不用機台的時間（例如晚上）一支接一支跑，**選好教師再開始 Step 2**。
+    `06_train_teacher` 會吃滿 CPU，`07_finetune` 要在同一台筆電上維持 50 Hz 控制。兩個同時跑會拖慢控制迴路，微調資料就不可靠。要多訓練幾支，趁不用機台的時間（例如晚上）一支接一支跑，**選好模型再開始 Step 2**。
 
-    已經用某一支開始微調後，才發現另一支 SEED 分數比較高：只要現在的微調在 [Step 2 的接線測試](step2-finetune.md#test)還在進步，就繼續用原本那支，不用換；如果接線測試的 balanced fraction 一直 < 0.4，再換新的教師，照 [Step 2 的「從教師重新開始」](step2-finetune.md#restart)開一條新的微調。
+    已經用某一支開始微調後，才發現另一支 SEED 分數比較高：只要現在的微調在 [Step 2 的接線測試](step2-finetune.md#test)還在進步，就繼續用原本那支，不用換；如果接線測試的 balanced fraction 一直 < 0.4，再換新的那一支，照 [Step 2 的「從 Step 1 的模型重新開始」](step2-finetune.md#restart)開一條新的微調。
 
 ## 模擬訓練在做什麼 { #what .rip-learn }
 
