@@ -3,6 +3,7 @@
 // 每次 ENGAGE（也就是每一回合開始）在 [FT_LATENCY_MIN_MS, FT_LATENCY_MAX_MS]
 // 之間均勻抽一個整數毫秒，這一回合的 GET_STATE 都回傳比最新樣本舊這麼多的那一筆
 // （位置、速度、時間戳一起變舊；依時間戳挑最接近的樣本，誤差約 ±1 ms）。
+// DISENGAGE（回合結束、馬達停下）後不加延遲，等擺錘靜止和標定零點讀的都是最新的樣本。
 // 這個延遲是「加在原本的延遲上面」，跟 RLControl 的 latency_profile.h 一樣。
 //
 // 範圍：0 ≤ MIN ≤ MAX ≤ 70（和 RLControl 序列埠指令的上限一樣，涵蓋延遲階梯的最高階 +55）。改完要重新上傳 LowLevelServer；

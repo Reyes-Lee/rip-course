@@ -386,6 +386,10 @@ void handleCommand()
 
     case CMD_DISENGAGE_MOTOR:
         motor_engaged = false;
+#if FT_LATENCY_MAX_MS > 0
+        // 回合之間（等擺錘靜止、標定零點）讀最新的樣本；下一次 ENGAGE 再重抽延遲。
+        episode_delay_us = 0;
+#endif
         // forceStop() drains the Timer1 step queue immediately; without this,
         // queued steps would continue advancing the firmware position counter
         // even though the driver's enable pin is HIGH.

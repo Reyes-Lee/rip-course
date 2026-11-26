@@ -37,14 +37,15 @@ REWARD_WEIGHTS = [
 
 
 LATENCY_HEADER = REPO / "firmware" / "LowLevelServer" / "finetune_latency.h"
+FT_LATENCY_LIMIT_MS = 70  # LowLevelServer.ino 的 #error 上限
 
 
 def finetune_latency() -> tuple[int, int] | None:
     """讀 firmware/LowLevelServer/finetune_latency.h 的延遲範圍（毫秒）。讀不到回傳 None。"""
     try:
         text = LATENCY_HEADER.read_text(encoding="utf-8")
-        lo = int(re.search(r"#define\s+FT_LATENCY_MIN_MS\s+(\d+)", text).group(1))
-        hi = int(re.search(r"#define\s+FT_LATENCY_MAX_MS\s+(\d+)", text).group(1))
+        lo = int(re.search(r"^\s*#define\s+FT_LATENCY_MIN_MS\s+(-?\d+)", text, re.M).group(1))
+        hi = int(re.search(r"^\s*#define\s+FT_LATENCY_MAX_MS\s+(-?\d+)", text, re.M).group(1))
     except (OSError, AttributeError, ValueError):
         return None
     return lo, hi
@@ -148,6 +149,12 @@ def main() -> int:
     lat = finetune_latency()
     if lat is None:
         warn(f"讀不到 {LATENCY_HEADER.name}，不知道 LowLevelServer 有沒有加延遲。")
+    elif not 0 <= lat[0] <= lat[1] <= FT_LATENCY_LIMIT_MS:
+        # 韌體的 #error 也會擋，這裡先停，免得 07_settings.json 記下上傳不了的設定。
+        warn(f"finetune_latency.h 的範圍是 {lat[0]}–{lat[1]} ms，"
+             f"要 0 ≤ FT_LATENCY_MIN_MS ≤ FT_LATENCY_MAX_MS ≤ {FT_LATENCY_LIMIT_MS}。")
+        info("改好 firmware/LowLevelServer/finetune_latency.h、用 Arduino IDE 重新上傳後，再執行 07_finetune。")
+        return 1
     elif lat[1] > 0:
         warn(f"finetune_latency.h：每回合在 {lat[0]}–{lat[1]} ms 之間抽一個延遲，加在原本的延遲上面。")
         warn("  Nano 上的 LowLevelServer 要是改完這個檔案之後重新上傳的版本，否則實際上沒有加延遲。")
