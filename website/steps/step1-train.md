@@ -62,7 +62,7 @@
 
     | 項目 | 工具做什麼 | 參考門檻 |
     | --- | --- | --- |
-    | 設定 header | 訓練開始時用眼睛確認這 4 行（其他行是步數、reward 權重等你選的設定） | 開頭是 `mirror augmentation: ON`、`obs staleness DR: 2–20 ms`、`rig sysid:`（後面是 `sysid_params.json`）、`control rate: 50 Hz, max accel: 150` 全部符合；不符就按 ++ctrl+c++ 停止，找助教。改過延遲設定（專題任務）的話，`obs staleness DR` 會是你設的範圍 |
+    | 設定 header | 訓練開始時用眼睛確認這 4 行（其他行是步數、reward 權重等你選的設定） | 開頭是 `mirror augmentation: ON`、`obs staleness DR: 2–20 ms`、`rig sysid:`（後面是 `sysid_params.json`）、`control rate: 50 Hz, max accel: 150` 全部符合；不符就按 ++ctrl+c++ 停止，在 Discord 開 ticket 找助教。改過延遲設定（專題任務）的話，`obs staleness DR` 會是你設的範圍 |
     | 對稱性 | 從垂下的狀態開始，看策略能不能自己甩上 | 從垂下的狀態能自己甩上（工具印出 `從垂下自己甩上：是／否`） |
     | 敏感度關卡 | 在模擬裡各跑 20 回合：開著與關掉韌體量測模型（模擬裡模仿 Nano 怎麼量角度、算速度的那一層，見 [sim2real 理論](../theory.md)） | 關掉後的 balanced fraction（擺錘在直立附近的時間比例，定義見 [Step 2](step2-finetune.md#honest)）≥ 0.7 |
 

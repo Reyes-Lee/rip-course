@@ -156,7 +156,7 @@ FAIL 時照下表處理：
 
 !!! checkpoint "通過條件"
 
-    五級都對齊、聲音都正常，最後印出 `PASS`。FAIL 就把結果拿給助教，檢查 Vref 與韌體加速度設定；不要自己轉可變電阻。
+    五級都對齊、聲音都正常，最後印出 `PASS`。FAIL 就把結果貼到 Discord ticket 給助教，檢查 Vref 與韌體加速度設定；不要自己轉可變電阻。
 
 ## 3. （需要時）方向標定 { #direction .rip-do }
 
@@ -166,7 +166,7 @@ FAIL 時照下表處理：
 - 工具說「還沒做方向標定」或「方向快速檢查：擺錘方向跟上次標定相反」。
 - 策略好像「反著推」，或擺錘只擺到幾十度就甩不上去（`08_test_policy` 判定 `NO SWING-UP`）。
 
-跑過 `04_check_direction` 還是有問題，就找助教。
+跑過 `04_check_direction` 還是有問題，就在 Discord 開 ticket 找助教。
 
 策略是在模擬裡學的，模擬有固定的正方向。實機的擺錘角度方向由 AS5600 決定：模組的 DIR 腳出廠可能接 GND、接 VCC，也可能沒接，同一批零件做出來的機台方向不一定一樣。**擺錘方向跟模擬相反時，策略出力的時機剛好錯開半個週期，擺錘怎麼都甩不上去**，而且 `02_check_encoder`、`03_check_motor` 都會 PASS，看不出來。
 
@@ -184,7 +184,7 @@ FAIL 時照下表處理：
 
     最後印出 `PASS：擺錘方向 ±1 已存在 Nano 的 EEPROM`。相關係數跟模擬一致時是負的，約 −0.9。紀錄與圖存在 `policy/direction_runs/<時間>/`：`direction.png` 的點應該排成往右下的斜線。
 
-    印出「判讀不出來」：擺錘幾乎沒有跟著手臂反應。檢查 12 V 有沒有接（手臂其實沒動）、擺錘有沒有被卡住，再跑一次 `02_check_encoder`。再跑一次 `04_check_direction` 還是判讀不出來，就找助教。
+    印出「判讀不出來」：擺錘幾乎沒有跟著手臂反應。檢查 12 V 有沒有接（手臂其實沒動）、擺錘有沒有被卡住，再跑一次 `02_check_encoder`。再跑一次 `04_check_direction` 還是判讀不出來，就在 Discord 開 ticket 找助教。
 
 - **存在哪裡**：Nano 的 EEPROM。Arduino IDE 重新上傳 `LowLevelServer` 或 `RLControl` **不會**清掉它，不用每次重做。`RLControl` 開機時讀同一個值。
 - **工具會幫你擋**：`05_sysid`、`07_finetune`、`08_test_policy` 開始前會確認 Nano 已經標定，沒有就停止並提示你先跑 `04_check_direction`。`07_finetune` 每一段開始前還會讓手臂抖動約 4 秒，確認方向沒有變；`RLControl` 沒標定就不會啟動馬達。

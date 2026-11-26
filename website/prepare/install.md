@@ -123,7 +123,7 @@ git pull
 git stash pop
 ```
 
-最後一行如果出現 `CONFLICT`，代表助教也改了同一個檔案，把整段訊息截圖給助教，不要自己刪檔案。
+最後一行如果出現 `CONFLICT`，代表助教也改了同一個檔案，在 Discord 開 ticket，把整段訊息截圖給助教，不要自己刪檔案。
 
 !!! warning "訊息裡的檔案是 `firmware/RLControl/policy_weights_student.h` 時"
 

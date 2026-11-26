@@ -6,7 +6,7 @@
   <span class="rip-chip">:material-file-outline: 每項任務一份 policy_weights_student.h（同一支可以共用）</span>
 </div>
 
-**[五個步驟](steps/index.md)是我們提供的 baseline。** 每一步的做法和工具都準備好了，照著跑完，你們就會有一支在 Nano 上、不加延遲時能甩上並平衡的策略。這是專題的起點，跑不出來或中途遇到問題，直接問助教。
+**[五個步驟](steps/index.md)是我們提供的 baseline。** 每一步的做法和工具都準備好了，照著跑完，你們就會有一支在 Nano 上、不加延遲時能甩上並平衡的策略。這是專題的起點，跑不出來或中途遇到問題，直接在 Discord 開 ticket 問助教。
 
 不過這支 baseline 只在**一種**延遲下練過：Nano 從讀取感測器到送出馬達指令大約 16 ms，策略在模擬裡也只見過差不多的值。真實系統的延遲會變，例如換一顆比較慢的 MCU、感測器改走通訊匯流排、或是同時要做別的事。
 

@@ -4,26 +4,26 @@
 
 !!! info "什麼時候找助教"
 
-    只有**硬體或工具本身出狀況**時找助教，例如：馬達、驅動板、編碼器照下表處理後仍然異常，工具報錯中止，或印出來的東西明顯不對（控制頻率不是 50 Hz、圖表爆掉）。
+    只有**硬體或工具本身出狀況**時在 Discord 開 ticket 找助教，例如：馬達、驅動板、編碼器照下表處理後仍然異常，工具報錯中止，或印出來的東西明顯不對（控制頻率不是 50 Hz、圖表爆掉）。
 
     訓練結果不好（分數低、甩不上、平衡不穩）是專題本身要處理的問題：照[依序查什麼](theory.md#debug-order)自己分析，換 SEED、加段微調、調整 reward 或設定，用實機的誠實指標比較。
 
 | 症狀 | 怎麼處理（照順序） |
 | --- | --- |
-| 手臂一直往同一個方向飄，最後撞限位 | 先確認桌面是水平、不會晃的，機台四角都著地（[Step 0 開始前](steps/step0-sysid.md#level)）。換了桌子仍然飄就找助教 |
-| 接線測試（`08_test_policy`）會平衡，燒進 Nano 後一直繞圈 | 1. 執行 `11_score_onboard`，第一行頻率不是約 50 Hz 就找助教。2. 確認 [Step 4 匯出](steps/step4-deploy.md#flash)的是 `09_distill` 產生的 `student.pt`（路徑含 `distill_h16_dagger_dev`）。3. 按 RESET 前擺錘要靜止垂下、手臂在正中間 |
+| 手臂一直往同一個方向飄，最後撞限位 | 先確認桌面是水平、不會晃的，機台四角都著地（[Step 0 開始前](steps/step0-sysid.md#level)）。換了桌子仍然飄就在 Discord 開 ticket 找助教 |
+| 接線測試（`08_test_policy`）會平衡，燒進 Nano 後一直繞圈 | 1. 執行 `11_score_onboard`，第一行頻率不是約 50 Hz 就在 Discord 開 ticket 找助教。2. 確認 [Step 4 匯出](steps/step4-deploy.md#flash)的是 `09_distill` 產生的 `student.pt`（路徑含 `distill_h16_dagger_dev`）。3. 按 RESET 前擺錘要靜止垂下、手臂在正中間 |
 | 燒進 Nano 後會平衡，但比接線測試明顯不穩 | 頻率與延遲正常的話，這是傳輸條件的差異，照 [Step 4「獨立執行比接線測試差時」](steps/step4-deploy.md#gap) 的順序試 |
-| 擺錘會擺但怎麼都甩不上去 | 先看 `08_test_policy` 或 `11_score_onboard` 印的 `verdict`：`NO SWING-UP`（擺錘從沒擺過水平）先照下一列跑 `04_check_direction`；方向正確還是甩不上去，燒 `LowLevelServer` 執行 `03_check_motor`，FAIL 就找助教檢查 Vref |
-| 馬達只轉一小段就卡住、來回抖，驅動板很燙 | 先拔 12 V。最常見是馬達線接觸不良：重新插好馬達線與 TMC2209 的接頭，確認 Nano 只用 USB 供電、12 V 只接 TMC2209（[供電](prepare/hardware.md#power-on)），再接 12 V 跑 `03_check_motor`。還是一樣就找助教 |
-| 馬達嘶嘶聲、磨擦聲 | 失步。在工具視窗按 ++ctrl+c++ 停止，燒 `LowLevelServer` 跑 `03_check_motor`，把結果拿給助教。Vref 與韌體加速度由助教調，不要自己轉可變電阻或改 sketch |
-| 手臂速度或範圍是預期的一半或兩倍 | 微步接線不對（應為 MS1 接 5V、MS2 接 GND）。拔掉 12 V 後找助教 |
+| 擺錘會擺但怎麼都甩不上去 | 先看 `08_test_policy` 或 `11_score_onboard` 印的 `verdict`：`NO SWING-UP`（擺錘從沒擺過水平）先照下一列跑 `04_check_direction`；方向正確還是甩不上去，燒 `LowLevelServer` 執行 `03_check_motor`，FAIL 就在 Discord 開 ticket 找助教檢查 Vref |
+| 馬達只轉一小段就卡住、來回抖，驅動板很燙 | 先拔 12 V。最常見是馬達線接觸不良：重新插好馬達線與 TMC2209 的接頭，確認 Nano 只用 USB 供電、12 V 只接 TMC2209（[供電](prepare/hardware.md#power-on)），再接 12 V 跑 `03_check_motor`。還是一樣就在 Discord 開 ticket 找助教 |
+| 馬達嘶嘶聲、磨擦聲 | 失步。在工具視窗按 ++ctrl+c++ 停止，燒 `LowLevelServer` 跑 `03_check_motor`，把結果貼到 Discord ticket 給助教。Vref 與韌體加速度由助教調，不要自己轉可變電阻或改 sketch |
+| 手臂速度或範圍是預期的一半或兩倍 | 微步接線不對（應為 MS1 接 5V、MS2 接 GND）。拔掉 12 V 後在 Discord 開 ticket 找助教 |
 | 編碼器角度亂跳 | 燒 `EncoderCheck`，執行 `02_check_encoder`，照[編碼器測試](prepare/hardware.md#encoder)的 FAIL 處理表調磁鐵 |
-| 策略好像「反著推」、完全穩不住，或擺錘只擺到幾十度就甩不上去 | 擺錘角度方向可能跟模擬相反。燒 `LowLevelServer`，執行 `04_check_direction`（見[方向標定](prepare/hardware.md#direction)）。它修正了方向的話，之前的 `runs/ftN` 不要再接續，照 [Step 2 的「從 Step 1 的模型重新開始」](steps/step2-finetune.md#restart)開一條新的微調；方向本來就對的話，照[依序查什麼](theory.md#debug-order)往下查。標定判讀不出來就找助教 |
-| 工具說「還沒做方向標定」或「LowLevelServer 是舊版」 | 照[方向標定](prepare/hardware.md#direction)做一次 `04_check_direction`；說是舊版就先重新上傳 `firmware/LowLevelServer`。做過還是一樣就找助教 |
-| `07_finetune` 說「方向快速檢查：擺錘方向跟上次標定相反」 | AS5600 的方向變了，通常是編碼器或磁鐵被動過。執行 `04_check_direction` 重新標定，再跑一次 `02_check_encoder`；之前幾段微調是在正確方向下做的，可以保留。重新標定後還是有問題就找助教 |
-| 工具因 `run_config.check_config` 中止 | 策略與韌體設定不一致。確認 Nano 燒的是工具開頭提醒的那份韌體，重燒後再跑一次；仍然中止就找助教 |
+| 策略好像「反著推」、完全穩不住，或擺錘只擺到幾十度就甩不上去 | 擺錘角度方向可能跟模擬相反。燒 `LowLevelServer`，執行 `04_check_direction`（見[方向標定](prepare/hardware.md#direction)）。它修正了方向的話，之前的 `runs/ftN` 不要再接續，照 [Step 2 的「從 Step 1 的模型重新開始」](steps/step2-finetune.md#restart)開一條新的微調；方向本來就對的話，照[依序查什麼](theory.md#debug-order)往下查。標定判讀不出來就在 Discord 開 ticket 找助教 |
+| 工具說「還沒做方向標定」或「LowLevelServer 是舊版」 | 照[方向標定](prepare/hardware.md#direction)做一次 `04_check_direction`；說是舊版就先重新上傳 `firmware/LowLevelServer`。做過還是一樣就在 Discord 開 ticket 找助教 |
+| `07_finetune` 說「方向快速檢查：擺錘方向跟上次標定相反」 | AS5600 的方向變了，通常是編碼器或磁鐵被動過。執行 `04_check_direction` 重新標定，再跑一次 `02_check_encoder`；之前幾段微調是在正確方向下做的，可以保留。重新標定後還是有問題就在 Discord 開 ticket 找助教 |
+| 工具因 `run_config.check_config` 中止 | 策略與韌體設定不一致。確認 Nano 燒的是工具開頭提醒的那份韌體，重燒後再跑一次；仍然中止就在 Discord 開 ticket 找助教 |
 | sysid 自由擺擬合失敗 | 擺得不夠大，或抽出墊塊時有震動。執行 `05_sysid`，選單輸入 `1` 重新量測 |
-| Arduino IDE 上傳失敗（例如 `avrdude: stk500_getsync(): not in sync`） | 關掉序列埠監控和正在跑的工具（它們會佔住序列埠）；確認「工具 → 序列埠」選的是 Nano 那一個；換一條能傳資料的 USB-C 線或換一個 USB 孔。還是不行，在「工具 → 處理器」改選 `ATmega328P (Old Bootloader)` 再上傳一次；兩種都失敗就找助教 |
+| Arduino IDE 上傳失敗（例如 `avrdude: stk500_getsync(): not in sync`） | 關掉序列埠監控和正在跑的工具（它們會佔住序列埠）；確認「工具 → 序列埠」選的是 Nano 那一個；換一條能傳資料的 USB-C 線或換一個 USB 孔。還是不行，在「工具 → 處理器」改選 `ATmega328P (Old Bootloader)` 再上傳一次；兩種都失敗就在 Discord 開 ticket 找助教 |
 | 工具說找不到序列埠 | 關掉 Arduino IDE 的序列埠監控；換一條能傳資料的 USB-C 線、換一個 USB 孔；Windows 確認 CH340 驅動（[安裝環境](prepare/install.md)）。裝置管理員出現 `Unknown USB Device (Device Descriptor Request Failed)`、錯誤碼 43 是線、USB 孔或板子的問題，裝驅動沒用 |
 
 ## 注意事項 { #notes }
