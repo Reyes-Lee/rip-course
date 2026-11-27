@@ -6,7 +6,7 @@ import sys
 import time
 from contextlib import contextmanager
 
-from _common import POLICY, fail, finish, info
+from _common import POLICY, fail, finish, info, warn
 
 sys.path.insert(0, str(POLICY))
 from lowlevel_client import LowLevelClient  # noqa: E402  作者的 serial 用戶端
@@ -21,12 +21,32 @@ def connect(port: str):
             finish(1)
         cli.zero_motor()
         cli.tare_pendulum()
+        raw_get_state = cli.get_state
+        drops = 0
+
+        def get_state_retry():
+            # 序列埠偶爾掉一個位元組（馬達通電的雜訊），韌體就不會回這一筆。等韌體 5 ms 的讀取逾時過去，再要一次。
+            nonlocal drops
+            try:
+                return raw_get_state()
+            except RuntimeError as e:
+                if not str(e).startswith("get_state:"):
+                    raise
+                drops += 1
+                time.sleep(0.02)
+                cli.ser.reset_input_buffer()
+                return raw_get_state()
+
+        ref_us = None
         try:
+            ref_us = raw_get_state().time_us       # Nano 開機後的時間；之後變小就代表它重開過
+            cli.get_state = get_state_retry
             yield cli
         except RuntimeError as e:
             if not str(e).startswith("get_state:"):
                 raise
-            explain_no_reply(cli)
+            drops = 0                              # 下面會說明，不用再印重試的次數
+            explain_no_reply(cli, raw_get_state, ref_us)
             finish(1)
         finally:
             try:
@@ -34,29 +54,39 @@ def connect(port: str):
                 cli.disengage_motor()
             except Exception:  # noqa: BLE001
                 pass
+            if drops:
+                warn(f"過程中有 {drops} 次沒收到 Nano 的回應，工具自動重新要了一次。")
 
 
-def explain_no_reply(cli) -> None:
-    """連線時有回應、做到一半 GET_STATE 收不到回應：判斷 Nano 是卡住、重開，還是 USB 斷了，印出該怎麼做。"""
+def explain_no_reply(cli, raw_get_state, ref_us) -> None:
+    """GET_STATE 連續兩次收不到回應：判斷 Nano 是卡住、重開、只是通訊掉資料，還是 USB 斷了，印出該怎麼做。"""
     print()
-    fail("Nano 沒有回應（GET_STATE 收不到資料）。")
-    info("正在判斷 Nano 是卡住還是重開了，約 4 秒⋯")
+    fail("Nano 沒有回應（GET_STATE 連續兩次收不到資料）。")
+    info("正在判斷是哪裡出問題，約 4 秒⋯")
     try:
         cli.disengage_motor()
         time.sleep(2.5)                      # 如果是重開，等它跑完開機程序
         back = cli.wait_until_ready(retries=4, retry_delay_s=0.4)
+        now_us = raw_get_state().time_us if back else None
+    except RuntimeError:
+        now_us = None
     except Exception:  # noqa: BLE001  序列埠本身不見了
         fail("序列埠斷線了：Nano 的 USB 連線掉了。")
         info("  換一條 USB 線、換一個電腦上的 USB 孔，再執行一次。")
         info("還是一樣就在 Discord 開 ticket，把整個畫面截圖給助教。")
         return
-    if back:
-        fail("Nano 重開了：馬達通電的時候 Nano 被重置。")
-        info("  換一條 USB 線、換一個電腦上的 USB 孔，再執行一次。")
-    else:
+    if not back:
         fail("Nano 卡住了：多半是讀編碼器（AS5600）的 I²C 被馬達通電的雜訊卡住。")
         info("  1. 用 git pull 拿新版，重新上傳 firmware/LowLevelServer（新版讀編碼器卡住時會自己恢復）。")
         info("  2. 再執行一次。")
+    elif ref_us is not None and now_us is not None and now_us < ref_us:
+        fail("Nano 重開了：馬達通電的時候 Nano 被重置（開機後的時間歸零了）。")
+        info("  換一條 USB 線、換一個電腦上的 USB 孔，再執行一次。")
+    elif now_us is not None:
+        fail("Nano 沒有重開，但馬達通電時序列埠一直掉資料，收不到回應。")
+        info("  換一條 USB 線、換一個電腦上的 USB 孔，再執行一次。")
+    else:
+        fail("Nano 有回應握手，但還是讀不到狀態。")
     info("還是一樣就在 Discord 開 ticket，把整個畫面截圖給助教。")
 
 
