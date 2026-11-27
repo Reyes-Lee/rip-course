@@ -15,6 +15,7 @@
 | 燒進 Nano 後會平衡，但比接線測試明顯不穩 | 頻率與延遲正常的話，這是傳輸條件的差異，照 [Step 4「獨立執行比接線測試差時」](steps/step4-deploy.md#gap) 的順序試 |
 | 擺錘會擺但怎麼都甩不上去 | 先看 `08_test_policy` 或 `11_score_onboard` 印的 `verdict`：`NO SWING-UP`（擺錘從沒擺過水平）先照下一列跑 `04_check_direction`；方向正確還是甩不上去，燒 `LowLevelServer` 執行 `03_check_motor`，FAIL 就在 Discord 開 ticket 找助教檢查 Vref |
 | 馬達只轉一小段就卡住、來回抖，驅動板很燙 | 先拔 12 V。最常見是馬達線接觸不良：重新插好馬達線與 TMC2209 的接頭，確認 Nano 只用 USB 供電、12 V 只接 TMC2209（[供電](prepare/hardware.md#power-on)），再接 12 V 跑 `03_check_motor`。還是一樣就在 Discord 開 ticket 找助教 |
+| 工具說「Nano 沒有回應」，或出現 `get_state: expected 20 bytes, got 0` | 先照[助教更新檔案時](prepare/install.md#update)執行 `git pull` 拿新版，重新上傳 `firmware/LowLevelServer`，再跑一次工具。還是失敗的話，新版工具會判斷是 Nano 卡住、重開還是 USB 斷線，照畫面上的說明做。還是一樣就在 Discord 開 ticket 找助教 |
 | 馬達嘶嘶聲、磨擦聲 | 失步。在工具視窗按 ++ctrl+c++ 停止，燒 `LowLevelServer` 跑 `03_check_motor`，把結果貼到 Discord ticket 給助教。Vref 與韌體加速度由助教調，不要自己轉可變電阻或改 sketch |
 | 手臂速度或範圍是預期的一半或兩倍 | 微步接線不對（應為 MS1 接 5V、MS2 接 GND）。拔掉 12 V 後在 Discord 開 ticket 找助教 |
 | 編碼器角度亂跳 | 燒 `EncoderCheck`，執行 `02_check_encoder`，照[編碼器測試](prepare/hardware.md#encoder)的 FAIL 處理表調磁鐵 |

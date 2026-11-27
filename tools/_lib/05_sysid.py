@@ -60,7 +60,7 @@ def main() -> int:
         ok(f"已寫出 {rel(SYSID_JSON)}")
         show_checkpoint()
     else:
-        fail("sysid 沒有完成。照畫面上的錯誤訊息處理，或把畫面截圖給助教。")
+        fail("sysid 沒有完成。照畫面上的錯誤訊息處理，或在 Discord 開 ticket，把畫面截圖給助教。")
     return code
 
 

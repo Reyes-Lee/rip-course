@@ -42,7 +42,7 @@ def main() -> int:
             fail(f"{mod} 載入失敗：{e}")
             bad = True
     if bad:
-        fail("有套件載入失敗。把整個畫面截圖給助教。")
+        fail("有套件載入失敗。在 Discord 開 ticket，把整個畫面截圖給助教。")
         return 1
 
     heading("Nano 序列埠")

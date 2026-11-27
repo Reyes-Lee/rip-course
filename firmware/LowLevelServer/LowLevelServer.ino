@@ -140,6 +140,9 @@ void setup()
     Serial.begin(BAUD_RATE);
     Wire.begin();
     Wire.setClock(400000);   // I²C fast mode for short transaction times.
+    // I²C 最多等 2 ms，超過就重設 TWI 硬體。沒設的話（Arduino 預設），馬達通電的雜訊
+    // 讓一次 I²C 讀取卡住，主迴圈就整個停住，電腦送 GET_STATE 收不到回應。
+    Wire.setWireTimeout(2000, true);
     as5600.begin();
 
     if (EEPROM.read(EEPROM_DIR_MAGIC_ADDR) == EEPROM_DIR_MAGIC)
@@ -205,9 +208,14 @@ void sampleState()
 {
     int32_t motor_step = stepper->getCurrentPosition();
     long raw = as5600.rawAngle();
+    bool read_ok = (as5600.lastError() == AS5600_OK);   // I²C 讀壞或逾時時 rawAngle 回 0
 
     // Pendulum wraparound tracking (AS5600 is 12-bit; wrap threshold ±2048).
-    if (pen_raw_prev < 0)
+    if (!read_ok)
+    {
+        // 這一筆沒讀到：擺錘角度沿用上一筆，pen_raw_prev 不動。
+    }
+    else if (pen_raw_prev < 0)
     {
         pen_raw_prev = raw;
     }

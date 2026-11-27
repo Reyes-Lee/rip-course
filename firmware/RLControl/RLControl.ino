@@ -359,6 +359,8 @@ static float read_pendulum_rad()
     static uint8_t reject_streak = 0;
 
     long raw = (long)as5600.rawAngle();
+    if (as5600.lastError() != AS5600_OK)   // I²C 讀壞或逾時（rawAngle 回 0）：這一筆不用
+        return _encoder_zero_pending ? 0.0f : pos;
 
     if (_encoder_zero_pending)
     {
@@ -877,6 +879,9 @@ void setup()
     Serial.begin(SERIAL_BAUD_RATE);
     Wire.begin();
     Wire.setClock(I2C_CLOCK_HZ);
+    // I²C 最多等 2 ms，超過就重設 TWI 硬體。沒設的話（Arduino 預設），一次 I²C 雜訊就讓
+    // 主迴圈卡死，馬達照最後的加速度一直跑下去。
+    Wire.setWireTimeout(2000, true);
     as5600.begin();
 
     if (EEPROM.read(EEPROM_DIR_MAGIC_ADDR) == EEPROM_DIR_MAGIC)

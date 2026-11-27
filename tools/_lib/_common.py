@@ -160,7 +160,7 @@ def _crash(kind, value, tb) -> None:
     import traceback
     traceback.print_exception(kind, value, tb)
     if not issubclass(kind, KeyboardInterrupt):
-        print(color("工具發生錯誤。把整個畫面截圖給助教。", "red"))
+        print(color("工具發生錯誤。在 Discord 開 ticket，把整個畫面截圖給助教。", "red"))
     finish(1)
 
 

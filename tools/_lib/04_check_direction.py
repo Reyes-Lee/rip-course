@@ -63,7 +63,7 @@ def main() -> int:
             cli.tare_pendulum()
             v = run_once(cli, "after", sign, results)
             if v != "ok":
-                fail("修正後仍然不一致。把 policy/direction_runs/ 最新資料夾拿給助教。")
+                fail("修正後仍然不一致。在 Discord 開 ticket，把 policy/direction_runs/ 最新資料夾傳給助教。")
                 save_run(out_dir, results, sign)
                 return 1
         else:

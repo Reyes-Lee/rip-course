@@ -52,7 +52,7 @@ def main() -> int:
     if all_ok:
         ok("PASS：到 150 rad/s² 都沒有失步。")
         return 0
-    fail("FAIL：有失步。把結果拿給助教，檢查 Vref 與韌體加速度設定；不要自己轉可變電阻。")
+    fail("FAIL：有失步。把結果貼到 Discord ticket 給助教，檢查 Vref 與韌體加速度設定；不要自己轉可變電阻。")
     return 1
 
 
